@@ -1,0 +1,28 @@
+@startuml
+scale 10
+actor user
+
+package predicat {
+	package import {
+		usecase "import data" as import_data
+		usecase "import inference engine" as import_inference_engine
+		
+	}
+	package add {
+		usecase "add rule" as add_rule
+		usecase "add fact" as add_fact
+	}
+	usecase "explore data" as explore_data
+	usecase "create graphs" as create_graphs
+	usecase "do stats" as do_stats
+}
+
+user -> add_rule
+user -> add_fact
+user -> create_graphs
+user -> import_data
+user -> explore_data
+user -> do_stats
+user -> import_inference_engine
+
+@enduml

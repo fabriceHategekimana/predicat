@@ -1,0 +1,26 @@
+@startuml
+scale 10
+
+object fact {
+	
+}
+
+object rule {
+	
+}
+
+enum data {
+	graphs
+	data_frame
+	csv
+	json
+}
+
+object reader {
+	
+}
+
+object inference_engines {
+
+}
+@enduml
