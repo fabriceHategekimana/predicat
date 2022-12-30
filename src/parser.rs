@@ -5,7 +5,6 @@ use nom::{
     character::complete::{char, alphanumeric1},
     sequence::preceded,
     Needed,
-    Err::{Incomplete, Error, Failure},
     IResult
 };
 
@@ -18,13 +17,22 @@ enum LanguageType<'a> {
 
 #[derive(PartialEq, Debug)]
 enum Language<'a> {
-    Var(&'a str)
+    Var(&'a str),
+    Get
 }
 
 fn parse_variable(s: &str) -> IResult<&str,Language> {
     let res = preceded(char('$'), alphanumeric1)(s);
     match res {
         Ok((t, s)) => Ok((t, Language::Var(s))),
+        Err(e) => Err(e)
+    }
+}
+
+fn parse_get(s: &str) -> IResult<&str,Language> {
+    let res = tag("get")(s);
+    match res {
+        Ok((t, s)) => Ok((t, Language::Get)),
         Err(e) => Err(e)
     }
 }
@@ -55,6 +63,18 @@ fn parse_query(query: LanguageType) -> LanguageType {
 mod tests {
     use super::*;
 
+    #[test]
+    fn test_get() {
+        assert_eq!(parse_get("get").unwrap().1, Language::Get);
+        assert_eq!(
+            parse_get("select"),
+            Err(nom::Err::Error(
+                    nom::error::Error {
+                        input: "select",
+                        code: nom::error::ErrorKind::Tag})));
+    }
+
+    #[test]
     fn test_variable() {
         assert_eq!(
             parse_variable("$Hello").unwrap().1,
@@ -65,6 +85,14 @@ mod tests {
         assert_eq!(
             parse_variable("$2").unwrap().1,
             Language::Var("2"));
+        assert_eq!(
+            parse_variable("hey"),
+            Err(nom::Err::Error(
+                nom::error::Error {
+                    input: "hey",
+                    code: nom::error::ErrorKind::Char
+                }
+            )));
     } 
 
     #[test]
