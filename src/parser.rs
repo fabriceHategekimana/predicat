@@ -2,8 +2,9 @@
 
 use nom::{
     bytes::complete::tag,
-    character::complete::{char, alphanumeric1},
-    sequence::preceded,
+    character::complete::{char, alphanumeric1, space1},
+    sequence::{preceded, tuple},
+    branch::alt,
     Needed,
     IResult
 };
@@ -18,11 +19,17 @@ enum LanguageType<'a> {
 #[derive(PartialEq, Debug)]
 enum Language<'a> {
     Var(&'a str),
-    Get
+    Get,
+    Connector,
+    Word(&'a str),
+    Triplet(&'a str, &'a str, &'a str)
 }
 
 fn parse_variable(s: &str) -> IResult<&str,Language> {
-    let res = preceded(char('$'), alphanumeric1)(s);
+    let res = preceded(
+        space1,
+        preceded(char('$'), alphanumeric1),
+        )(s);
     match res {
         Ok((t, s)) => Ok((t, Language::Var(s))),
         Err(e) => Err(e)
@@ -33,6 +40,45 @@ fn parse_get(s: &str) -> IResult<&str,Language> {
     let res = tag("get")(s);
     match res {
         Ok((t, s)) => Ok((t, Language::Get)),
+        Err(e) => Err(e)
+    }
+}
+
+fn parse_connector(s: &str) -> IResult<&str, Language> {
+    let res =alt((tag("such_as"),
+        tag("who_is"),
+        tag("who_are"),
+        tag("who_has")))(s);
+    match res {
+        Ok((t, s)) => Ok((t, Language::Connector)),
+        Err(e) => Err(e)
+    }
+}
+
+fn parse_word(s: &str) -> IResult<&str,Language> {
+    let res = preceded(space1, alphanumeric1)(s);
+    match res {
+        Ok((t, s)) => Ok((t, Language::Word(s))),
+        Err(e) => Err(e)
+    }
+}
+
+fn parse_triplet(s: &str) -> IResult<&str,Language> {
+    let res = alt((
+            tuple((parse_word, parse_word, parse_word)),
+            tuple((parse_word, parse_word, parse_variable))
+            ))(s);
+    match res {
+        Ok((t, tri)) => Ok((t, to_triplet(tri))) ,
+        Err(e) => Err(e),
+        _ => todo!()
+    }
+}
+
+fn parse_word_space(s: &str) -> IResult<&str, Language> {
+    let res = preceded(space1, alphanumeric1)(s);
+    match res {
+        Ok((t, s1)) => Ok((t, Language::Word(s1))),
         Err(e) => Err(e)
     }
 }
@@ -59,6 +105,22 @@ fn parse_query(query: LanguageType) -> LanguageType {
     }
 }
 
+fn extract(l: Language) -> Option<&str> {
+    match l {
+        Language::Var(s) => Some(s),
+        Language::Word(s) => Some(s),
+        _ => None
+    }
+}
+
+fn to_triplet<'a>(t: (Language<'a>, Language<'a>, Language<'a>)) -> Language<'a> {
+    Language::Triplet(
+        extract(t.0).unwrap(),
+        extract(t.1).unwrap(),
+        extract(t.2).unwrap()
+        )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -77,16 +139,16 @@ mod tests {
     #[test]
     fn test_variable() {
         assert_eq!(
-            parse_variable("$Hello").unwrap().1,
+            parse_variable(" $Hello").unwrap().1,
             Language::Var("Hello"));
         assert_eq!(
-            parse_variable("$A").unwrap().1,
+            parse_variable(" $A").unwrap().1,
             Language::Var("A"));
         assert_eq!(
-            parse_variable("$2").unwrap().1,
+            parse_variable(" $2").unwrap().1,
             Language::Var("2"));
         assert_eq!(
-            parse_variable("hey"),
+            parse_variable(" hey"),
             Err(nom::Err::Error(
                 nom::error::Error {
                     input: "hey",
@@ -94,13 +156,50 @@ mod tests {
                 }
             )));
     } 
-
     #[test]
-    fn test_final(){
-        assert_eq!(2,2);
-        //assert_eq!(
-    //parse_query(LanguageType::Soft("get $A $B | $A age $B where $B < 30;")),
-    //LanguageType::SQL("select A, B from (select subject as A, goal as B from facts where link like 'age') where B < 30);")
-            //);
+    fn test_connector() {
+        assert_eq!(
+            parse_connector("who_has").unwrap().1,
+            Language::Connector);
+        assert_eq!(
+            parse_connector("such_as").unwrap().1,
+            Language::Connector);
+        assert_eq!(
+            parse_connector("hey"),
+            Err(nom::Err::Error(
+                nom::error::Error {
+                    input: "hey",
+                    code: nom::error::ErrorKind::Tag
+                }
+            )));
+    }
+    #[test]
+    fn test_word() {
+        assert_eq!(
+            parse_word(" wow").unwrap().1,
+            Language::Word("wow"));
+        assert_eq!(
+            parse_word(" $A"),
+            Err(nom::Err::Error(
+                nom::error::Error {
+                    input: "$A",
+                    code: nom::error::ErrorKind::AlphaNumeric
+                }
+            )));
+    }
+    #[test]
+    fn test_triplet() {
+        assert_eq!(
+            parse_triplet(" un deux trois").unwrap().1,
+            Language::Triplet("un", "deux", "trois"));
+        assert_eq!(
+            parse_triplet(" un deux $A").unwrap().1,
+            Language::Triplet("un", "deux", "A"));
+    }
+    #[test]
+    fn test() {
+        assert_eq!(
+            parse_word_space(" hey").unwrap().1,
+            Language::Word("hey"));
     }
 }
