@@ -9,6 +9,13 @@ use nom::{
     IResult
 };
 
+//for ease of use
+use crate::parser::Language::Word;
+use crate::parser::Language::Var;
+use crate::parser::Language::Tri;
+
+use crate::parser::Triplet::*;
+
 #[derive(PartialEq, Debug)]
 enum LanguageType<'a> {
     Soft(&'a str),
@@ -22,7 +29,19 @@ enum Language<'a> {
     Get,
     Connector,
     Word(&'a str),
-    Triplet(&'a str, &'a str, &'a str)
+    Tri(Triplet<'a>)
+}
+
+#[derive(PartialEq, Debug)]
+enum Triplet<'a> {
+    Twww(&'a str, &'a str, &'a str),
+    Tvww(&'a str, &'a str, &'a str),
+    Twvw(&'a str, &'a str, &'a str),
+    Twwv(&'a str, &'a str, &'a str),
+    Tvvw(&'a str, &'a str, &'a str),
+    Tvwv(&'a str, &'a str, &'a str),
+    Twvv(&'a str, &'a str, &'a str),
+    Tvvv(&'a str, &'a str, &'a str)
 }
 
 fn parse_variable(s: &str) -> IResult<&str,Language> {
@@ -69,7 +88,14 @@ fn parse_triplet(s: &str) -> IResult<&str,Language> {
             tuple((parse_word, parse_word, parse_variable))
             ))(s);
     match res {
-        Ok((t, tri)) => Ok((t, to_triplet(tri))) ,
+        Ok((t, (Word(s1),Word(s2),Word(s3)))) => Ok((t, Tri(Twww(s1,s2,s3)))),
+        Ok((t, (Var(s1),Word(s2),Word(s3)))) => Ok((t, Tri(Tvww(s1,s2,s3)))),
+        Ok((t, (Word(s1),Var(s2),Word(s3)))) => Ok((t, Tri(Twvw(s1,s2,s3)))),
+        Ok((t, (Word(s1),Word(s2),Var(s3)))) => Ok((t, Tri(Twwv(s1,s2,s3)))),
+        Ok((t, (Var(s1),Var(s2),Word(s3)))) => Ok((t, Tri(Tvvw(s1,s2,s3)))),
+        Ok((t, (Var(s1),Word(s2),Var(s3)))) => Ok((t, Tri(Tvwv(s1,s2,s3)))),
+        Ok((t, (Word(s1),Var(s2),Var(s3)))) => Ok((t, Tri(Twvv(s1,s2,s3)))),
+        Ok((t, (Var(s1),Var(s2),Var(s3)))) => Ok((t, Tri(Tvvv(s1,s2,s3)))),
         Err(e) => Err(e),
         _ => todo!()
     }
@@ -114,11 +140,12 @@ fn extract(l: Language) -> Option<&str> {
 }
 
 fn to_triplet<'a>(t: (Language<'a>, Language<'a>, Language<'a>)) -> Language<'a> {
-    Language::Triplet(
-        extract(t.0).unwrap(),
-        extract(t.1).unwrap(),
-        extract(t.2).unwrap()
-        )
+    //Language::Tri(
+        //extract(t.0).unwrap(),
+        //extract(t.1).unwrap(),
+        //extract(t.2).unwrap()
+        //)
+    todo!();
 }
 
 #[cfg(test)]
@@ -191,10 +218,10 @@ mod tests {
     fn test_triplet() {
         assert_eq!(
             parse_triplet(" un deux trois").unwrap().1,
-            Language::Triplet("un", "deux", "trois"));
+            Language::Tri(Twww("un", "deux", "trois")));
         assert_eq!(
             parse_triplet(" un deux $A").unwrap().1,
-            Language::Triplet("un", "deux", "A"));
+            Language::Tri(Twwv("un", "deux", "A")));
     }
     #[test]
     fn test() {
