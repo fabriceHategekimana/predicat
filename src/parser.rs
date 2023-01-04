@@ -13,8 +13,10 @@ use nom::{
 use crate::parser::Language::Word;
 use crate::parser::Language::Var;
 use crate::parser::Language::Tri;
+use crate::parser::Language::CompOp;
 
 use crate::parser::Triplet::*;
+use crate::parser::ComparisonOperators::*;
 
 #[derive(PartialEq, Debug)]
 enum LanguageType<'a> {
@@ -29,7 +31,8 @@ enum Language<'a> {
     Get,
     Connector,
     Word(&'a str),
-    Tri(Triplet<'a>)
+    Tri(Triplet<'a>),
+    CompOp(ComparisonOperators)
 }
 
 #[derive(PartialEq, Debug)]
@@ -42,6 +45,16 @@ enum Triplet<'a> {
     Tvwv(&'a str, &'a str, &'a str),
     Twvv(&'a str, &'a str, &'a str),
     Tvvv(&'a str, &'a str, &'a str)
+}
+
+#[derive(PartialEq, Debug)]
+enum ComparisonOperators {
+    Eq,
+    Ne,
+    Le,
+    Ge,
+    Lt,
+    Gt
 }
 
 fn parse_variable(s: &str) -> IResult<&str,Language> {
@@ -77,7 +90,7 @@ fn parse_connector(s: &str) -> IResult<&str, Language> {
 fn parse_word(s: &str) -> IResult<&str,Language> {
     let res = preceded(space1, alphanumeric1)(s);
     match res {
-        Ok((t, s)) => Ok((t, Language::Word(s))),
+        Ok((t, s)) => Ok((t, Word(s))),
         Err(e) => Err(e)
     }
 }
@@ -101,20 +114,35 @@ fn parse_triplet(s: &str) -> IResult<&str,Language> {
     }
 }
 
-fn parse_word_space(s: &str) -> IResult<&str, Language> {
-    let res = preceded(space1, alphanumeric1)(s);
+fn parse_operator(s: &str) -> IResult<&str,Language> {
+    let res = preceded(space1, alt((
+        tag("=="),
+        tag("!="),
+        tag("<="),
+        tag(">="),
+        tag("<"),
+        tag(">")
+        )))(s);
     match res {
-        Ok((t, s1)) => Ok((t, Language::Word(s1))),
+        Ok((t, "==")) => Ok((t, CompOp(ComparisonOperators::Eq))),
+        Ok((t, "!=")) => Ok((t, CompOp(ComparisonOperators::Ne))),
+        Ok((t, "<=")) => Ok((t, CompOp(ComparisonOperators::Le))),
+        Ok((t, ">=")) => Ok((t, CompOp(ComparisonOperators::Ge))),
+        Ok((t, "<")) => Ok((t, CompOp(ComparisonOperators::Lt))),
+        Ok((t, ">")) => Ok((t, CompOp(ComparisonOperators::Gt))),
+        Ok((_, &_)) => todo!(), //given a non valid operator
         Err(e) => Err(e)
     }
+
 }
 
 fn parse_query_helper(s: &str) -> IResult<&str,&str> {
     tag("get")(s)
 }
 
+
 fn to_sql(s: &str) -> &str {
-    s
+    todo!();
 }
 
 fn parse_and_convert(s: &str) -> &str {
@@ -224,9 +252,13 @@ mod tests {
             Language::Tri(Twwv("un", "deux", "A")));
     }
     #[test]
-    fn test() {
+    fn test_operator() {
         assert_eq!(
-            parse_word_space(" hey").unwrap().1,
-            Language::Word("hey"));
+            parse_operator(" ==").unwrap().1,
+            CompOp(ComparisonOperators::Eq));
+        assert_eq!(
+            parse_operator(" >").unwrap().1,
+            CompOp(ComparisonOperators::Gt));
+        //TODO check error
     }
 }
