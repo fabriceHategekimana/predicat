@@ -1,11 +1,13 @@
 #![allow(dead_code, unused_variables, unused_imports)]
-
 use nom::{
-    bytes::complete::tag,
-    character::complete::{char, alphanumeric1, space1},
-    sequence::{preceded, tuple},
+    bytes::complete::{tag, is_not},
+    character::complete::{char, alphanumeric1, space1, digit1},
+    sequence::{preceded, tuple, delimited},
     branch::alt,
-    Needed,
+    combinator::recognize,
+    multi::many1,
+    error::{Error,
+            ErrorKind},
     IResult
 };
 
@@ -13,10 +15,9 @@ use nom::{
 use crate::parser::Language::Word;
 use crate::parser::Language::Var;
 use crate::parser::Language::Tri;
-use crate::parser::Language::CompOp;
+use crate::parser::Language::Comp;
 
 use crate::parser::Triplet::*;
-use crate::parser::ComparisonOperators::*;
 
 #[derive(PartialEq, Debug)]
 enum LanguageType<'a> {
@@ -26,17 +27,17 @@ enum LanguageType<'a> {
 }
 
 #[derive(PartialEq, Debug)]
-enum Language<'a> {
+pub enum Language<'a> {
     Var(&'a str),
     Get,
     Connector,
     Word(&'a str),
     Tri(Triplet<'a>),
-    CompOp(ComparisonOperators)
+    Comp(&'a str)
 }
 
 #[derive(PartialEq, Debug)]
-enum Triplet<'a> {
+pub enum Triplet<'a> {
     Twww(&'a str, &'a str, &'a str),
     Tvww(&'a str, &'a str, &'a str),
     Twvw(&'a str, &'a str, &'a str),
@@ -45,16 +46,6 @@ enum Triplet<'a> {
     Tvwv(&'a str, &'a str, &'a str),
     Twvv(&'a str, &'a str, &'a str),
     Tvvv(&'a str, &'a str, &'a str)
-}
-
-#[derive(PartialEq, Debug)]
-enum ComparisonOperators {
-    Eq,
-    Ne,
-    Le,
-    Ge,
-    Lt,
-    Gt
 }
 
 fn parse_variable(s: &str) -> IResult<&str,Language> {
@@ -68,6 +59,13 @@ fn parse_variable(s: &str) -> IResult<&str,Language> {
     }
 }
 
+fn recognize_variable(s: &str) -> IResult<&str,&str> {
+    preceded(
+        space1,
+        recognize(preceded(char('$'), alphanumeric1)),
+        )(s)
+}
+
 fn parse_get(s: &str) -> IResult<&str,Language> {
     let res = tag("get")(s);
     match res {
@@ -77,10 +75,10 @@ fn parse_get(s: &str) -> IResult<&str,Language> {
 }
 
 fn parse_connector(s: &str) -> IResult<&str, Language> {
-    let res =alt((tag("such_as"),
-        tag("who_is"),
-        tag("who_are"),
-        tag("who_has")))(s);
+    let res =alt((tag(" such_as"),
+        tag(" who_is"),
+        tag(" who_are"),
+        tag(" who_has")))(s);
     match res {
         Ok((t, s)) => Ok((t, Language::Connector)),
         Err(e) => Err(e)
@@ -98,7 +96,13 @@ fn parse_word(s: &str) -> IResult<&str,Language> {
 fn parse_triplet(s: &str) -> IResult<&str,Language> {
     let res = alt((
             tuple((parse_word, parse_word, parse_word)),
-            tuple((parse_word, parse_word, parse_variable))
+            tuple((parse_variable, parse_word, parse_word)),
+            tuple((parse_word, parse_variable, parse_word)),
+            tuple((parse_word, parse_word, parse_variable)),
+            tuple((parse_variable, parse_variable, parse_word)),
+            tuple((parse_variable, parse_word, parse_variable)),
+            tuple((parse_word, parse_variable, parse_variable)),
+            tuple((parse_variable, parse_variable, parse_variable))
             ))(s);
     match res {
         Ok((t, (Word(s1),Word(s2),Word(s3)))) => Ok((t, Tri(Twww(s1,s2,s3)))),
@@ -114,26 +118,52 @@ fn parse_triplet(s: &str) -> IResult<&str,Language> {
     }
 }
 
-fn parse_operator(s: &str) -> IResult<&str,Language> {
-    let res = preceded(space1, alt((
+fn parse_operator(s: &str) -> IResult<&str,&str> {
+    preceded(space1, alt((
         tag("=="),
         tag("!="),
         tag("<="),
         tag(">="),
         tag("<"),
         tag(">")
-        )))(s);
+        )))(s)
+}
+
+fn parse_comparison(s: &str) -> IResult<&str,Language> {
+    let res = recognize(tuple((
+                parse_valvar,
+                parse_operator,
+                parse_valvar
+                )))(s);
     match res {
-        Ok((t, "==")) => Ok((t, CompOp(ComparisonOperators::Eq))),
-        Ok((t, "!=")) => Ok((t, CompOp(ComparisonOperators::Ne))),
-        Ok((t, "<=")) => Ok((t, CompOp(ComparisonOperators::Le))),
-        Ok((t, ">=")) => Ok((t, CompOp(ComparisonOperators::Ge))),
-        Ok((t, "<")) => Ok((t, CompOp(ComparisonOperators::Lt))),
-        Ok((t, ">")) => Ok((t, CompOp(ComparisonOperators::Gt))),
-        Ok((_, &_)) => todo!(), //given a non valid operator
+        Ok((t, s)) => Ok((t, Language::Comp(s))),
         Err(e) => Err(e)
     }
+}
 
+fn parse_number(s: &str) -> IResult<&str,&str> {
+   preceded(space1,
+      alt((
+          recognize(tuple((char('-'),digit1,char('.'),digit1))),
+          recognize(tuple((digit1,char('.'),digit1))),
+          recognize(tuple((char('-'), digit1))),
+          digit1)
+       ))(s)
+}
+
+fn parse_string(s: &str) -> IResult<&str,&str> {
+   recognize(delimited(
+       char('\''),
+       is_not("\'"),
+       char('\'')))(s)
+}
+
+fn parse_value(s: &str) -> IResult<&str,&str> {
+    alt((parse_string, parse_number))(s)
+}
+
+fn parse_valvar(s: &str) -> IResult<&str,&str> {
+    alt((recognize_variable, parse_value))(s)
 }
 
 fn parse_query_helper(s: &str) -> IResult<&str,&str> {
@@ -159,21 +189,16 @@ fn parse_query(query: LanguageType) -> LanguageType {
     }
 }
 
-fn extract(l: Language) -> Option<&str> {
-    match l {
-        Language::Var(s) => Some(s),
-        Language::Word(s) => Some(s),
-        _ => None
+pub fn parse_query2(s: &str) -> IResult<&str,(Vec<Language>,Vec<Language>,Vec<Language>)> {
+    let res = tuple((parse_get,
+          many1(parse_variable),
+          parse_connector,
+          many1(parse_triplet),
+          many1(parse_comparison)))(s);
+    match res {
+        Ok((r, (g,var,c,tri,comp))) => Ok((r, (var, tri, comp))),
+        Err(e) => Err(e)
     }
-}
-
-fn to_triplet<'a>(t: (Language<'a>, Language<'a>, Language<'a>)) -> Language<'a> {
-    //Language::Tri(
-        //extract(t.0).unwrap(),
-        //extract(t.1).unwrap(),
-        //extract(t.2).unwrap()
-        //)
-    todo!();
 }
 
 #[cfg(test)]
@@ -186,9 +211,9 @@ mod tests {
         assert_eq!(
             parse_get("select"),
             Err(nom::Err::Error(
-                    nom::error::Error {
+                    Error {
                         input: "select",
-                        code: nom::error::ErrorKind::Tag})));
+                        code: ErrorKind::Tag})));
     }
 
     #[test]
@@ -205,26 +230,26 @@ mod tests {
         assert_eq!(
             parse_variable(" hey"),
             Err(nom::Err::Error(
-                nom::error::Error {
+                Error {
                     input: "hey",
-                    code: nom::error::ErrorKind::Char
+                    code: ErrorKind::Char
                 }
             )));
     } 
     #[test]
     fn test_connector() {
         assert_eq!(
-            parse_connector("who_has").unwrap().1,
+            parse_connector(" who_has").unwrap().1,
             Language::Connector);
         assert_eq!(
-            parse_connector("such_as").unwrap().1,
+            parse_connector(" such_as").unwrap().1,
             Language::Connector);
         assert_eq!(
-            parse_connector("hey"),
+            parse_connector(" hey"),
             Err(nom::Err::Error(
-                nom::error::Error {
-                    input: "hey",
-                    code: nom::error::ErrorKind::Tag
+                Error {
+                    input: " hey",
+                    code: ErrorKind::Tag
                 }
             )));
     }
@@ -236,9 +261,9 @@ mod tests {
         assert_eq!(
             parse_word(" $A"),
             Err(nom::Err::Error(
-                nom::error::Error {
+                Error {
                     input: "$A",
-                    code: nom::error::ErrorKind::AlphaNumeric
+                    code: ErrorKind::AlphaNumeric
                 }
             )));
     }
@@ -250,15 +275,79 @@ mod tests {
         assert_eq!(
             parse_triplet(" un deux $A").unwrap().1,
             Language::Tri(Twwv("un", "deux", "A")));
+        assert_eq!(
+            parse_triplet(" $A deux trois").unwrap().1,
+            Language::Tri(Tvww("A", "deux", "trois")));
     }
     #[test]
     fn test_operator() {
         assert_eq!(
             parse_operator(" ==").unwrap().1,
-            CompOp(ComparisonOperators::Eq));
+            "==");
         assert_eq!(
             parse_operator(" >").unwrap().1,
-            CompOp(ComparisonOperators::Gt));
-        //TODO check error
+            ">");
+        assert_eq!(
+            parse_operator(" a"),
+            Err(nom::Err::Error(
+                Error {
+                    input: "a",
+                    code: ErrorKind::Tag
+                }
+            )));
+    }
+
+    #[test]
+    fn test_comparison() {
+        assert_eq!(
+            parse_comparison(" 4 < 5").unwrap().1,
+            Language::Comp(" 4 < 5"));
+        assert_eq!(
+            parse_comparison(" $A > 5").unwrap().1,
+            Language::Comp(" $A > 5"));
+        assert_eq!(
+            parse_comparison(" F"),
+            Err(
+                nom::Err::Error(
+                    Error { input: "F", code: ErrorKind::Digit })));
+    }
+
+
+    #[test]
+    fn test_string() {
+        assert_eq!(
+            parse_string("'un deux trois'").unwrap().1,
+            "'un deux trois'"
+            );
+    }
+
+    #[test]
+    fn test_number() {
+        assert_eq!(
+            parse_number(" 57").unwrap().1,
+            "57");
+        assert_eq!(
+            parse_number(" 2.57").unwrap().1,
+            "2.57");
+        assert_eq!(
+            parse_number(" -57").unwrap().1,
+            "-57");
+        assert_eq!(
+            parse_number(" -57.34").unwrap().1,
+            "-57.34");
+    }
+
+    #[test]
+    fn test_valvar() {
+        assert_eq!(
+            parse_valvar(" $A").unwrap().1,
+            "$A");
+    }
+    #[test]
+    fn test_parse_query2() {
+        //TODO modify to let the "and" keyword
+        assert_eq!(parse_query2("get $A such_as $A ami Bob $A == 7").unwrap().1,
+                   (vec![Var("A")], vec![Tri(Tvww("A","ami","Bob"))], vec![Comp(" $A == 7")])
+                   );
     }
 }
