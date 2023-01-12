@@ -2,7 +2,7 @@
 use nom::{
     bytes::complete::{tag, is_not},
     character::complete::{char, alphanumeric1, space1, digit1},
-    sequence::{preceded, tuple, delimited},
+    sequence::{preceded, tuple, delimited, terminated},
     branch::alt,
     combinator::recognize,
     multi::many1,
@@ -118,6 +118,12 @@ fn parse_triplet(s: &str) -> IResult<&str,Language> {
     }
 }
 
+fn parse_triplet_and(s: &str) -> IResult<&str,Language> {
+    alt((
+        terminated(parse_triplet, tag(" and")),
+        parse_triplet))(s)
+}
+
 fn parse_operator(s: &str) -> IResult<&str,&str> {
     preceded(space1, alt((
         tag("=="),
@@ -139,6 +145,12 @@ fn parse_comparison(s: &str) -> IResult<&str,Language> {
         Ok((t, s)) => Ok((t, Language::Comp(s))),
         Err(e) => Err(e)
     }
+}
+
+fn parse_comparison_and(s: &str) -> IResult<&str,Language> {
+    alt((
+        terminated(parse_comparison, tag(" and")),
+        parse_comparison))(s)
 }
 
 fn parse_number(s: &str) -> IResult<&str,&str> {
@@ -193,8 +205,8 @@ pub fn parse_query2(s: &str) -> IResult<&str,(Vec<Language>,Vec<Language>,Vec<La
     let res = tuple((parse_get,
           many1(parse_variable),
           parse_connector,
-          many1(parse_triplet),
-          many1(parse_comparison)))(s);
+          many1(parse_triplet_and),
+          many1(parse_comparison_and)))(s);
     match res {
         Ok((r, (g,var,c,tri,comp))) => Ok((r, (var, tri, comp))),
         Err(e) => Err(e)
@@ -343,11 +355,33 @@ mod tests {
             parse_valvar(" $A").unwrap().1,
             "$A");
     }
+
     #[test]
     fn test_parse_query2() {
         //TODO modify to let the "and" keyword
         assert_eq!(parse_query2("get $A such_as $A ami Bob $A == 7").unwrap().1,
                    (vec![Var("A")], vec![Tri(Tvww("A","ami","Bob"))], vec![Comp(" $A == 7")])
                    );
+        assert_eq!(parse_query2("get $A $B such_as $A ami $B $A == 7").unwrap().1,
+                   (vec![Var("A"), Var("B")], vec![Tri(Tvwv("A","ami","B"))], vec![Comp(" $A == 7")])
+                   );
+        assert_eq!(parse_query2("get $A $B such_as $A ami $B and $A == 7 and $B < 9").unwrap().1,
+                   (vec![Var("A"), Var("B")], vec![Tri(Tvwv("A","ami","B"))], vec![Comp(" $A == 7"), Comp(" $B < 9")])
+                   );
+    }
+
+    #[test]
+    fn test_triplet_and() {
+        assert_eq!(
+            parse_triplet_and(" B ami C and A ami C").unwrap().1,
+            Tri(Twww("B","ami","C"))
+        );
+    }
+
+    #[test]
+    fn test_comparison_and() {
+        assert_eq!(
+            parse_comparison_and(" 7 == 8 and 6 < 9").unwrap().1,
+            Comp(" 7 == 8"));
     }
 }
