@@ -178,29 +178,6 @@ fn parse_valvar(s: &str) -> IResult<&str,&str> {
     alt((recognize_variable, parse_value))(s)
 }
 
-fn parse_query_helper(s: &str) -> IResult<&str,&str> {
-    tag("get")(s)
-}
-
-
-fn to_sql(s: &str) -> &str {
-    todo!();
-}
-
-fn parse_and_convert(s: &str) -> &str {
-    let res = parse_query_helper(s);
-    println!("res: {:?}", res);
-    to_sql(res.unwrap().1)
-}
-
-fn parse_query(query: LanguageType) -> LanguageType {
-    // take a soft query and return an sql query
-    match query {
-        LanguageType::Soft(q) => LanguageType::SQL(parse_and_convert(q)),
-        _ => LanguageType::SQL("sql")
-    }
-}
-
 pub fn parse_query2(s: &str) -> IResult<&str,(Vec<Language>,Vec<Language>,Vec<Language>)> {
     let res = tuple((parse_get,
           many1(parse_variable),
@@ -210,6 +187,83 @@ pub fn parse_query2(s: &str) -> IResult<&str,(Vec<Language>,Vec<Language>,Vec<La
     match res {
         Ok((r, (g,var,c,tri,comp))) => Ok((r, (var, tri, comp))),
         Err(e) => Err(e)
+    }
+}
+
+fn format_variables(vars: &[Language]) -> String {
+    let extracted_vars = vars.iter()
+        .filter_map(|x| {
+            match x {
+                Var(v) => Some(v),
+                _ => None
+            }
+        });
+    let string_vars = extracted_vars
+        .fold("".to_string(), |acc, x| acc +","+x)
+        .chars()
+        .skip(1)
+        .collect::<String>();
+    format!("Select {} from (",string_vars)
+}
+
+fn triplet_to_sql(tri: &Triplet) -> String {
+    match tri {
+        Twww(a,b,c) => 
+            format!("Select subject,link,goal from facts where subject='{}' and link='{}' and goal='{}'",a,b,c),
+        Tvww(a,b,c) => 
+            format!("Select subject as {} from facts where link='{}' and goal='{}'",a,b,c),
+        Twvw(a,b,c) => 
+            format!("Select link as {} from facts where subject='{}' and goal='{}'",b,a,c),
+        Twwv(a,b,c) => 
+            format!("Select goal as {} from facts where subject='{}' and link='{}'",c,a,b),
+        Tvvw(a,b,c) => 
+            format!("Select subject as {},link as {} from facts where goal='{}'",a,b,c),
+        Tvwv(a,b,c) => 
+            format!("Select subject as {},goal as {} from facts where link='{}'",a,c,b),
+        Twvv(a,b,c) => 
+            format!("Select link as {},goal as {} from facts where subject='{}'",b,c,a),
+        Tvvv(a,b,c) => 
+            format!("Select subject as {},link as {},goal as {} from facts",a,b,c),
+    }
+}
+
+fn format_triplets(tri: &[Language]) -> String {
+    let sql_queries = tri.iter()
+        .filter_map(|x| {
+            match x {
+                Tri(t) => Some(triplet_to_sql(t)),
+                _ => None
+            }
+        });
+    sql_queries
+        .reduce(|acc, x| format!("{} natural join {}", acc, x)).unwrap()
+}
+
+fn format_comparisons(comp: &[Language]) -> String {
+    let comparisons = comp.iter()
+        .filter_map(|x| {
+            match x {
+                Comp(c) => Some(c.replace("$","").replace("==","=")),
+                _ => None
+            }
+        });
+    let final_comparisons = comparisons
+        .reduce(|acc, x| format!("{} and {}", acc, x)).unwrap();
+    format!(") where {};", final_comparisons)
+}
+
+fn to_sql(res: (&[Language], &[Language], &[Language])) -> String {
+    let head = format_variables(&res.0);
+    let columns = format_triplets(&res.1);
+    let comparisons = format_comparisons(&res.2);
+    format!("{}{}{}", head, columns, comparisons )
+}
+
+pub fn parse_query(s: &str) -> String {
+    let res = parse_query2(s);
+    match parse_query2(s){
+        Ok((t, (v1,v2,v3))) => to_sql((&v1,&v2,&v3)),
+        Err(e) => format!("{}", e)
     }
 }
 
@@ -291,6 +345,7 @@ mod tests {
             parse_triplet(" $A deux trois").unwrap().1,
             Language::Tri(Tvww("A", "deux", "trois")));
     }
+
     #[test]
     fn test_operator() {
         assert_eq!(
@@ -323,7 +378,6 @@ mod tests {
                 nom::Err::Error(
                     Error { input: "F", code: ErrorKind::Digit })));
     }
-
 
     #[test]
     fn test_string() {
@@ -383,5 +437,51 @@ mod tests {
         assert_eq!(
             parse_comparison_and(" 7 == 8 and 6 < 9").unwrap().1,
             Comp(" 7 == 8"));
+    }
+    #[test]
+    fn test_format_variables() {
+        assert_eq!(
+            format_variables(&vec![Var("X"),Var("Y")]),
+            "Select X,Y from ("
+        );
+        assert_eq!(
+            format_variables(&vec![Var("X")]),
+            "Select X from ("
+        );
+    }
+    #[test]
+    fn test_from_triplet_to_sql() {
+        assert_eq!(
+            triplet_to_sql(&Tvvv("A","B","C")),
+            "Select subject as A,link as B,goal as C from facts".to_string()
+        );
+        assert_eq!(
+            triplet_to_sql(&Tvwv("A","B","C")),
+            "Select subject as A,goal as C from facts where link='B'"
+        );
+    }
+
+    #[test]
+    fn test_format_triplets() {
+        assert_eq!(
+            format_triplets(&vec![Tri(Tvvv("A","B","C"))]),
+            "Select subject as A,link as B,goal as C from facts".to_string()
+        );
+        assert_eq!(
+            format_triplets(&vec![Tri(Tvvv("A","B","C")),Tri(Twvv("D","E","F"))]),
+            "Select subject as A,link as B,goal as C from facts natural join Select link as E,goal as F from facts where subject='D'".to_string()
+        );
+    }
+
+    #[test]
+    fn test_format_comparisons() {
+        assert_eq!(
+            format_comparisons(&vec![Comp(" $A == 8")]),
+            ") where  A = 8;".to_string()
+        );
+        assert_eq!(
+            format_comparisons(&vec![Comp(" $A == 8"), Comp(" 6 < 3")]),
+            ") where  A = 8 and  6 < 3;".to_string()
+        );
     }
 }
