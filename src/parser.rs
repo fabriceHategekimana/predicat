@@ -33,7 +33,8 @@ pub enum Language<'a> {
     Connector,
     Word(&'a str),
     Tri(Triplet<'a>),
-    Comp(&'a str)
+    Comp(&'a str),
+    Empty
 }
 
 #[derive(PartialEq, Debug)]
@@ -164,10 +165,10 @@ fn parse_number(s: &str) -> IResult<&str,&str> {
 }
 
 fn parse_string(s: &str) -> IResult<&str,&str> {
-   recognize(delimited(
+   recognize(preceded(space1,delimited(
        char('\''),
        is_not("\'"),
-       char('\'')))(s)
+       char('\''))))(s)
 }
 
 fn parse_value(s: &str) -> IResult<&str,&str> {
@@ -178,7 +179,7 @@ fn parse_valvar(s: &str) -> IResult<&str,&str> {
     alt((recognize_variable, parse_value))(s)
 }
 
-pub fn parse_query2(s: &str) -> IResult<&str,(Vec<Language>,Vec<Language>,Vec<Language>)> {
+fn parse_query2_var1(s: &str) -> IResult<&str,(Vec<Language>, Vec<Language>,Vec<Language>)> {
     let res = tuple((parse_get,
           many1(parse_variable),
           parse_connector,
@@ -190,20 +191,54 @@ pub fn parse_query2(s: &str) -> IResult<&str,(Vec<Language>,Vec<Language>,Vec<La
     }
 }
 
+fn parse_query2_var2(s: &str) -> IResult<&str,(Vec<Language>, Vec<Language>,Vec<Language>)> {
+    let res = tuple((parse_get,
+          many1(parse_variable),
+          parse_connector,
+          many1(parse_triplet_and)))(s);
+    match res {
+        Ok((r, (g,var,c,tri))) => Ok((r, (var, tri, vec![Language::Empty]))),
+        Err(e) => Err(e)
+    }
+}
+
+fn parse_query2_var3(s: &str) -> IResult<&str,(Vec<Language>, Vec<Language>,Vec<Language>)> {
+    let res = tuple((parse_get,
+          many1(parse_variable),
+          parse_connector,
+          many1(parse_comparison_and)))(s);
+    match res {
+        Ok((r, (g,var,c,comp))) => Ok((r, (var, vec![Language::Empty], comp))),
+        Err(e) => Err(e)
+    }
+}
+pub fn parse_query2(s: &str) -> IResult<&str,(Vec<Language>,Vec<Language>,Vec<Language>)> {
+    alt((
+        parse_query2_var1,
+        parse_query2_var2,
+        parse_query2_var3
+        ))(s)
+}
+
 fn format_variables(vars: &[Language]) -> String {
-    let extracted_vars = vars.iter()
-        .filter_map(|x| {
-            match x {
-                Var(v) => Some(v),
-                _ => None
-            }
-        });
-    let string_vars = extracted_vars
-        .fold("".to_string(), |acc, x| acc +","+x)
-        .chars()
-        .skip(1)
-        .collect::<String>();
-    format!("Select {} from (",string_vars)
+    if vars == [Language::Empty]{
+        String::from("Select * from ")
+    }
+    else {
+        let extracted_vars = vars.iter()
+            .filter_map(|x| {
+                match x {
+                    Var(v) => Some(v),
+                    _ => None
+                }
+            });
+        let string_vars = extracted_vars
+            .fold("".to_string(), |acc, x| acc +","+x)
+            .chars()
+            .skip(1)
+            .collect::<String>();
+        format!("Select {} from ",string_vars)
+    }
 }
 
 fn triplet_to_sql(tri: &Triplet) -> String {
@@ -228,28 +263,39 @@ fn triplet_to_sql(tri: &Triplet) -> String {
 }
 
 fn format_triplets(tri: &[Language]) -> String {
-    let sql_queries = tri.iter()
-        .filter_map(|x| {
-            match x {
-                Tri(t) => Some(triplet_to_sql(t)),
-                _ => None
-            }
-        });
-    sql_queries
-        .reduce(|acc, x| format!("{} natural join {}", acc, x)).unwrap()
+    if tri == [Language::Empty]{
+        String::from("facts")
+    }
+    else {
+        let sql_queries = tri.iter()
+            .filter_map(|x| {
+                match x {
+                    Tri(t) => Some(triplet_to_sql(t)),
+                    _ => None
+                }
+            });
+        let queries = sql_queries
+            .reduce(|acc, x| format!("{} natural join {}", acc, x)).unwrap();
+        format!("({})", queries)
+    }
 }
 
 fn format_comparisons(comp: &[Language]) -> String {
-    let comparisons = comp.iter()
-        .filter_map(|x| {
-            match x {
-                Comp(c) => Some(c.replace("$","").replace("==","=")),
-                _ => None
-            }
-        });
-    let final_comparisons = comparisons
-        .reduce(|acc, x| format!("{} and {}", acc, x)).unwrap();
-    format!(") where {};", final_comparisons)
+    if  comp == [Language::Empty] {
+        String::from(";")
+    }
+    else {
+        let comparisons = comp.iter()
+            .filter_map(|x| {
+                match x {
+                    Comp(c) => Some(c.replace("$","").replace("==","=")),
+                    _ => None
+                }
+            });
+        let final_comparisons = comparisons
+            .reduce(|acc, x| format!("{} and {}", acc, x)).unwrap();
+        format!(" where {};", final_comparisons)
+    }
 }
 
 fn to_sql(res: (&[Language], &[Language], &[Language])) -> String {
@@ -261,7 +307,7 @@ fn to_sql(res: (&[Language], &[Language], &[Language])) -> String {
 
 pub fn parse_query(s: &str) -> String {
     let res = parse_query2(s);
-    match parse_query2(s){
+    match res {
         Ok((t, (v1,v2,v3))) => to_sql((&v1,&v2,&v3)),
         Err(e) => format!("{}", e)
     }
@@ -377,13 +423,23 @@ mod tests {
             Err(
                 nom::Err::Error(
                     Error { input: "F", code: ErrorKind::Digit })));
+        assert_eq!(
+            parse_comparison(" 4 == 5").unwrap().1,
+            Language::Comp(" 4 == 5"));
+        assert_eq!(
+            parse_comparison(" 4 == 'res'").unwrap().1,
+            Language::Comp(" 4 == 'res'"));
     }
 
     #[test]
     fn test_string() {
         assert_eq!(
-            parse_string("'un deux trois'").unwrap().1,
-            "'un deux trois'"
+            parse_string(" 'un deux trois'").unwrap().1,
+            " 'un deux trois'"
+            );
+        assert_eq!(
+            parse_string(" 'sdt'").unwrap().1,
+            " 'sdt'"
             );
     }
 
@@ -408,11 +464,16 @@ mod tests {
         assert_eq!(
             parse_valvar(" $A").unwrap().1,
             "$A");
+        assert_eq!(
+            parse_valvar(" 7").unwrap().1,
+            "7");
+        assert_eq!(
+            parse_valvar(" '7'").unwrap().1,
+            " '7'");
     }
 
     #[test]
     fn test_parse_query2() {
-        //TODO modify to let the "and" keyword
         assert_eq!(parse_query2("get $A such_as $A ami Bob $A == 7").unwrap().1,
                    (vec![Var("A")], vec![Tri(Tvww("A","ami","Bob"))], vec![Comp(" $A == 7")])
                    );
@@ -483,5 +544,22 @@ mod tests {
             format_comparisons(&vec![Comp(" $A == 8"), Comp(" 6 < 3")]),
             ") where  A = 8 and  6 < 3;".to_string()
         );
+    }
+
+    #[test]
+    fn test_value() {
+        assert_eq!(
+            parse_value(" -57.34").unwrap().1,
+            "-57.34");
+
+        assert_eq!(
+            parse_value(" '3'").unwrap().1,
+            " '3'"
+            );
+
+        assert_eq!(
+            parse_value(" 'sdt'").unwrap().1,
+            " 'sdt'"
+            );
     }
 }
