@@ -1,4 +1,12 @@
+#![allow(dead_code, unused_variables, unused_imports)]
 use sqlite::Connection;
+use polars::{
+    df,
+    frame::DataFrame,
+    series::Series,
+    prelude::NamedFrom
+};
+use std::collections::HashMap;
 
 //TODO: use it when the data test is no more needed
 static _CREATE_FACTS : &str = " CREATE TABLE facts(
@@ -51,16 +59,38 @@ static _INITIALYZE_CONTEXT : &str = "insert into context (name) values ('default
 
 fn get(connection: Connection, query: &str) {
     let query = query.replace("from facts", "from facts_default");
-    let _res = connection.iterate(query, |pairs| {
-        for &(_, value) in pairs.iter() {
-            println!("{}", value.unwrap());
+    let mut hm: HashMap<String, Vec<String>> = HashMap::new();
+    let _res = connection.iterate(query, |sqlite_couple| {
+        for couple in sqlite_couple.iter() {
+            match hm.get_mut(couple.0) {
+                None => hm.insert(couple.0.to_owned(), vec![couple.1.unwrap().to_owned()]),
+                Some(v) => {v.push(couple.1.unwrap().to_owned()); None}
+            };
         }
         true
     });
+    let df = to_dataframe(hm);
+    println!("df: {:?}", df);
 }
 
-fn _modifier(connection: &Connection, query: &str) {
+fn modifier(connection: &Connection, query: &str) {
     connection.execute(query).unwrap();
+}
+
+fn to_hashmap<'a>(sqlite_couple: &[(&'a str, &'a str)]) -> HashMap<&'a str, Vec<&'a str>> {
+    let mut hm = HashMap::new();
+    for couple in sqlite_couple.iter() {
+        match hm.get_mut(couple.0) {
+            None => hm.insert(couple.0, vec![couple.1]),
+            Some(v) => {v.push(couple.1); None}
+        };
+    }
+    hm
+}
+
+fn to_dataframe(hm: HashMap<String, Vec<String>>) -> DataFrame {
+    let vs = hm.iter().map(|(key, value)| Series::new(key, value)).collect();
+    DataFrame::new(vs).unwrap()
 }
 
 pub fn initialisation(query: &str) {
@@ -68,3 +98,4 @@ pub fn initialisation(query: &str) {
     //modifier(&connection, CREATE_FACTS);
     get(connection, query);
 }
+

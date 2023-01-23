@@ -233,7 +233,7 @@ fn format_variables(vars: &[Language]) -> String {
                 }
             });
         let string_vars = extracted_vars
-            .fold("".to_string(), |acc, x| acc +","+x)
+            .fold("".to_string(), |acc, &x| acc +","+x)
             .chars()
             .skip(1)
             .collect::<String>();
