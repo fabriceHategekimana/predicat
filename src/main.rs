@@ -6,11 +6,6 @@ use std::env;
 // ajout d'un module parseur
 
 use crate::parser::parse_query;
-use crate::knowledge::initialisation;
-use polars::{
-    frame::DataFrame,
-    series::Series
-};
 
 fn get_args_or(query: &str) -> String {
     let args: String = env::args().skip(1)
@@ -22,11 +17,6 @@ fn get_args_or(query: &str) -> String {
         args
     }
 }
-
-//fn format_query_df(df: DataFrame, query: &[Language]) -> &[(&str, Value)] {
-    //let elements = format_query_df(df, query);
-    //todo!();
-//}
 
 fn main() {
     let query = get_args_or("get $A $B such_as $A type $B");
