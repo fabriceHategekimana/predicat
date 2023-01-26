@@ -1,5 +1,10 @@
 #![allow(dead_code, unused_variables, unused_imports)]
-use sqlite::Connection;
+
+use sqlite::{
+        Connection,
+        Value,
+        Statement,
+};
 use polars::{
     df,
     frame::DataFrame,
@@ -7,6 +12,10 @@ use polars::{
     prelude::NamedFrom
 };
 use std::collections::HashMap;
+
+static SUBJECT: &str = ":subject";
+static LINK: &str = ":link";
+static GOAL: &str = ":goal";
 
 //TODO: use it when the data test is no more needed
 static _CREATE_FACTS : &str = " CREATE TABLE facts(
@@ -57,7 +66,7 @@ CREATE UNIQUE INDEX historical_event on historical (event);
 static _INITIALYZE_STAGE : &str = "insert into stage (stage) values (0)";
 static _INITIALYZE_CONTEXT : &str = "insert into context (name) values ('default')";
 
-fn get(connection: Connection, query: &str) {
+pub fn get(connection: Connection, query: &str) {
     let query = query.replace("from facts", "from facts_default");
     let mut hm: HashMap<String, Vec<String>> = HashMap::new();
     let _res = connection.iterate(query, |sqlite_couple| {
@@ -77,6 +86,15 @@ fn modifier(connection: &Connection, query: &str) {
     connection.execute(query).unwrap();
 }
 
+
+fn add<'l>(connection: &Connection, elements: &[(&str, Value)]) -> Result<(), sqlite::Error> {
+    let sql_query = format!(
+        "INSERT INTO facts (subject, link, goal) VALUES ({subject}, {link}, {goal});",
+        subject=SUBJECT, link=LINK, goal=GOAL);
+    let mut statement = connection.prepare(sql_query)?;
+    statement.bind::<&[(_, Value)]>(elements)
+}
+
 fn to_hashmap<'a>(sqlite_couple: &[(&'a str, &'a str)]) -> HashMap<&'a str, Vec<&'a str>> {
     let mut hm = HashMap::new();
     for couple in sqlite_couple.iter() {
@@ -93,9 +111,6 @@ fn to_dataframe(hm: HashMap<String, Vec<String>>) -> DataFrame {
     DataFrame::new(vs).unwrap()
 }
 
-pub fn initialisation(query: &str) {
-    let connection = sqlite::open("data.db").unwrap();
-    //modifier(&connection, CREATE_FACTS);
-    get(connection, query);
+pub fn initialisation() {
+    sqlite::open("data.db").unwrap();
 }
-

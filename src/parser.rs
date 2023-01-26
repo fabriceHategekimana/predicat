@@ -313,6 +313,24 @@ pub fn parse_query(s: &str) -> String {
     }
 }
 
+fn parse_add(s: &str) -> String {
+    let res = many1(parse_triplet_and)(s);
+    match res {
+        Ok((t, v)) => "a".to_string(),
+        _ => "b".to_string()
+    }
+}
+
+fn parse_command(s: &str) -> Option<String> {
+   let first =  s.split(" ").next()?;
+   let res = match first {
+       "get" => parse_query(s),
+       "add" => parse_add(s),
+       t => format!("{} is not recognized", t)
+   };
+   Some(res)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
