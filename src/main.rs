@@ -5,11 +5,11 @@ use std::env;
 
 // ajout d'un module parseur
 
+use polars::{
+    frame::DataFrame
+};
+
 use crate::parser::parse_command;
-//use polars::{
-//    frame::DataFrame,
-//    series::Series
-//};
 
 fn get_args_or(query: &str) -> String {
     let args: String = env::args().skip(1)
@@ -27,14 +27,25 @@ fn get_args_or(query: &str) -> String {
     //todo!();
 //}
 
+fn execute(sql: &[&String]) -> DataFrame {
+   todo!(); 
+}
+
+fn develop(table: DataFrame, res: &[String]) -> Vec<Vec<&String>> {
+   res.iter().map(|x| vec![x]).collect::<Vec<Vec<&String>>>()
+}
+
+fn parse_and_execute(table: DataFrame, command: &str) -> DataFrame {
+    let res = parse_command(command);
+    let res = develop(table, &res).into_iter().flatten().collect::<Vec<&String>>();
+    let _res = execute(&res);
+    DataFrame::default()
+}
+
 fn main() {
-    let query = get_args_or("get $A $B such_as $A type $B");
-    let res = parse_command(&query);
+    let command = get_args_or("get $A $B such_as $A type $B");
+    let df = DataFrame::default();
+    let res = parse_and_execute(df, &command);
     println!("res: {:?}", res);
-    //let connection = initialisation();
-    //let df = DataFrame::new::<Series>(vec![]).unwrap();
-    //if &res[0..6] == "SELECT".to_string() {
-        //todo!();
-    //}
 }
 
