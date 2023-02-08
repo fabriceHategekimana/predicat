@@ -5,12 +5,11 @@ use std::env;
 
 // ajout d'un module parseur
 
-use crate::parser::parse_query;
-use crate::knowledge::initialisation;
-use polars::{
-    frame::DataFrame,
-    series::Series
-};
+use crate::parser::parse_command;
+//use polars::{
+//    frame::DataFrame,
+//    series::Series
+//};
 
 fn get_args_or(query: &str) -> String {
     let args: String = env::args().skip(1)
@@ -30,12 +29,12 @@ fn get_args_or(query: &str) -> String {
 
 fn main() {
     let query = get_args_or("get $A $B such_as $A type $B");
-    let res = parse_query(&query);
+    let res = parse_command(&query);
     println!("res: {:?}", res);
     //let connection = initialisation();
     //let df = DataFrame::new::<Series>(vec![]).unwrap();
-    if &res[0..6] == "Select" {
-        todo!();
-    }
+    //if &res[0..6] == "SELECT".to_string() {
+        //todo!();
+    //}
 }
 

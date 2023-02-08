@@ -49,6 +49,21 @@ pub enum Triplet<'a> {
     Tvvv(&'a str, &'a str, &'a str)
 }
 
+impl <'a>Triplet<'a> {
+    fn to_tuple(&self) -> (&'a str, &'a str, &'a str) {
+        match *self {
+            Twww(a,b,c) => (a,b,c),
+            Tvww(a,b,c) => (a,b,c),
+            Twvw(a,b,c) => (a,b,c),
+            Twwv(a,b,c) => (a,b,c),
+            Tvvw(a,b,c) => (a,b,c),
+            Tvwv(a,b,c) => (a,b,c),
+            Twvv(a,b,c) => (a,b,c),
+            Tvvv(a,b,c) => (a,b,c)
+        }
+    }
+}
+
 fn parse_variable(s: &str) -> IResult<&str,Language> {
     let res = preceded(
         space1,
@@ -179,7 +194,7 @@ fn parse_valvar(s: &str) -> IResult<&str,&str> {
     alt((recognize_variable, parse_value))(s)
 }
 
-fn parse_query2_var1(s: &str) -> IResult<&str,(Vec<Language>, Vec<Language>,Vec<Language>)> {
+fn parse_query_var1(s: &str) -> IResult<&str,(Vec<Language>, Vec<Language>,Vec<Language>)> {
     let res = tuple((parse_get,
           many1(parse_variable),
           parse_connector,
@@ -191,7 +206,7 @@ fn parse_query2_var1(s: &str) -> IResult<&str,(Vec<Language>, Vec<Language>,Vec<
     }
 }
 
-fn parse_query2_var2(s: &str) -> IResult<&str,(Vec<Language>, Vec<Language>,Vec<Language>)> {
+fn parse_query_var2(s: &str) -> IResult<&str,(Vec<Language>, Vec<Language>,Vec<Language>)> {
     let res = tuple((parse_get,
           many1(parse_variable),
           parse_connector,
@@ -202,7 +217,7 @@ fn parse_query2_var2(s: &str) -> IResult<&str,(Vec<Language>, Vec<Language>,Vec<
     }
 }
 
-fn parse_query2_var3(s: &str) -> IResult<&str,(Vec<Language>, Vec<Language>,Vec<Language>)> {
+fn parse_query_var3(s: &str) -> IResult<&str,(Vec<Language>, Vec<Language>,Vec<Language>)> {
     let res = tuple((parse_get,
           many1(parse_variable),
           parse_connector,
@@ -212,17 +227,23 @@ fn parse_query2_var3(s: &str) -> IResult<&str,(Vec<Language>, Vec<Language>,Vec<
         Err(e) => Err(e)
     }
 }
-pub fn parse_query2(s: &str) -> IResult<&str,(Vec<Language>,Vec<Language>,Vec<Language>)> {
-    alt((
-        parse_query2_var1,
-        parse_query2_var2,
-        parse_query2_var3
-        ))(s)
+
+//return a vector to correlate with the result of the modifiers
+pub fn parse_query(s: &str) -> IResult<&str,Vec<String>> {
+    let res = alt((
+        parse_query_var1,
+        parse_query_var2,
+        parse_query_var3
+        ))(s);
+    match res {
+        Ok((t, (v1,v2,v3))) => Ok((t, vec![to_sql((&v1,&v2,&v3))])),
+        Err(e) => Err(e)
+    }
 }
 
 fn format_variables(vars: &[Language]) -> String {
     if vars == [Language::Empty]{
-        String::from("Select * from ")
+        String::from("SELECT * FROM ")
     }
     else {
         let extracted_vars = vars.iter()
@@ -237,28 +258,28 @@ fn format_variables(vars: &[Language]) -> String {
             .chars()
             .skip(1)
             .collect::<String>();
-        format!("Select {} from ",string_vars)
+        format!("SELECT {} FROM ",string_vars)
     }
 }
 
 fn triplet_to_sql(tri: &Triplet) -> String {
     match tri {
         Twww(a,b,c) => 
-            format!("Select subject,link,goal from facts where subject='{}' and link='{}' and goal='{}'",a,b,c),
+            format!("SELECT subject,link,goal FROM facts WHERE subject='{}' AND link='{}' AND goal='{}'",a,b,c),
         Tvww(a,b,c) => 
-            format!("Select subject as {} from facts where link='{}' and goal='{}'",a,b,c),
+            format!("SELECT subject AS {} FROM facts WHERE link='{}' AND goal='{}'",a,b,c),
         Twvw(a,b,c) => 
-            format!("Select link as {} from facts where subject='{}' and goal='{}'",b,a,c),
+            format!("SELECT link AS {} FROM facts WHERE subject='{}' AND goal='{}'",b,a,c),
         Twwv(a,b,c) => 
-            format!("Select goal as {} from facts where subject='{}' and link='{}'",c,a,b),
+            format!("SELECT goal AS {} FROM facts WHERE subject='{}' AND link='{}'",c,a,b),
         Tvvw(a,b,c) => 
-            format!("Select subject as {},link as {} from facts where goal='{}'",a,b,c),
+            format!("SELECT subject AS {},link AS {} FROM facts WHERE goal='{}'",a,b,c),
         Tvwv(a,b,c) => 
-            format!("Select subject as {},goal as {} from facts where link='{}'",a,c,b),
+            format!("SELECT subject AS {},goal AS {} FROM facts WHERE link='{}'",a,c,b),
         Twvv(a,b,c) => 
-            format!("Select link as {},goal as {} from facts where subject='{}'",b,c,a),
+            format!("SELECT link AS {},goal AS {} FROM facts WHERE subject='{}'",b,c,a),
         Tvvv(a,b,c) => 
-            format!("Select subject as {},link as {},goal as {} from facts",a,b,c),
+            format!("SELECT subject AS {},link AS {},goal AS {} FROM facts",a,b,c),
     }
 }
 
@@ -293,23 +314,79 @@ fn format_comparisons(comp: &[Language]) -> String {
                 }
             });
         let final_comparisons = comparisons
-            .reduce(|acc, x| format!("{} and {}", acc, x)).unwrap();
-        format!(" where {};", final_comparisons)
+            .reduce(|acc, x| format!("{} AND{}", acc, x)).unwrap();
+        format!(" WHERE{};", final_comparisons)
     }
 }
 
 fn to_sql(res: (&[Language], &[Language], &[Language])) -> String {
     let head = format_variables(&res.0);
-    let columns = format_triplets(&res.1);
+    let columns = format_triplets(&res.1); // warning, put the result into a parenthese
     let comparisons = format_comparisons(&res.2);
     format!("{}{}{}", head, columns, comparisons )
 }
 
-pub fn parse_query(s: &str) -> String {
-    let res = parse_query2(s);
+fn triplet_to_insert(tri: &Triplet) -> String {
+    let tup = tri.to_tuple();
+    format!("INSERT INTO facts (subject,link,goal) VALUES ({},{},{})",
+            tup.0, tup.1, tup.2)
+}
+
+fn add_to_insert(l: &Language) -> String {
+    match l {
+        Language::Tri(tri) => triplet_to_insert(&tri),
+        _ => String::from("")
+    }
+}
+
+fn parse_add_modifier(s: &str) -> IResult<&str, Vec<String>> {
+    let res = preceded(tag("add"),
+        many1(parse_triplet_and)
+    )(s);
     match res {
-        Ok((t, (v1,v2,v3))) => to_sql((&v1,&v2,&v3)),
-        Err(e) => format!("{}", e)
+        Ok((s, v)) => Ok((s, v.iter().map(|x| add_to_insert(x)).collect::<Vec<String>>())),
+        Err(e) => Err(e)
+    }
+}
+
+fn triplet_to_delete(tri: &Triplet) -> String {
+    let tup = tri.to_tuple();
+    format!("DELETE FROM facts WHERE subject='{}',link='{}',goal='{}'",
+            tup.0, tup.1, tup.2)
+}
+
+fn delete_to_insert(l: &Language) -> String {
+    match l {
+        Language::Tri(tri) => triplet_to_delete(&tri),
+        _ => String::from("")
+    }
+}
+
+fn parse_delete_modifier(s: &str) -> IResult<&str,Vec<String>> {
+    let res = preceded(tag("delete"),
+        many1(parse_triplet_and)
+    )(s);
+    match res {
+        Ok((s, v)) => Ok((s, v.iter().map(|x| delete_to_insert(x)).collect::<Vec<String>>())),
+        Err(e) => Err(e)
+    }
+}
+
+fn parse_modifier(s: &str) -> IResult<&str,Vec<String>> {
+    alt((
+            parse_add_modifier,
+            parse_delete_modifier
+        ))(s)
+}
+
+//main
+pub fn parse_command(s: &str) -> Vec<String> {
+    let res = alt((
+            parse_query,
+            parse_modifier))(s);
+    match res {
+        Ok((s, t)) => t,
+        Err(e) => vec![String::from("Error")] //;format!("{}", Err(e))
     }
 }
 
@@ -321,16 +398,6 @@ fn parse_add(s: &str) -> String {
     }
 }
 
-fn parse_command(s: &str) -> Option<String> {
-   let first =  s.split(" ").next()?;
-   let res = match first {
-       "get" => parse_query(s),
-       "add" => parse_add(s),
-       t => format!("{} is not recognized", t)
-   };
-   Some(res)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -339,10 +406,10 @@ mod tests {
     fn test_get() {
         assert_eq!(parse_get("get").unwrap().1, Language::Get);
         assert_eq!(
-            parse_get("select"),
+            parse_get("SELECT"),
             Err(nom::Err::Error(
                     Error {
-                        input: "select",
+                        input: "SELECT",
                         code: ErrorKind::Tag})));
     }
 
@@ -491,22 +558,25 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_query2() {
-        assert_eq!(parse_query2("get $A such_as $A ami Bob $A == 7").unwrap().1,
-                   (vec![Var("A")], vec![Tri(Tvww("A","ami","Bob"))], vec![Comp(" $A == 7")])
+    fn test_parse_query() {
+        assert_eq!(parse_query("get $A such_as $A ami Bob $A == 7").unwrap().1,
+                   //(vec![Var("A")], vec![Tri(Tvww("A","ami","Bob"))], vec![Comp(" $A == 7")])
+                   vec!["SELECT A FROM (SELECT subject AS A FROM facts WHERE link='ami' AND goal='Bob') WHERE A = 7;"]
                    );
-        assert_eq!(parse_query2("get $A $B such_as $A ami $B $A == 7").unwrap().1,
-                   (vec![Var("A"), Var("B")], vec![Tri(Tvwv("A","ami","B"))], vec![Comp(" $A == 7")])
+        assert_eq!(parse_query("get $A $B such_as $A ami $B and $A == 7").unwrap().1,
+                   //(vec![Var("A"), Var("B")], vec![Tri(Tvwv("A","ami","B"))], vec![Comp(" $A == 7")])
+                   vec!["SELECT A,B FROM (SELECT subject AS A,goal AS B FROM facts WHERE link='ami') WHERE A = 7;"]
                    );
-        assert_eq!(parse_query2("get $A $B such_as $A ami $B and $A == 7 and $B < 9").unwrap().1,
-                   (vec![Var("A"), Var("B")], vec![Tri(Tvwv("A","ami","B"))], vec![Comp(" $A == 7"), Comp(" $B < 9")])
+        assert_eq!(parse_query("get $A $B such_as $A ami $B and $A == 7 and $B < 9").unwrap().1,
+                   //(vec![Var("A"), Var("B")], vec![Tri(Tvwv("A","ami","B"))], vec![Comp(" $A == 7"), Comp(" $B < 9")])
+                   vec!["SELECT A,B FROM (SELECT subject AS A,goal AS B FROM facts WHERE link='ami') WHERE A = 7 AND B < 9;"]
                    );
     }
 
     #[test]
     fn test_triplet_and() {
         assert_eq!(
-            parse_triplet_and(" B ami C and A ami C").unwrap().1,
+            parse_triplet_and(" B ami C AND A ami C").unwrap().1,
             Tri(Twww("B","ami","C"))
         );
     }
@@ -514,29 +584,29 @@ mod tests {
     #[test]
     fn test_comparison_and() {
         assert_eq!(
-            parse_comparison_and(" 7 == 8 and 6 < 9").unwrap().1,
+            parse_comparison_and(" 7 == 8 AND 6 < 9").unwrap().1,
             Comp(" 7 == 8"));
     }
     #[test]
     fn test_format_variables() {
         assert_eq!(
             format_variables(&vec![Var("X"),Var("Y")]),
-            "Select X,Y from ("
+            "SELECT X,Y FROM "
         );
         assert_eq!(
             format_variables(&vec![Var("X")]),
-            "Select X from ("
+            "SELECT X FROM "
         );
     }
     #[test]
     fn test_from_triplet_to_sql() {
         assert_eq!(
             triplet_to_sql(&Tvvv("A","B","C")),
-            "Select subject as A,link as B,goal as C from facts".to_string()
+            "SELECT subject AS A,link AS B,goal AS C FROM facts".to_string()
         );
         assert_eq!(
             triplet_to_sql(&Tvwv("A","B","C")),
-            "Select subject as A,goal as C from facts where link='B'"
+            "SELECT subject AS A,goal AS C FROM facts WHERE link='B'"
         );
     }
 
@@ -544,11 +614,11 @@ mod tests {
     fn test_format_triplets() {
         assert_eq!(
             format_triplets(&vec![Tri(Tvvv("A","B","C"))]),
-            "Select subject as A,link as B,goal as C from facts".to_string()
+            "(SELECT subject AS A,link AS B,goal AS C FROM facts)".to_string()
         );
         assert_eq!(
             format_triplets(&vec![Tri(Tvvv("A","B","C")),Tri(Twvv("D","E","F"))]),
-            "Select subject as A,link as B,goal as C from facts natural join Select link as E,goal as F from facts where subject='D'".to_string()
+            "(SELECT subject AS A,link AS B,goal AS C FROM facts natural join SELECT link AS E,goal AS F FROM facts WHERE subject='D')".to_string()
         );
     }
 
@@ -556,11 +626,11 @@ mod tests {
     fn test_format_comparisons() {
         assert_eq!(
             format_comparisons(&vec![Comp(" $A == 8")]),
-            ") where  A = 8;".to_string()
+            " WHERE A = 8;".to_string()
         );
         assert_eq!(
             format_comparisons(&vec![Comp(" $A == 8"), Comp(" 6 < 3")]),
-            ") where  A = 8 and  6 < 3;".to_string()
+            " WHERE A = 8 AND 6 < 3;".to_string()
         );
     }
 
@@ -579,5 +649,38 @@ mod tests {
             parse_value(" 'sdt'").unwrap().1,
             " 'sdt'"
             );
+    }
+
+    #[test]
+    fn test_add_modifier() {
+        assert_eq!(
+            parse_add_modifier("add pierre ami jean").unwrap().1,
+            vec!["INSERT INTO facts (subject,link,goal) VALUES (pierre,ami,jean)"]
+                  );
+
+        assert_eq!(
+            parse_add_modifier("add pierre ami jean and julie ami susanne").unwrap().1,
+            vec!["INSERT INTO facts (subject,link,goal) VALUES (pierre,ami,jean)",
+                 "INSERT INTO facts (subject,link,goal) VALUES (julie,ami,susanne)"
+            ]);
+    } 
+
+    #[test]
+    fn test_delete_modifier() {
+        assert_eq!(
+            parse_delete_modifier("delete pierre ami jean").unwrap().1,
+            vec!["DELETE FROM facts WHERE subject='pierre',link='ami',goal='jean'"]);
+
+        assert_eq!(
+            parse_delete_modifier("delete pierre ami jean and julie ami susanne").unwrap().1,
+            vec!["DELETE FROM facts WHERE subject='pierre',link='ami',goal='jean'",
+                 "DELETE FROM facts WHERE subject='julie',link='ami',goal='susanne'"]);
+    }
+
+    #[test]
+    fn test_triplet_to_insert() {
+        assert_eq!(
+            triplet_to_insert(&Twww("pierre","ami","jean")),
+            "INSERT INTO facts (subject,link,goal) VALUES (pierre,ami,jean)".to_string());
     }
 }

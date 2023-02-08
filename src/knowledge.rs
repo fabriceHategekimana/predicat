@@ -6,7 +6,6 @@ use sqlite::{
         Statement,
 };
 use polars::{
-    df,
     frame::DataFrame,
     series::Series,
     prelude::NamedFrom
