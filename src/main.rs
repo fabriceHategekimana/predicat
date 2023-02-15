@@ -6,8 +6,8 @@ use std::env;
 // ajout d'un module parseur
 
 use polars::frame::DataFrame;
-
 use crate::parser::parse_command;
+use crate::parser::parse_query;
 
 fn get_args_or(query: &str) -> String {
     let args: String = env::args().skip(1)
