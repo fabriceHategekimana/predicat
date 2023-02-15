@@ -65,6 +65,30 @@ CREATE UNIQUE INDEX historical_event on historical (event);
 static _INITIALYZE_STAGE : &str = "insert into stage (stage) values (0)";
 static _INITIALYZE_CONTEXT : &str = "insert into context (name) values ('default')";
 
+struct Knowledge {
+    connection: Connection
+}
+
+fn build_knowledge() -> Knowledge {
+    Knowledge {
+        connection: sqlite::open("data.db").unwrap()
+    }
+}
+
+impl Knowledge {
+    fn execute(&self, cmd: &[&String]) {
+        todo!();
+    }    
+
+    fn query(&self, cmd: &[&String]) -> DataFrame {
+        todo!();
+    }
+
+    fn modifier(&self, cmd: &[&String]) {
+        todo!();
+    }
+}
+
 pub fn get(connection: Connection, query: &str) {
     let query = query.replace("from facts", "from facts_default");
     let mut hm: HashMap<String, Vec<String>> = HashMap::new();
