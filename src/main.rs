@@ -7,7 +7,6 @@ use std::env;
 
 use polars::frame::DataFrame;
 use crate::parser::parse_command;
-use crate::parser::parse_query;
 
 fn get_args_or(query: &str) -> String {
     let args: String = env::args().skip(1)
@@ -38,6 +37,7 @@ fn parse_and_execute(table: DataFrame, command: &str) -> DataFrame {
 }
 
 fn main() {
+    //TODO add management for multiple commands
     let command = get_args_or("get $A $B such_as $A type $B");
     let df = DataFrame::default();
     let res = parse_and_execute(df, &command);
