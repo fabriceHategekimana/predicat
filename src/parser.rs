@@ -49,6 +49,10 @@ pub enum Triplet<'a> {
     Tvvv(&'a str, &'a str, &'a str)
 }
 
+fn to_var(s: &str) -> String {
+    format!("${}", s)
+}
+
 impl <'a>Triplet<'a> {
     fn to_tuple(&self) -> (&'a str, &'a str, &'a str) {
         match *self {
@@ -60,6 +64,18 @@ impl <'a>Triplet<'a> {
             Tvwv(a,b,c) => (a,b,c),
             Twvv(a,b,c) => (a,b,c),
             Tvvv(a,b,c) => (a,b,c)
+        }
+    }
+    fn to_tuple_with_variable(&self) -> (String, String, String) {
+        match *self {
+            Twww(a,b,c) => (a.to_string(),b.to_string(),c.to_string()),
+            Tvww(a,b,c) => (to_var(a),b.to_string(),c.to_string()),
+            Twvw(a,b,c) => (a.to_string(),to_var(b),c.to_string()),
+            Twwv(a,b,c) => (a.to_string(),b.to_string(), to_var(c)),
+            Tvvw(a,b,c) => (to_var(a),to_var(b),c.to_string()),
+            Tvwv(a,b,c) => (to_var(a),b.to_string(),to_var(c)),
+            Twvv(a,b,c) => (a.to_string(),to_var(b),to_var(c)),
+            Tvvv(a,b,c) => (to_var(a),to_var(b),to_var(c))
         }
     }
 }
@@ -327,7 +343,7 @@ fn to_sql(res: (&[Language], &[Language], &[Language])) -> String {
 }
 
 fn triplet_to_insert(tri: &Triplet) -> String {
-    let tup = tri.to_tuple();
+    let tup = tri.to_tuple_with_variable();
     format!("INSERT INTO facts (subject,link,goal) VALUES ({},{},{})",
             tup.0, tup.1, tup.2)
 }
@@ -350,7 +366,7 @@ fn parse_add_modifier(s: &str) -> IResult<&str, Vec<String>> {
 }
 
 fn triplet_to_delete(tri: &Triplet) -> String {
-    let tup = tri.to_tuple();
+    let tup = tri.to_tuple_with_variable();
     format!("DELETE FROM facts WHERE subject='{}',link='{}',goal='{}'",
             tup.0, tup.1, tup.2)
 }

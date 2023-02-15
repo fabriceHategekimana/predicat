@@ -5,9 +5,7 @@ use std::env;
 
 // ajout d'un module parseur
 
-use polars::{
-    frame::DataFrame
-};
+use polars::frame::DataFrame;
 
 use crate::parser::parse_command;
 
@@ -22,22 +20,19 @@ fn get_args_or(query: &str) -> String {
     }
 }
 
-//fn format_query_df(df: DataFrame, query: &[Language]) -> &[(&str, Value)] {
-    //let elements = format_query_df(df, query);
-    //todo!();
-//}
-
-fn execute(sql: &[&String]) -> DataFrame {
-   todo!(); 
+fn execute(_sql: &[&String]) -> DataFrame {
+    println!("execute function not implemented yet!");
+    DataFrame::default()
 }
 
-fn develop(table: DataFrame, res: &[String]) -> Vec<Vec<&String>> {
+fn develop(_table: DataFrame, res: &[String]) -> Vec<Vec<&String>> {
    res.iter().map(|x| vec![x]).collect::<Vec<Vec<&String>>>()
 }
 
 fn parse_and_execute(table: DataFrame, command: &str) -> DataFrame {
     let res = parse_command(command);
     let res = develop(table, &res).into_iter().flatten().collect::<Vec<&String>>();
+    println!("res: {:?}", res);
     let _res = execute(&res);
     DataFrame::default()
 }
