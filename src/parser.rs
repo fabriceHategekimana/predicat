@@ -1,84 +1,8 @@
 #![allow(dead_code, unused_variables, unused_imports)]
-use nom::{
-    bytes::complete::{tag, is_not},
-    character::complete::{char, alphanumeric1, space1, digit1},
-    sequence::{preceded, tuple, delimited, terminated},
-    branch::alt,
-    combinator::recognize,
-    multi::many1,
-    error::{Error,
-            ErrorKind},
-    IResult
-};
 
-//for ease of use
-use crate::parser::Language::Word;
-use crate::parser::Language::Var;
-use crate::parser::Language::Tri;
-use crate::parser::Language::Comp;
+mod parse_query;
 
-use crate::parser::Triplet::*;
-
-#[derive(PartialEq, Debug)]
-enum LanguageType<'a> {
-    Soft(&'a str),
-    Raw(&'a str),
-    SQL(&'a str)
-}
-
-#[derive(PartialEq, Debug)]
-pub enum Language<'a> {
-    Var(&'a str),
-    Get,
-    Connector,
-    Word(&'a str),
-    Tri(Triplet<'a>),
-    Comp(&'a str),
-    Empty
-}
-
-#[derive(PartialEq, Debug)]
-pub enum Triplet<'a> {
-    Twww(&'a str, &'a str, &'a str),
-    Tvww(&'a str, &'a str, &'a str),
-    Twvw(&'a str, &'a str, &'a str),
-    Twwv(&'a str, &'a str, &'a str),
-    Tvvw(&'a str, &'a str, &'a str),
-    Tvwv(&'a str, &'a str, &'a str),
-    Twvv(&'a str, &'a str, &'a str),
-    Tvvv(&'a str, &'a str, &'a str)
-}
-
-fn to_var(s: &str) -> String {
-    format!("${}", s)
-}
-
-impl <'a>Triplet<'a> {
-    fn to_tuple(&self) -> (&'a str, &'a str, &'a str) {
-        match *self {
-            Twww(a,b,c) => (a,b,c),
-            Tvww(a,b,c) => (a,b,c),
-            Twvw(a,b,c) => (a,b,c),
-            Twwv(a,b,c) => (a,b,c),
-            Tvvw(a,b,c) => (a,b,c),
-            Tvwv(a,b,c) => (a,b,c),
-            Twvv(a,b,c) => (a,b,c),
-            Tvvv(a,b,c) => (a,b,c)
-        }
-    }
-    fn to_tuple_with_variable(&self) -> (String, String, String) {
-        match *self {
-            Twww(a,b,c) => (a.to_string(),b.to_string(),c.to_string()),
-            Tvww(a,b,c) => (to_var(a),b.to_string(),c.to_string()),
-            Twvw(a,b,c) => (a.to_string(),to_var(b),c.to_string()),
-            Twwv(a,b,c) => (a.to_string(),b.to_string(), to_var(c)),
-            Tvvw(a,b,c) => (to_var(a),to_var(b),c.to_string()),
-            Tvwv(a,b,c) => (to_var(a),b.to_string(),to_var(c)),
-            Twvv(a,b,c) => (a.to_string(),to_var(b),to_var(c)),
-            Tvvv(a,b,c) => (to_var(a),to_var(b),to_var(c))
-        }
-    }
-}
+use parse_query::*;
 
 fn parse_variable(s: &str) -> IResult<&str,Language> {
     let res = preceded(
@@ -98,13 +22,6 @@ fn recognize_variable(s: &str) -> IResult<&str,&str> {
         )(s)
 }
 
-fn parse_get(s: &str) -> IResult<&str,Language> {
-    let res = tag("get")(s);
-    match res {
-        Ok((t, s)) => Ok((t, Language::Get)),
-        Err(e) => Err(e)
-    }
-}
 
 fn parse_connector(s: &str) -> IResult<&str, Language> {
     let res =alt((tag(" such_as"),
@@ -210,52 +127,6 @@ fn parse_valvar(s: &str) -> IResult<&str,&str> {
     alt((recognize_variable, parse_value))(s)
 }
 
-fn parse_query_var1(s: &str) -> IResult<&str,(Vec<Language>, Vec<Language>,Vec<Language>)> {
-    let res = tuple((parse_get,
-          many1(parse_variable),
-          parse_connector,
-          many1(parse_triplet_and),
-          many1(parse_comparison_and)))(s);
-    match res {
-        Ok((r, (g,var,c,tri,comp))) => Ok((r, (var, tri, comp))),
-        Err(e) => Err(e)
-    }
-}
-
-fn parse_query_var2(s: &str) -> IResult<&str,(Vec<Language>, Vec<Language>,Vec<Language>)> {
-    let res = tuple((parse_get,
-          many1(parse_variable),
-          parse_connector,
-          many1(parse_triplet_and)))(s);
-    match res {
-        Ok((r, (g,var,c,tri))) => Ok((r, (var, tri, vec![Language::Empty]))),
-        Err(e) => Err(e)
-    }
-}
-
-fn parse_query_var3(s: &str) -> IResult<&str,(Vec<Language>, Vec<Language>,Vec<Language>)> {
-    let res = tuple((parse_get,
-          many1(parse_variable),
-          parse_connector,
-          many1(parse_comparison_and)))(s);
-    match res {
-        Ok((r, (g,var,c,comp))) => Ok((r, (var, vec![Language::Empty], comp))),
-        Err(e) => Err(e)
-    }
-}
-
-//return a vector to correlate with the result of the modifiers
-pub fn parse_query(s: &str) -> IResult<&str,Vec<String>> {
-    let res = alt((
-        parse_query_var1,
-        parse_query_var2,
-        parse_query_var3
-        ))(s);
-    match res {
-        Ok((t, (v1,v2,v3))) => Ok((t, vec![to_sql((&v1,&v2,&v3))])),
-        Err(e) => Err(e)
-    }
-}
 
 fn format_variables(vars: &[Language]) -> String {
     if vars == [Language::Empty]{
