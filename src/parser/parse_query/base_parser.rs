@@ -65,7 +65,7 @@ impl <'a>Triplet<'a> {
             Tvvv(a,b,c) => (a,b,c)
         }
     }
-    fn to_tuple_with_variable(&self) -> (String, String, String) {
+    pub fn to_tuple_with_variable(&self) -> (String, String, String) {
         match *self {
             Twww(a,b,c) => (a.to_string(),b.to_string(),c.to_string()),
             Tvww(a,b,c) => (to_var(a),b.to_string(),c.to_string()),
