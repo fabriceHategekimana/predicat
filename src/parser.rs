@@ -1,61 +1,10 @@
 #![allow(dead_code, unused_variables, unused_imports)]
 
 mod parse_query;
+mod parse_modifier;
 
 use parse_query::*;
-
-fn triplet_to_insert(tri: &Triplet) -> String {
-    let tup = tri.to_tuple_with_variable();
-    format!("INSERT INTO facts (subject,link,goal) VALUES ({},{},{})",
-            tup.0, tup.1, tup.2)
-}
-
-fn add_to_insert(l: &Language) -> String {
-    match l {
-        Language::Tri(tri) => triplet_to_insert(&tri),
-        _ => String::from("")
-    }
-}
-
-fn parse_add_modifier(s: &str) -> IResult<&str, Vec<String>> {
-    let res = preceded(tag("add"),
-        many1(parse_triplet_and)
-    )(s);
-    match res {
-        Ok((s, v)) => Ok((s, v.iter().map(|x| add_to_insert(x)).collect::<Vec<String>>())),
-        Err(e) => Err(e)
-    }
-}
-
-fn triplet_to_delete(tri: &Triplet) -> String {
-    let tup = tri.to_tuple_with_variable();
-    format!("DELETE FROM facts WHERE subject='{}',link='{}',goal='{}'",
-            tup.0, tup.1, tup.2)
-}
-
-fn delete_to_insert(l: &Language) -> String {
-    match l {
-        Language::Tri(tri) => triplet_to_delete(&tri),
-        _ => String::from("")
-    }
-}
-
-fn parse_delete_modifier(s: &str) -> IResult<&str,Vec<String>> {
-    let res = preceded(tag("delete"),
-        many1(parse_triplet_and)
-    )(s);
-    match res {
-        Ok((s, v)) => Ok((s, v.iter().map(|x| delete_to_insert(x)).collect::<Vec<String>>())),
-        Err(e) => Err(e)
-    }
-}
-
-fn parse_modifier(s: &str) -> IResult<&str,Vec<String>> {
-    alt((
-            parse_add_modifier,
-            parse_delete_modifier
-        ))(s)
-}
+use parse_modifier::*;
 
 //main
 pub fn parse_command(s: &str) -> Vec<String> {
@@ -64,17 +13,10 @@ pub fn parse_command(s: &str) -> Vec<String> {
             parse_modifier))(s);
     match res {
         Ok((s, t)) => t,
-        Err(e) => vec![String::from("Error")] //;format!("{}", Err(e))
+        Err(e) => vec![String::from("Error")] 
     }
 }
 
-fn parse_add(s: &str) -> String {
-    let res = many1(parse_triplet_and)(s);
-    match res {
-        Ok((t, v)) => "a".to_string(),
-        _ => "b".to_string()
-    }
-}
 
 #[cfg(test)]
 mod tests {
@@ -96,45 +38,4 @@ mod tests {
                    );
     }
 
-    #[test]
-    fn test_triplet_and() {
-        assert_eq!(
-            parse_triplet_and(" B ami C AND A ami C").unwrap().1,
-            Tri(Twww("B","ami","C"))
-        );
-    }
-
-
-    #[test]
-    fn test_add_modifier() {
-        assert_eq!(
-            parse_add_modifier("add pierre ami jean").unwrap().1,
-            vec!["INSERT INTO facts (subject,link,goal) VALUES (pierre,ami,jean)"]
-                  );
-
-        assert_eq!(
-            parse_add_modifier("add pierre ami jean and julie ami susanne").unwrap().1,
-            vec!["INSERT INTO facts (subject,link,goal) VALUES (pierre,ami,jean)",
-                 "INSERT INTO facts (subject,link,goal) VALUES (julie,ami,susanne)"
-            ]);
-    } 
-
-    #[test]
-    fn test_delete_modifier() {
-        assert_eq!(
-            parse_delete_modifier("delete pierre ami jean").unwrap().1,
-            vec!["DELETE FROM facts WHERE subject='pierre',link='ami',goal='jean'"]);
-
-        assert_eq!(
-            parse_delete_modifier("delete pierre ami jean and julie ami susanne").unwrap().1,
-            vec!["DELETE FROM facts WHERE subject='pierre',link='ami',goal='jean'",
-                 "DELETE FROM facts WHERE subject='julie',link='ami',goal='susanne'"]);
-    }
-
-    #[test]
-    fn test_triplet_to_insert() {
-        assert_eq!(
-            triplet_to_insert(&Twww("pierre","ami","jean")),
-            "INSERT INTO facts (subject,link,goal) VALUES (pierre,ami,jean)".to_string());
-    }
 }
