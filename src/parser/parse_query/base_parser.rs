@@ -161,4 +161,12 @@ mod tests {
             Language::Tri(Tvww("A", "deux", "trois")));
     }
 
+    #[test]
+    fn test_triplet_and() {
+        assert_eq!(
+            parse_triplet_and(" B ami C AND A ami C").unwrap().1,
+            Tri(Twww("B","ami","C"))
+        );
+    }
+
 }

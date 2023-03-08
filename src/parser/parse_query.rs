@@ -1,6 +1,31 @@
 pub mod base_parser;
 
-pub use base_parser::*;
+pub use base_parser::{
+    Language,
+    Triplet,
+    Triplet::*,
+    Comp,
+    Var,
+    Tri,
+    IResult,
+    preceded,
+    tag,
+    space1,
+    alt,
+    recognize,
+    char,
+    alphanumeric1,
+    delimited,
+    is_not,
+    tuple,
+    digit1,
+    terminated,
+    many1,
+    parse_variable,
+    parse_triplet_and,
+    Error,
+    ErrorKind
+};
 
 fn triplet_to_sql(tri: &Triplet) -> String {
     match tri {

@@ -1,6 +1,18 @@
 pub mod base_parser;
 
-pub use base_parser::*;
+pub use base_parser::{
+    Language,
+    Triplet,
+    Triplet::*,
+    Tri,
+    IResult,
+    preceded,
+    tag,
+    alt,
+    many1,
+    parse_triplet_and,
+    ErrorKind
+};
 
 fn triplet_to_delete(tri: &Triplet) -> String {
     let tup = tri.to_tuple_with_variable();
@@ -80,13 +92,6 @@ mod tests {
             "INSERT INTO facts (subject,link,goal) VALUES (pierre,ami,jean)".to_string());
     }
 
-    #[test]
-    fn test_triplet_and() {
-        assert_eq!(
-            parse_triplet_and(" B ami C AND A ami C").unwrap().1,
-            Tri(Twww("B","ami","C"))
-        );
-    }
 
     #[test]
     fn test_delete_modifier() {

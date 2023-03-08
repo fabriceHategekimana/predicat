@@ -1,7 +1,7 @@
 #![allow(dead_code, unused_variables, unused_imports)]
 
-mod parse_query;
 mod parse_modifier;
+mod parse_query;
 
 use parse_query::*;
 use parse_modifier::*;
