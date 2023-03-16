@@ -129,6 +129,27 @@ pub fn parse_triplet_and(s: &str) -> IResult<&str,Language> {
         parse_triplet))(s)
 }
 
+pub fn triplet_to_sql(tri: &Triplet) -> String {
+    match tri {
+        Twww(a,b,c) => 
+            format!("SELECT subject,link,goal FROM facts WHERE subject='{}' AND link='{}' AND goal='{}'",a,b,c),
+        Tvww(a,b,c) => 
+            format!("SELECT subject AS {} FROM facts WHERE link='{}' AND goal='{}'",a,b,c),
+        Twvw(a,b,c) => 
+            format!("SELECT link AS {} FROM facts WHERE subject='{}' AND goal='{}'",b,a,c),
+        Twwv(a,b,c) => 
+            format!("SELECT goal AS {} FROM facts WHERE subject='{}' AND link='{}'",c,a,b),
+        Tvvw(a,b,c) => 
+            format!("SELECT subject AS {},link AS {} FROM facts WHERE goal='{}'",a,b,c),
+        Tvwv(a,b,c) => 
+            format!("SELECT subject AS {},goal AS {} FROM facts WHERE link='{}'",a,c,b),
+        Twvv(a,b,c) => 
+            format!("SELECT link AS {},goal AS {} FROM facts WHERE subject='{}'",b,c,a),
+        Tvvv(a,b,c) => 
+            format!("SELECT subject AS {},link AS {},goal AS {} FROM facts",a,b,c),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -166,6 +187,18 @@ mod tests {
         assert_eq!(
             parse_triplet_and(" B ami C AND A ami C").unwrap().1,
             Tri(Twww("B","ami","C"))
+        );
+    }
+
+    #[test]
+    fn test_from_triplet_to_sql() {
+        assert_eq!(
+            triplet_to_sql(&Tvvv("A","B","C")),
+            "SELECT subject AS A,link AS B,goal AS C FROM facts".to_string()
+        );
+        assert_eq!(
+            triplet_to_sql(&Tvwv("A","B","C")),
+            "SELECT subject AS A,goal AS C FROM facts WHERE link='B'"
         );
     }
 

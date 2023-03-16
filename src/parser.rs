@@ -3,8 +3,11 @@
 mod parse_modifier;
 mod parse_query;
 
-use parse_query::*;
-use parse_modifier::*;
+use parse_query::{
+    parse_query,
+    alt
+};
+use parse_modifier::parse_modifier;
 
 //main
 pub fn parse_command(s: &str) -> Vec<String> {
