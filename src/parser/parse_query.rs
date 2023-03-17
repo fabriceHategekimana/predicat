@@ -1,6 +1,4 @@
-pub mod base_parser;
-
-pub use base_parser::{
+pub use crate::parser::base_parser::{
     Language,
     Triplet,
     Triplet::*,

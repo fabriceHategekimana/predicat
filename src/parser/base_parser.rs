@@ -10,13 +10,11 @@ pub use nom::{
     IResult
 };
 
-
-//for ease of use
-pub use crate::parser::parse_query::base_parser::Language::Word;
-pub use crate::parser::parse_query::base_parser::Language::Var;
-pub use crate::parser::parse_query::base_parser::Language::Tri;
-pub use crate::parser::parse_query::base_parser::Language::Comp;
-pub use crate::parser::parse_query::base_parser::Triplet::*;
+pub use crate::parser::base_parser::Language::Word;
+pub use crate::parser::base_parser::Language::Var;
+pub use crate::parser::base_parser::Language::Tri;
+pub use crate::parser::base_parser::Language::Comp;
+pub use crate::parser::base_parser::Triplet::*;
 
 #[derive(PartialEq, Debug)]
 enum LanguageType<'a> {

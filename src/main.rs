@@ -3,8 +3,6 @@ mod importer;
 mod knowledge;
 use std::env;
 
-// ajout d'un module parseur
-
 use polars::frame::DataFrame;
 use crate::parser::parse_command;
 

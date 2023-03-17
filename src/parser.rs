@@ -2,6 +2,7 @@
 
 mod parse_modifier;
 mod parse_query;
+mod base_parser;
 
 use parse_query::{
     parse_query,
