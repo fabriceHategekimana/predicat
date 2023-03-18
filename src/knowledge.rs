@@ -5,26 +5,27 @@ use sqlite::{
         Value,
         Statement,
 };
+
 use polars::{
     frame::DataFrame,
     series::Series,
     prelude::NamedFrom
 };
+
 use std::collections::HashMap;
 
 static SUBJECT: &str = ":subject";
 static LINK: &str = ":link";
 static GOAL: &str = ":goal";
 
-//TODO: use it when the data test is no more needed
-static _CREATE_FACTS : &str = " CREATE TABLE facts(
+static CREATE_FACTS : &str = "CREATE TABLE IF NOT EXISTS facts(
                   'subject' TEXT,
                   'link' TEXT,
                   'goal' TEXT,
                   PRIMARY KEY (subject,link,goal)
                 ); ";
 
-static _CREATE_RULES : &str = " CREATE TABLE rules_default(
+static CREATE_RULES : &str = "CREATE TABLE IF NOT EXISTS rules_default(
                     'id' INTEGER,
                     'source' TEXT,
                     'type' TEXT, 
@@ -32,60 +33,78 @@ static _CREATE_RULES : &str = " CREATE TABLE rules_default(
                     'body' TEXT);
                     ";
 
-static _CREATE_HISTORICAL : &str = " CREATE TABLE historical(
+static CREATE_HISTORICAL : &str = "CREATE TABLE historical(
                             'stage' TEXT, 
                             'event' TEXT,
                             PRIMARY KEY (event)); 
                     ";
 
 
-static _CREATE_MACRO : &str = " CREATE TABLE macro(
+static CREATE_MACRO : &str = "CREATE TABLE IF NOT EXISTS macro(
                             'name' TEXT,
                             'body' TEXT);
                     ";
 
-static _CREATE_STAGE : &str = "
-CREATE TABLE stage('stage' TEXT); 
+static CREATE_STAGE : &str = "
+CREATE TABLE IF NOT EXISTS stage('stage' TEXT); 
 ";
 
-static _CREATE_CONTEXT : &str = "
-CREATE TABLE context('name' TEXT); 
+static CREATE_CONTEXT : &str = "
+CREATE TABLE IF NOT EXISTS context('name' TEXT); 
 ";
 
-static _CREATE_UNIQUE_INDEX_RULES : &str = "
+static CREATE_UNIQUE_INDEX_RULES : &str = "
 CREATE UNIQUE INDEX rules_body on rules (body);
 ";
 
-static _CREATE_UNIQUE_INDEX_FACTS : &str = "create unique index fact_subject_link_goal on rules (subject, link, goal);";
+static CREATE_UNIQUE_INDEX_FACTS : &str = "CREATE UNIQUE INDEX fact_subject_link_goal ON rules (subject, link, goal);";
 
-static _CREATE_UNIQUE_INDEX_HISTORICAL : &str = "
-CREATE UNIQUE INDEX historical_event on historical (event);
+static CREATE_UNIQUE_INDEX_HISTORICAL : &str = "
+CREATE UNIQUE INDEX historical_event ON historical (event);
 ";
 
-static _INITIALYZE_STAGE : &str = "insert into stage (stage) values (0)";
-static _INITIALYZE_CONTEXT : &str = "insert into context (name) values ('default')";
+static INITIALYZE_STAGE : &str = "INSERT INTO stage (stage) VALUES (0)";
+static INITIALYZE_CONTEXT : &str = "INSERT INTO context (name) VALUES ('default')";
 
-struct Knowledge {
+pub struct Knowledge {
     connection: Connection
 }
 
-fn build_knowledge() -> Knowledge {
-    Knowledge {
-        connection: sqlite::open("data.db").unwrap()
-    }
-}
 
 impl Knowledge {
-    fn execute(&self, cmd: &[&String]) {
+    fn new() -> Knowledge {
+        Knowledge {
+            connection: sqlite::open("data.db").unwrap()
+        }
+    }
+
+    fn execute(&self, cmds: &[&String]) {
         todo!();
     }    
 
-    fn query(&self, cmd: &[&String]) -> DataFrame {
-        todo!();
+    pub fn get(&self, cmds: &[&String]) -> DataFrame {
+        for query in cmds {
+            let query = query.replace("from facts", "from facts_default");
+            let mut hm: HashMap<String, Vec<String>> = HashMap::new();
+            let _res = self.connection.iterate(query, |sqlite_couple| {
+                for couple in sqlite_couple.iter() {
+                    match hm.get_mut(couple.0) {
+                        None => hm.insert(couple.0.to_owned(), vec![couple.1.unwrap().to_owned()]),
+                        Some(v) => {v.push(couple.1.unwrap().to_owned()); None}
+                    };
+                }
+                true
+            });
+            let df = to_dataframe(hm);
+            println!("df: {:?}", df);
+        }
+        DataFrame::default()
     }
 
-    fn modifier(&self, cmd: &[&String]) {
-        todo!();
+    fn modifier(&self, cmds: &[&String]) {
+        let _res = cmds.iter()
+            .map(|x| self.connection.execute(x))
+            .collect::<Vec<Result<(), sqlite::Error>>>();
     }
 }
 
@@ -106,7 +125,11 @@ pub fn get(connection: Connection, query: &str) {
 }
 
 fn modifier(connection: &Connection, query: &str) {
-    connection.execute(query).unwrap();
+    let res = connection.execute(query);
+    match res {
+        Ok(s) => (),
+        Err(e) => println!("The query '{}' \n failed: \n '{}'", query, e)
+    }
 }
 
 
@@ -134,6 +157,9 @@ fn to_dataframe(hm: HashMap<String, Vec<String>>) -> DataFrame {
     DataFrame::new(vs).unwrap()
 }
 
-pub fn initialisation() {
-    sqlite::open("data.db").unwrap();
+pub fn initialisation() -> Knowledge {
+    //let connection = sqlite::open("data.db").unwrap();
+    let knowledge = Knowledge::new();
+    knowledge.modifier(&[&CREATE_FACTS.to_string()]);
+    knowledge
 }

@@ -38,7 +38,7 @@ fn parse_delete_modifier(s: &str) -> IResult<&str,Vec<String>> {
 
 fn triplet_to_insert(tri: &Triplet) -> String {
     let tup = tri.to_tuple_with_variable();
-    format!("INSERT INTO facts (subject,link,goal) VALUES ({},{},{})",
+    format!("INSERT INTO facts (subject,link,goal) VALUES ('{}','{}','{}')",
             tup.0, tup.1, tup.2)
 }
 

@@ -17,7 +17,7 @@ pub fn parse_command(s: &str) -> Vec<String> {
             parse_modifier))(s);
     match res {
         Ok((s, t)) => t,
-        Err(e) => vec![String::from("Error")] 
+        Err(e) => vec![format!("{}", e)]
     }
 }
 

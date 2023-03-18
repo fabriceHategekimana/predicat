@@ -175,6 +175,7 @@ fn parse_get(s: &str) -> IResult<&str,Language> {
 }
 
 
+// get [vars] [connector] [triplets] [comparison]
 fn parse_query_var1(s: &str) -> IResult<&str,(Vec<Language>, Vec<Language>,Vec<Language>)> {
     let res = tuple((parse_get,
           many1(parse_variable),
@@ -187,6 +188,7 @@ fn parse_query_var1(s: &str) -> IResult<&str,(Vec<Language>, Vec<Language>,Vec<L
     }
 }
 
+// get [variables] [connector] [triplets]
 fn parse_query_var2(s: &str) -> IResult<&str,(Vec<Language>, Vec<Language>,Vec<Language>)> {
     let res = tuple((parse_get,
           many1(parse_variable),
@@ -198,6 +200,7 @@ fn parse_query_var2(s: &str) -> IResult<&str,(Vec<Language>, Vec<Language>,Vec<L
     }
 }
 
+// get [vars] [connector] [comparison]
 fn parse_query_var3(s: &str) -> IResult<&str,(Vec<Language>, Vec<Language>,Vec<Language>)> {
     let res = tuple((parse_get,
           many1(parse_variable),
