@@ -74,13 +74,13 @@ mod tests {
     fn test_add_modifier() {
         assert_eq!(
             parse_add_modifier("add pierre ami jean").unwrap().1,
-            vec!["INSERT INTO facts (subject,link,goal) VALUES (pierre,ami,jean)"]
+            vec!["INSERT INTO facts (subject,link,goal) VALUES ('pierre','ami','jean')"]
                   );
 
         assert_eq!(
             parse_add_modifier("add pierre ami jean and julie ami susanne").unwrap().1,
-            vec!["INSERT INTO facts (subject,link,goal) VALUES (pierre,ami,jean)",
-                 "INSERT INTO facts (subject,link,goal) VALUES (julie,ami,susanne)"
+            vec!["INSERT INTO facts (subject,link,goal) VALUES ('pierre','ami','jean')",
+                 "INSERT INTO facts (subject,link,goal) VALUES ('julie','ami','susanne')"
             ]);
     } 
 
@@ -88,7 +88,7 @@ mod tests {
     fn test_triplet_to_insert() {
         assert_eq!(
             triplet_to_insert(&Twww("pierre","ami","jean")),
-            "INSERT INTO facts (subject,link,goal) VALUES (pierre,ami,jean)".to_string());
+            "INSERT INTO facts (subject,link,goal) VALUES ('pierre','ami','jean')".to_string());
     }
 
 

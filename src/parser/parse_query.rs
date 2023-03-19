@@ -1,5 +1,7 @@
 pub use crate::parser::base_parser::{
+    Word,
     Language,
+    Language::Empty,
     Triplet,
     Triplet::*,
     Comp,
@@ -159,7 +161,8 @@ fn parse_connector(s: &str) -> IResult<&str, Language> {
     let res =alt((tag(" such_as"),
         tag(" who_is"),
         tag(" who_are"),
-        tag(" who_has")))(s);
+        tag(" who_has"),
+        tag(" where")))(s);
     match res {
         Ok((t, s)) => Ok((t, Language::Connector)),
         Err(e) => Err(e)
@@ -418,4 +421,29 @@ mod tests {
             " 'sdt'"
             );
     }
+
+    #[test]
+    // get [variables] [connector] [triplets]
+    fn test_parse_query_var1() {
+        assert_eq!(
+            parse_query_var1("get $A where $A est mortel and $A > 4").unwrap().1,
+              (vec![Var("A")], vec![Tri(Tvww("A", "est", "mortel"))], vec![Comp(" $A > 4")]));
+    }
+
+    #[test]
+    // get [variables] [connector] [triplets]
+    fn test_parse_query_var2() {
+        assert_eq!(
+            parse_query_var2("get $A where $A est mortel").unwrap().1,
+              (vec![Var("A")], vec![Tri(Tvww("A", "est", "mortel"))], vec![Empty]));
+    }
+
+    #[test]
+    // get [variables] [connector] [triplets]
+    fn test_parse_query_var3() {
+        assert_eq!(
+            parse_query_var3("get $A where $A > 7").unwrap().1,
+              (vec![Var("A")], vec![Empty], vec![Comp(" $A > 7")]));
+    }
+
 }
