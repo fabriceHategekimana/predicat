@@ -17,28 +17,23 @@ fn get_args_or(query: &str) -> String {
     }
 }
 
-fn execute(sql: &[&String]) -> DataFrame {
-    let knowledge = knowledge::initialisation();
-    knowledge.get(sql);
-    DataFrame::default()
-}
-
 fn develop(_table: DataFrame, res: &[String]) -> Vec<Vec<&String>> {
    res.iter().map(|x| vec![x]).collect::<Vec<Vec<&String>>>()
 }
 
-fn parse_and_execute(table: DataFrame, command: &str) -> DataFrame {
-    let res = parse_command(command);
-    let res = develop(table, &res).into_iter().flatten().collect::<Vec<&String>>();
-    println!("res: {:?}", res);
-    let _res = execute(&res);
+fn parse_and_execute(table: DataFrame, command: &str, Knowledge: Knowledge) -> DataFrame {
+    let ast = parse_command(command); // must return an AST
+    let queries = knowledge.translate(ast);
+    let developped = develop(table, &queries).into_iter().flatten().collect::<Vec<&String>>();
+    println!("queries: {:?}", queries);
+    let _res = knowledge.execute(&queries); // TODO : vérifier que ça marche
     DataFrame::default()
 }
 
 fn main() {
-    //let command = get_args_or("get $A $B such_as $A type $B");
     let command = get_args_or("add Socrate est mortel");
     let df = DataFrame::default();
-    let _res = parse_and_execute(df, &command);
+    let knowledge = knowledge::initialisation();
+    let _res = parse_and_execute(df, &command, knowledge);
 }
 
