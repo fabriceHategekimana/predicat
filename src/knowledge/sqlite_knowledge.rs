@@ -72,10 +72,12 @@ pub struct SqliteKnowledge {
 
 
 impl SqliteKnowledge {
-    fn new() -> SqliteKnowledge {
-        SqliteKnowledge {
+    pub fn new() -> SqliteKnowledge {
+        let knowledge = SqliteKnowledge {
             connection: sqlite::open("data.db").unwrap()
-        }
+        };
+        knowledge.modify(&[&CREATE_FACTS.to_string()]);
+        knowledge
     }
 
     pub fn get(&self, cmds: &[&String]) -> DataFrame {
@@ -97,34 +99,14 @@ impl SqliteKnowledge {
         DataFrame::default()
     }
 
-    fn modify(&self, cmds: &[&String]) {
+    pub fn modify(&self, cmds: &[&String]) {
         let _res = cmds.iter()
             .map(|x| self.connection.execute(x))
             .collect::<Vec<Result<(), sqlite::Error>>>();
     }
-}
 
-pub fn get(connection: Connection, query: &str) {
-    let query = query.replace("from facts", "from facts_default");
-    let mut hm: HashMap<String, Vec<String>> = HashMap::new();
-    let _res = connection.iterate(query, |sqlite_couple| {
-        for couple in sqlite_couple.iter() {
-            match hm.get_mut(couple.0) {
-                None => hm.insert(couple.0.to_owned(), vec![couple.1.unwrap().to_owned()]),
-                Some(v) => {v.push(couple.1.unwrap().to_owned()); None}
-            };
-        }
-        true
-    });
-    let df = to_dataframe(hm);
-    println!("df: {:?}", df);
-}
-
-fn modifier(connection: &Connection, query: &str) {
-    let res = connection.execute(query);
-    match res {
-        Ok(s) => (),
-        Err(e) => println!("The query '{}' \n failed: \n '{}'", query, e)
+    pub fn translate(s: &str) -> &str {
+        todo!();
     }
 }
 
@@ -153,9 +135,3 @@ fn to_dataframe(hm: HashMap<String, Vec<String>>) -> DataFrame {
     DataFrame::new(vs).unwrap()
 }
 
-pub fn initialisation() -> SqliteKnowledge {
-    //let connection = sqlite::open("data.db").unwrap();
-    let knowledge = SqliteKnowledge::new();
-    knowledge.modifier(&[&CREATE_FACTS.to_string()]);
-    knowledge
-}

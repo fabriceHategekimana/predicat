@@ -1,28 +1,37 @@
-#[derive(PartialEq, Debug)]
+use crate::knowledge::sqlite_knowledge::SqliteKnowledge;
+use polars::frame::DataFrame;
+
 pub enum Knowledge {
-    SLQ(SqliteKnowledge),
+    Sqlite(SqliteKnowledge),
     EmptyKnowledge
 }
 
 impl Knowledge {
     fn new(kind: &str) -> Knowledge {
         match kind {
-            "sqlite" => SQL(SqliteKnowledge::new()),
+            "sqlite" => Knowledge::Sqlite(SqliteKnowledge::new()),
             _ => Knowledge::EmptyKnowledge
         }
     }
 
-    fn get(&self, query: &str) -> DataFrame {
+    pub fn get(&self, query: &[&String]) -> DataFrame {
         match self {
-            SQL(k) => k.get(),
+            Knowledge::Sqlite(k) => k.get(query),
             Knowledge::EmptyKnowledge =>DataFrame::default()
         }
     }
 
-    fn modify(&self, modifier: &str) -> () {
+    pub fn modify(&self, modifier: &[&String]) -> () {
         match self {
-            SQL(k) => k.modify(),
+            Knowledge::Sqlite(k) => k.modify(modifier),
             Knowledge::EmptyKnowledge => ()
         };
+    }
+
+    pub fn translate(&self, s: &str) -> Result<&str, &str> {
+        match self {
+            Knowledge::Sqlite(k) => Ok(SqliteKnowledge::translate(s)),
+            Knowledge::EmptyKnowledge => Err("no knowledge connected") 
+        }
     }
 }

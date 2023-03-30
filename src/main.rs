@@ -5,6 +5,7 @@ use std::env;
 
 use polars::frame::DataFrame;
 use crate::parser::parse_command;
+use knowledge::Knowledge;
 
 fn get_args_or(query: &str) -> String {
     let args: String = env::args().skip(1)
@@ -21,7 +22,7 @@ fn develop(_table: DataFrame, res: &[String]) -> Vec<Vec<&String>> {
    res.iter().map(|x| vec![x]).collect::<Vec<Vec<&String>>>()
 }
 
-fn parse_and_execute(table: DataFrame, command: &str, Knowledge: Knowledge) -> DataFrame {
+fn parse_and_execute(table: DataFrame, command: &str, knowledge: Knowledge) -> DataFrame {
     let ast = parse_command(command); // must return an AST
     let queries = knowledge.translate(ast);
     let developped = develop(table, &queries).into_iter().flatten().collect::<Vec<&String>>();
@@ -33,7 +34,7 @@ fn parse_and_execute(table: DataFrame, command: &str, Knowledge: Knowledge) -> D
 fn main() {
     let command = get_args_or("add Socrate est mortel");
     let df = DataFrame::default();
-    let knowledge = knowledge::initialisation();
+    let knowledge = Knowledge::new();
     let _res = parse_and_execute(df, &command, knowledge);
 }
 
