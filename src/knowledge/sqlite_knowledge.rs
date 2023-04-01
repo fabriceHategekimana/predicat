@@ -13,6 +13,7 @@ use polars::{
 };
 
 use std::collections::HashMap;
+use crate::knowledge::Knowledgeable;
 
 static SUBJECT: &str = ":subject";
 static LINK: &str = ":link";
@@ -71,8 +72,8 @@ pub struct SqliteKnowledge {
 }
 
 
-impl SqliteKnowledge {
-    pub fn new() -> SqliteKnowledge {
+impl Knowledgeable for SqliteKnowledge {
+    fn new() -> SqliteKnowledge {
         let knowledge = SqliteKnowledge {
             connection: sqlite::open("data.db").unwrap()
         };
@@ -80,7 +81,7 @@ impl SqliteKnowledge {
         knowledge
     }
 
-    pub fn get(&self, cmds: &[&String]) -> DataFrame {
+    fn get(&self, cmds: &[&String]) -> DataFrame {
         for query in cmds {
             let query = query.replace("from facts", "from facts_default");
             let mut hm: HashMap<String, Vec<String>> = HashMap::new();
@@ -99,13 +100,17 @@ impl SqliteKnowledge {
         DataFrame::default()
     }
 
-    pub fn modify(&self, cmds: &[&String]) {
+    fn modify(&self, cmds: &[&String]) {
         let _res = cmds.iter()
             .map(|x| self.connection.execute(x))
             .collect::<Vec<Result<(), sqlite::Error>>>();
     }
 
-    pub fn translate(s: &str) -> &str {
+    fn translate<'a>(&self, s: &[&'a str]) -> &'a str {
+        todo!();
+    }
+
+    fn execute<'a>(&self, s: &[&'a str]) -> &'a str {
         todo!();
     }
 }
