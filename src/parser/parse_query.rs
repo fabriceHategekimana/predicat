@@ -24,8 +24,7 @@ pub use crate::parser::base_parser::{
     parse_variable,
     parse_triplet_and,
     Error,
-    ErrorKind,
-    triplet_to_sql
+    ErrorKind
 };
 
 
@@ -68,30 +67,7 @@ fn format_variables(vars: &[Language]) -> String {
     }
 }
 
-fn format_triplets(tri: &[Language]) -> String {
-    if tri == [Language::Empty]{
-        String::from("facts")
-    }
-    else {
-        let sql_queries = tri.iter()
-            .filter_map(|x| {
-                match x {
-                    Tri(t) => Some(triplet_to_sql(&t)),
-                    _ => None
-                }
-            });
-        let queries = sql_queries
-            .reduce(|acc, x| format!("{} natural join {}", acc, x)).unwrap();
-        format!("({})", queries)
-    }
-}
 
-fn to_sql(res: (&[Language], &[Language], &[Language])) -> String {
-    let head = format_variables(&res.0);
-    let columns = format_triplets(&res.1); // warning, put the result into a parenthese
-    let comparisons = format_comparisons(&res.2);
-    format!("{}{}{}", head, columns, comparisons )
-}
 
 fn parse_operator(s: &str) -> IResult<&str,&str> {
     preceded(space1, alt((
@@ -216,14 +192,14 @@ fn parse_query_var3(s: &str) -> IResult<&str,(Vec<Language>, Vec<Language>,Vec<L
 }
 
 //return a vector to correlate with the result of the modifiers
-pub fn parse_query(s: &str) -> IResult<&str,Vec<String>> {
+pub fn parse_query(s: &str) -> IResult<&str,(Vec<Language>, Vec<Language>, Vec<Language>)> {
     let res = alt((
         parse_query_var1,
         parse_query_var2,
         parse_query_var3
         ))(s);
     match res {
-        Ok((t, (v1,v2,v3))) => Ok((t, vec![to_sql((&v1,&v2,&v3))])),
+        Ok(r) => Ok(r),
         Err(e) => Err(e)
     }
 }
@@ -381,17 +357,6 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_format_triplets() {
-        assert_eq!(
-            format_triplets(&vec![Tri(Tvvv("A","B","C"))]),
-            "(SELECT subject AS A,link AS B,goal AS C FROM facts)".to_string()
-        );
-        assert_eq!(
-            format_triplets(&vec![Tri(Tvvv("A","B","C")),Tri(Twvv("D","E","F"))]),
-            "(SELECT subject AS A,link AS B,goal AS C FROM facts natural join SELECT link AS E,goal AS F FROM facts WHERE subject='D')".to_string()
-        );
-    }
 
     #[test]
     fn test_format_comparisons() {

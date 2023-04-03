@@ -24,7 +24,7 @@ fn develop(_table: DataFrame, res: &[String]) -> Vec<Vec<&String>> {
 }
 
 fn parse_and_execute<K: Knowledgeable>(table: DataFrame, command: &str, knowledge: K) -> DataFrame {
-    let ast = parse_command(command); // must return an AST
+    let ast = parse_command(command); 
     let m_ast: Vec<&str> = ast.iter().map(String::as_ref).collect();
     let queries = knowledge.translate(&m_ast);
     //let developped = develop(table, &[queries.to_string()])
@@ -42,4 +42,3 @@ fn main() {
         _ => DataFrame::default()
     };
 }
-

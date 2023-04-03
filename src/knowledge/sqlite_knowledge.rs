@@ -140,3 +140,82 @@ fn to_dataframe(hm: HashMap<String, Vec<String>>) -> DataFrame {
     DataFrame::new(vs).unwrap()
 }
 
+/*
+fn format_triplets(tri: &[Language]) -> String {
+    if tri == [Language::Empty]{
+        String::from("facts")
+    }
+    else {
+        let sql_queries = tri.iter()
+            .filter_map(|x| {
+                match x {
+                    Tri(t) => Some(triplet_to_sql(&t)),
+                    _ => None
+                }
+            });
+        let queries = sql_queries
+            .reduce(|acc, x| format!("{} natural join {}", acc, x)).unwrap();
+        format!("({})", queries)
+    }
+}
+
+fn to_sql(res: (&[Language], &[Language], &[Language])) -> String {
+    let head = format_variables(&res.0);
+    let columns = format_triplets(&res.1); // warning, put the result into a parenthese
+    let comparisons = format_comparisons(&res.2);
+    format!("{}{}{}", head, columns, comparisons )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    pub fn triplet_to_sql(tri: &Triplet) -> String {
+        match tri {
+            Twww(a,b,c) => 
+                format!("SELECT subject,link,goal FROM facts WHERE subject='{}' AND link='{}' AND goal='{}'",a,b,c),
+            Tvww(a,b,c) => 
+                format!("SELECT subject AS {} FROM facts WHERE link='{}' AND goal='{}'",a,b,c),
+            Twvw(a,b,c) => 
+                format!("SELECT link AS {} FROM facts WHERE subject='{}' AND goal='{}'",b,a,c),
+            Twwv(a,b,c) => 
+                format!("SELECT goal AS {} FROM facts WHERE subject='{}' AND link='{}'",c,a,b),
+            Tvvw(a,b,c) => 
+                format!("SELECT subject AS {},link AS {} FROM facts WHERE goal='{}'",a,b,c),
+            Tvwv(a,b,c) => 
+                format!("SELECT subject AS {},goal AS {} FROM facts WHERE link='{}'",a,c,b),
+            Twvv(a,b,c) => 
+                format!("SELECT link AS {},goal AS {} FROM facts WHERE subject='{}'",b,c,a),
+            Tvvv(a,b,c) => 
+                format!("SELECT subject AS {},link AS {},goal AS {} FROM facts",a,b,c),
+        }
+    }
+
+    #[test]
+    fn test_from_triplet_to_sql() {
+        assert_eq!(
+            triplet_to_sql(&Tvvv("A","B","C")),
+            "SELECT subject AS A,link AS B,goal AS C FROM facts".to_string()
+        );
+        assert_eq!(
+            triplet_to_sql(&Tvwv("A","B","C")),
+            "SELECT subject AS A,goal AS C FROM facts WHERE link='B'"
+        );
+    }
+}
+
+
+    #[test]
+    fn test_format_triplets() {
+        assert_eq!(
+            format_triplets(&vec![Tri(Tvvv("A","B","C"))]),
+            "(SELECT subject AS A,link AS B,goal AS C FROM facts)".to_string()
+        );
+        assert_eq!(
+            format_triplets(&vec![Tri(Tvvv("A","B","C")),Tri(Twvv("D","E","F"))]),
+            "(SELECT subject AS A,link AS B,goal AS C FROM facts natural join SELECT link AS E,goal AS F FROM facts WHERE subject='D')".to_string()
+        );
+    }
+
+*/
