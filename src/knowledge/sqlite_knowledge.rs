@@ -14,6 +14,7 @@ use polars::{
 
 use std::collections::HashMap;
 use crate::knowledge::Knowledgeable;
+use crate::parser;
 
 static SUBJECT: &str = ":subject";
 static LINK: &str = ":link";
@@ -106,7 +107,7 @@ impl Knowledgeable for SqliteKnowledge {
             .collect::<Vec<Result<(), sqlite::Error>>>();
     }
 
-    fn translate<'a>(&self, s: &[&'a str]) -> &'a str {
+    fn translate(&self, s: &parser::PredicatAST) -> &str {
         todo!();
     }
 

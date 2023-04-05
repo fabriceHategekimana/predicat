@@ -24,9 +24,8 @@ fn develop(_table: DataFrame, res: &[String]) -> Vec<Vec<&String>> {
 }
 
 fn parse_and_execute<K: Knowledgeable>(table: DataFrame, command: &str, knowledge: K) -> DataFrame {
-    let ast = parse_command(command); 
-    let m_ast: Vec<&str> = ast.iter().map(String::as_ref).collect();
-    let queries = knowledge.translate(&m_ast);
+    let ast: parser::PredicatAST = parse_command(command); 
+    let queries = knowledge.translate(&ast);
     //let developped = develop(table, &[queries.to_string()])
     //let m_developped: Vec<&str> = developped.iter().map(String::as_ref).collect();
     let _res = knowledge.execute(&[queries]); // TODO : vérifier que ça marche

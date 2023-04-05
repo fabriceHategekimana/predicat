@@ -11,14 +11,28 @@ use parse_query::{
     alt
 };
 
+use self::base_parser::Language;
+
+#[derive(PartialEq, Debug)]
+pub enum PredicatAST<'a> {
+    Query((Vec<Language<'a>>, Vec<Language<'a>>, Vec<Language<'a>>)),
+    Modifier(Vec<String>),
+    Empty
+}
+
 //main
-pub fn parse_command(s: &str) -> Vec<String> {
-    let res = alt((
-            parse_query,
-            parse_modifier))(s);
-    match res {
-        Ok((s, t)) => t,
-        Err(e) => vec![format!("{}", e)]
+pub fn parse_command(s: &str) -> PredicatAST {
+    if &s[0..3] == "get" {
+       match parse_query(s) {
+           Ok((s, t)) => PredicatAST::Query(t),
+           _ => PredicatAST::Empty
+       }
+    }
+    else {
+        match parse_modifier(s) {
+            Ok((s, t)) => PredicatAST::Modifier(t),
+            _ => PredicatAST::Empty
+        }
     }
 }
 
