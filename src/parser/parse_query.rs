@@ -28,45 +28,6 @@ pub use crate::parser::base_parser::{
 };
 
 
-fn format_comparisons(comp: &[Language]) -> String {
-    if  comp == [Language::Empty] {
-        String::from(";")
-    }
-    else {
-        let comparisons = comp.iter()
-            .filter_map(|x| {
-                match x {
-                    Comp(c) => Some(c.replace("$","").replace("==","=")),
-                    _ => None
-                }
-            });
-        let final_comparisons = comparisons
-            .reduce(|acc, x| format!("{} AND{}", acc, x)).unwrap();
-        format!(" WHERE{};", final_comparisons)
-    }
-}
-
-fn format_variables(vars: &[Language]) -> String {
-    if vars == [Language::Empty]{
-        String::from("SELECT * FROM ")
-    }
-    else {
-        let extracted_vars = vars.iter()
-            .filter_map(|x| {
-                match x {
-                    Var(v) => Some(v),
-                    _ => None
-                }
-            });
-        let string_vars = extracted_vars
-            .fold("".to_string(), |acc, &x| acc +","+x)
-            .chars()
-            .skip(1)
-            .collect::<String>();
-        format!("SELECT {} FROM ",string_vars)
-    }
-}
-
 
 
 fn parse_operator(s: &str) -> IResult<&str,&str> {
@@ -344,30 +305,6 @@ mod tests {
         assert_eq!(
             parse_comparison_and(" 7 == 8 AND 6 < 9").unwrap().1,
             Comp(" 7 == 8"));
-    }
-    #[test]
-    fn test_format_variables() {
-        assert_eq!(
-            format_variables(&vec![Var("X"),Var("Y")]),
-            "SELECT X,Y FROM "
-        );
-        assert_eq!(
-            format_variables(&vec![Var("X")]),
-            "SELECT X FROM "
-        );
-    }
-
-
-    #[test]
-    fn test_format_comparisons() {
-        assert_eq!(
-            format_comparisons(&vec![Comp(" $A == 8")]),
-            " WHERE A = 8;".to_string()
-        );
-        assert_eq!(
-            format_comparisons(&vec![Comp(" $A == 8"), Comp(" 6 < 3")]),
-            " WHERE A = 8 AND 6 < 3;".to_string()
-        );
     }
 
     #[test]

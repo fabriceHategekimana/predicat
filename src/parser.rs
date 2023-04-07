@@ -2,7 +2,7 @@
 
 mod parse_modifier;
 mod parse_query;
-mod base_parser;
+pub mod base_parser;
 
 use parse_modifier::parse_modifier;
 

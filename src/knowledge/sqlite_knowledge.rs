@@ -14,7 +14,19 @@ use polars::{
 
 use std::collections::HashMap;
 use crate::knowledge::Knowledgeable;
-use crate::parser;
+use crate::parser::{
+                base_parser::Language,
+                PredicatAST,
+                PredicatAST::{Query, Modifier, Empty}
+                };
+
+
+use crate::parser::base_parser::Language::Word;
+use crate::parser::base_parser::Language::Var;
+use crate::parser::base_parser::Language::Tri;
+use crate::parser::base_parser::Language::Comp;
+use crate::parser::base_parser::Triplet::*;
+use crate::parser::base_parser::Triplet;
 
 static SUBJECT: &str = ":subject";
 static LINK: &str = ":link";
@@ -107,11 +119,17 @@ impl Knowledgeable for SqliteKnowledge {
             .collect::<Vec<Result<(), sqlite::Error>>>();
     }
 
-    fn translate(&self, s: &parser::PredicatAST) -> &str {
-        todo!();
+    fn translate(&self, ast: &PredicatAST) -> Result<String, &str> {
+        match ast {
+            Query((get, link, filter)) => Ok(query_to_sql(get, link, filter)),
+            Modifier(commands) => Ok(commands
+                                    .iter()
+                                    .fold("".to_string(), |acc, x| format!("{}{}", acc, x))),
+            Empty => Err("The AST is empty") 
+        }
     }
 
-    fn execute<'a>(&self, s: &[&'a str]) -> &'a str {
+    fn execute(&self, s: &[&str]) -> String {
         todo!();
     }
 }
@@ -141,7 +159,13 @@ fn to_dataframe(hm: HashMap<String, Vec<String>>) -> DataFrame {
     DataFrame::new(vs).unwrap()
 }
 
-/*
+fn query_to_sql(get: &[Language], link: &[Language], filter: &[Language]) -> String {
+    let head = format_variables(get);
+    let columns = format_triplets(link); // warning, put the result into a parenthese
+    let comparisons = format_comparisons(filter);
+    format!("{}{}{}", head, columns, comparisons )
+}
+
 fn format_triplets(tri: &[Language]) -> String {
     if tri == [Language::Empty]{
         String::from("facts")
@@ -160,38 +184,73 @@ fn format_triplets(tri: &[Language]) -> String {
     }
 }
 
-fn to_sql(res: (&[Language], &[Language], &[Language])) -> String {
-    let head = format_variables(&res.0);
-    let columns = format_triplets(&res.1); // warning, put the result into a parenthese
-    let comparisons = format_comparisons(&res.2);
-    format!("{}{}{}", head, columns, comparisons )
+
+fn format_variables(vars: &[Language]) -> String {
+    if vars == [Language::Empty]{
+        String::from("SELECT * FROM ")
+    }
+    else {
+        let extracted_vars = vars.iter()
+            .filter_map(|x| {
+                match x {
+                    Var(v) => Some(v),
+                    _ => None
+                }
+            });
+        let string_vars = extracted_vars
+            .fold("".to_string(), |acc, &x| acc +","+x)
+            .chars()
+            .skip(1)
+            .collect::<String>();
+        format!("SELECT {} FROM ",string_vars)
+    }
 }
+
+fn format_comparisons(comp: &[Language]) -> String {
+    if  comp == [Language::Empty] {
+        String::from(";")
+    }
+    else {
+        let comparisons = comp.iter()
+            .filter_map(|x| {
+                match x {
+                    Comp(c) => Some(c.replace("$","").replace("==","=")),
+                    _ => None
+                }
+            });
+        let final_comparisons = comparisons
+            .reduce(|acc, x| format!("{} AND{}", acc, x)).unwrap();
+        format!(" WHERE{};", final_comparisons)
+    }
+}
+
+pub fn triplet_to_sql(tri: &Triplet) -> String {
+    match tri {
+        Twww(a,b,c) => 
+            format!("SELECT subject,link,goal FROM facts WHERE subject='{}' AND link='{}' AND goal='{}'",a,b,c),
+        Tvww(a,b,c) => 
+            format!("SELECT subject AS {} FROM facts WHERE link='{}' AND goal='{}'",a,b,c),
+        Twvw(a,b,c) => 
+            format!("SELECT link AS {} FROM facts WHERE subject='{}' AND goal='{}'",b,a,c),
+        Twwv(a,b,c) => 
+            format!("SELECT goal AS {} FROM facts WHERE subject='{}' AND link='{}'",c,a,b),
+        Tvvw(a,b,c) => 
+            format!("SELECT subject AS {},link AS {} FROM facts WHERE goal='{}'",a,b,c),
+        Tvwv(a,b,c) => 
+            format!("SELECT subject AS {},goal AS {} FROM facts WHERE link='{}'",a,c,b),
+        Twvv(a,b,c) => 
+            format!("SELECT link AS {},goal AS {} FROM facts WHERE subject='{}'",b,c,a),
+        Tvvv(a,b,c) => 
+            format!("SELECT subject AS {},link AS {},goal AS {} FROM facts",a,b,c),
+    }
+}
+
+/*
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    #[test]
-    pub fn triplet_to_sql(tri: &Triplet) -> String {
-        match tri {
-            Twww(a,b,c) => 
-                format!("SELECT subject,link,goal FROM facts WHERE subject='{}' AND link='{}' AND goal='{}'",a,b,c),
-            Tvww(a,b,c) => 
-                format!("SELECT subject AS {} FROM facts WHERE link='{}' AND goal='{}'",a,b,c),
-            Twvw(a,b,c) => 
-                format!("SELECT link AS {} FROM facts WHERE subject='{}' AND goal='{}'",b,a,c),
-            Twwv(a,b,c) => 
-                format!("SELECT goal AS {} FROM facts WHERE subject='{}' AND link='{}'",c,a,b),
-            Tvvw(a,b,c) => 
-                format!("SELECT subject AS {},link AS {} FROM facts WHERE goal='{}'",a,b,c),
-            Tvwv(a,b,c) => 
-                format!("SELECT subject AS {},goal AS {} FROM facts WHERE link='{}'",a,c,b),
-            Twvv(a,b,c) => 
-                format!("SELECT link AS {},goal AS {} FROM facts WHERE subject='{}'",b,c,a),
-            Tvvv(a,b,c) => 
-                format!("SELECT subject AS {},link AS {},goal AS {} FROM facts",a,b,c),
-        }
-    }
 
     #[test]
     fn test_from_triplet_to_sql() {
@@ -218,5 +277,30 @@ mod tests {
             "(SELECT subject AS A,link AS B,goal AS C FROM facts natural join SELECT link AS E,goal AS F FROM facts WHERE subject='D')".to_string()
         );
     }
+
+    #[test]
+    fn test_format_variables() {
+        assert_eq!(
+            format_variables(&vec![Var("X"),Var("Y")]),
+            "SELECT X,Y FROM "
+        );
+        assert_eq!(
+            format_variables(&vec![Var("X")]),
+            "SELECT X FROM "
+        );
+    }
+
+    #[test]
+    fn test_format_comparisons() {
+        assert_eq!(
+            format_comparisons(&vec![Comp(" $A == 8")]),
+            " WHERE A = 8;".to_string()
+        );
+        assert_eq!(
+            format_comparisons(&vec![Comp(" $A == 8"), Comp(" 6 < 3")]),
+            " WHERE A = 8 AND 6 < 3;".to_string()
+        );
+    }
+
 
 */
