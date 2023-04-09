@@ -90,33 +90,32 @@ impl Knowledgeable for SqliteKnowledge {
         let knowledge = SqliteKnowledge {
             connection: sqlite::open("data.db").unwrap()
         };
-        knowledge.modify(&[&CREATE_FACTS.to_string()]);
+        let _ = knowledge.modify(CREATE_FACTS);
         knowledge
     }
 
-    fn get(&self, cmds: &[&String]) -> DataFrame {
-        for query in cmds {
-            let query = query.replace("from facts", "from facts_default");
-            let mut hm: HashMap<String, Vec<String>> = HashMap::new();
-            let _res = self.connection.iterate(query, |sqlite_couple| {
-                for couple in sqlite_couple.iter() {
-                    match hm.get_mut(couple.0) {
-                        None => hm.insert(couple.0.to_owned(), vec![couple.1.unwrap().to_owned()]),
-                        Some(v) => {v.push(couple.1.unwrap().to_owned()); None}
-                    };
-                }
-                true
-            });
-            let df = to_dataframe(hm);
-            println!("df: {:?}", df);
-        }
+    fn get(&self, cmd: &str) -> DataFrame {
+        let query = cmd.replace("from facts", "from facts_default");
+        let mut hm: HashMap<String, Vec<String>> = HashMap::new();
+        let _res = self.connection.iterate(query, |sqlite_couple| {
+            for couple in sqlite_couple.iter() {
+                match hm.get_mut(couple.0) {
+                    None => hm.insert(couple.0.to_owned(), vec![couple.1.unwrap().to_owned()]),
+                    Some(v) => {v.push(couple.1.unwrap().to_owned()); None}
+                };
+            }
+            true
+        });
+        let df = to_dataframe(hm);
+        println!("df: {:?}", df);
         DataFrame::default()
     }
 
-    fn modify(&self, cmds: &[&String]) {
-        let _res = cmds.iter()
-            .map(|x| self.connection.execute(x))
-            .collect::<Vec<Result<(), sqlite::Error>>>();
+    fn modify(&self, cmd: &str) -> Result<(), &str>{
+        match self.connection.execute(cmd) {
+            Ok(r) => Ok(r),
+            Err(r) => Err("An error occured with the sqlite database")
+        }
     }
 
     fn translate(&self, ast: &PredicatAST) -> Result<String, &str> {
@@ -129,11 +128,28 @@ impl Knowledgeable for SqliteKnowledge {
         }
     }
 
-    fn execute(&self, s: &[&str]) -> String {
-        todo!();
+    fn execute(&self, s: &[&str]) -> DataFrame {
+        let mut res = DataFrame::default();
+        for cmd in s.iter() {
+            res = self.execute_helper(res, cmd)
+        }
+        res
     }
+
 }
 
+impl SqliteKnowledge{
+    fn execute_helper(&self, df: DataFrame, s: &str) -> DataFrame {
+        let mut res = DataFrame::default();
+        if &s[0..6]  == "SELECT" {
+            res = self.get(s);
+        }
+        else {
+            let _ = self.modify(s);
+        }
+        res
+    }
+}
 
 fn add<'l>(connection: &Connection, elements: &[(&str, Value)]) -> Result<(), sqlite::Error> {
     let sql_query = format!(

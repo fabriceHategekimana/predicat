@@ -11,8 +11,8 @@ pub fn new_knowledge(kind: &str) -> Result<impl Knowledgeable, String> {
 
 pub trait Knowledgeable {
     fn new() -> SqliteKnowledge;
-    fn get(&self, cmds: &[&String]) -> DataFrame;
-    fn modify(&self, cmds: &[&String]);
+    fn get(&self, cmds: &str) -> DataFrame;
+    fn modify(&self, cmds: &str) -> Result<(), &str>;
     fn translate(&self, s: &parser::PredicatAST) -> Result<String, &str>;
-    fn execute(&self, s: &[&str]) -> String;
+    fn execute(&self, s: &[&str]) -> DataFrame;
 } 

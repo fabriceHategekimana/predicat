@@ -22,12 +22,11 @@ fn get_args_or(query: &str) -> String {
 fn parse_and_execute<K: Knowledgeable>(_table: DataFrame, command: &str, knowledge: K) -> DataFrame {
     let ast: parser::PredicatAST = parse_command(command); 
     let queries = knowledge.translate(&ast);
-    let _res = match queries {
+    let res = match queries {
         Ok(s) => knowledge.execute(&[&s]),
-        Err(s) => s.to_owned()
+        Err(_) => DataFrame::default()
     };
-    println!("_res: {:?}", _res);
-    DataFrame::default()
+    res
 }
 
 fn main() {
