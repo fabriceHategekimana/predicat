@@ -21,7 +21,9 @@ pub enum PredicatAST<'a> {
 }
 
 //main
-pub fn parse_command(s: &str) -> PredicatAST {
+pub fn parse_command(string: &str) -> Vec<PredicatAST> {
+    string.split(" | ")
+        .map(|s| {
     if &s[0..3] == "get" {
        match parse_query(s) {
            Ok((s, t)) => PredicatAST::Query(t),
@@ -34,6 +36,7 @@ pub fn parse_command(s: &str) -> PredicatAST {
             _ => PredicatAST::Empty
         }
     }
+        }).collect::<Vec<PredicatAST>>()
 }
 
 

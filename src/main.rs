@@ -20,13 +20,16 @@ fn get_args_or(query: &str) -> String {
 }
 
 fn parse_and_execute<K: Knowledgeable>(_table: DataFrame, command: &str, knowledge: K) -> DataFrame {
-    let ast: parser::PredicatAST = parse_command(command); 
+    let ast: Vec<parser::PredicatAST> = parse_command(command); 
     let queries = knowledge.translate(&ast);
-    let res = match queries {
-        Ok(s) => knowledge.execute(&[&s]),
-        Err(_) => DataFrame::default()
-    };
-    res
+    let fqueries = queries
+                    .into_iter()
+                    .filter(|x| x.is_ok())
+                    .map(|x| x.unwrap())
+                    .collect::<Vec<String>>();
+    knowledge.execute(&fqueries)
+    //let res = queries.iter().map(|q| {
+        //}).collect::<Vec<DataFrame>>();
 }
 
 fn main() {

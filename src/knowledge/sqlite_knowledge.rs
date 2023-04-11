@@ -118,28 +118,31 @@ impl Knowledgeable for SqliteKnowledge {
         }
     }
 
-    fn translate(&self, ast: &PredicatAST) -> Result<String, &str> {
-        match ast {
-            Query((get, link, filter)) => Ok(query_to_sql(get, link, filter)),
-            Modifier(commands) => Ok(commands
-                                    .iter()
-                                    .fold("".to_string(), |acc, x| format!("{}{}", acc, x))),
-            Empty => Err("The AST is empty") 
-        }
+    fn translate(&self, asts: &[PredicatAST]) -> Vec<Result<String, &str>> {
+        asts.iter().map(|ast| {
+            match ast {
+                Query((get, link, filter)) => Ok(query_to_sql(get, link, filter)),
+                Modifier(commands) => Ok(commands
+                                        .iter()
+                                        .fold("".to_string(), |acc, x| format!("{}{}", acc, x))),
+                Empty => Err("The AST is empty") 
+            }
+        }).collect::<Vec<Result<String, &str>>>()
     }
 
-    fn execute(&self, s: &[&str]) -> DataFrame {
-        let mut res = DataFrame::default();
+    fn execute(&self, s: &[String]) -> DataFrame {
+        let mut df = DataFrame::default();
         for cmd in s.iter() {
-            res = self.execute_helper(res, cmd)
+            df = self.execute_helper(df, cmd)
         }
-        res
+        df
     }
 
 }
 
 impl SqliteKnowledge{
     fn execute_helper(&self, df: DataFrame, s: &str) -> DataFrame {
+        println!("s: {:?}", s);
         let mut res = DataFrame::default();
         if &s[0..6]  == "SELECT" {
             res = self.get(s);
@@ -262,11 +265,9 @@ pub fn triplet_to_sql(tri: &Triplet) -> String {
 }
 
 /*
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
 
     #[test]
     fn test_from_triplet_to_sql() {
@@ -317,6 +318,4 @@ mod tests {
             " WHERE A = 8 AND 6 < 3;".to_string()
         );
     }
-
-
 */
