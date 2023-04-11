@@ -27,8 +27,10 @@ pub use crate::parser::base_parser::{
     ErrorKind
 };
 
+use nom::Err;
 
-
+type QueryAST<'a> = (Vec<Language<'a>>, Vec<Language<'a>>,Vec<Language<'a>>);
+type QueryVarAST<'a> = ((Vec<Language<'a>>, Vec<Language<'a>>,Vec<Language<'a>>), Vec<&'a str>);
 
 fn parse_operator(s: &str) -> IResult<&str,&str> {
     preceded(space1, alt((
@@ -116,20 +118,20 @@ fn parse_get(s: &str) -> IResult<&str,Language> {
 
 
 // get [vars] [connector] [triplets] [comparison]
-fn parse_query_var1(s: &str) -> IResult<&str,(Vec<Language>, Vec<Language>,Vec<Language>)> {
+fn parse_query_var1(s: &str) -> IResult<&str, QueryAST> {
     let res = tuple((parse_get,
           many1(parse_variable),
           parse_connector,
           many1(parse_triplet_and),
           many1(parse_comparison_and)))(s);
     match res {
-        Ok((r, (g,var,c,tri,comp))) => Ok((r, (var, tri, comp))),
+        Ok((r, (g, var, c, tri, comp))) => Ok((r, (var, tri, comp))),
         Err(e) => Err(e)
     }
 }
 
 // get [variables] [connector] [triplets]
-fn parse_query_var2(s: &str) -> IResult<&str,(Vec<Language>, Vec<Language>,Vec<Language>)> {
+fn parse_query_var2(s: &str) -> IResult<&str, QueryAST> {
     let res = tuple((parse_get,
           many1(parse_variable),
           parse_connector,
@@ -141,7 +143,7 @@ fn parse_query_var2(s: &str) -> IResult<&str,(Vec<Language>, Vec<Language>,Vec<L
 }
 
 // get [vars] [connector] [comparison]
-fn parse_query_var3(s: &str) -> IResult<&str,(Vec<Language>, Vec<Language>,Vec<Language>)> {
+fn parse_query_var3(s: &str) -> IResult<&str, QueryAST> {
     let res = tuple((parse_get,
           many1(parse_variable),
           parse_connector,
@@ -152,15 +154,22 @@ fn parse_query_var3(s: &str) -> IResult<&str,(Vec<Language>, Vec<Language>,Vec<L
     }
 }
 
-//return a vector to correlate with the result of the modifiers
-pub fn parse_query(s: &str) -> IResult<&str,(Vec<Language>, Vec<Language>, Vec<Language>)> {
+pub fn parse_query(s: &str) -> Result<QueryVarAST,Err<Error<&str>>> {
     let res = alt((
         parse_query_var1,
         parse_query_var2,
         parse_query_var3
         ))(s);
     match res {
-        Ok(r) => Ok(r),
+        Ok((s,(var, tri, comp))) => {
+                        let extvar = var.iter()
+                            .map(|&v| {
+                                let Language::Var(x) = v
+                                else { todo!() };
+                                x
+                            }).collect::<Vec<&str>>();
+                        Ok(((var, tri, comp), extvar))
+                        },
         Err(e) => Err(e)
     }
 }

@@ -121,10 +121,10 @@ impl Knowledgeable for SqliteKnowledge {
     fn translate(&self, asts: &[PredicatAST]) -> Vec<Result<String, &str>> {
         asts.iter().map(|ast| {
             match ast {
-                Query((get, link, filter)) => Ok(query_to_sql(get, link, filter)),
-                Modifier(commands) => Ok(commands
+                Query((get, link, filter), variables) => Ok(query_to_sql(get, link, filter), variables),
+                Modifier(commands, variables) => Ok(commands
                                         .iter()
-                                        .fold("".to_string(), |acc, x| format!("{}{}", acc, x))),
+                                        .fold("".to_string(), |acc, x| format!("{}{}", acc, x)), variables),
                 Empty => Err("The AST is empty") 
             }
         }).collect::<Vec<Result<String, &str>>>()

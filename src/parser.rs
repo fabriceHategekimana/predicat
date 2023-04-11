@@ -15,8 +15,11 @@ use self::base_parser::{Language, Triplet};
 
 #[derive(PartialEq, Debug)]
 pub enum PredicatAST<'a> {
-    Query((Vec<Language<'a>>, Vec<Language<'a>>, Vec<Language<'a>>)),
-    Modifier(Vec<String>),
+    Query(
+        (Vec<Language<'a>>, Vec<Language<'a>>, Vec<Language<'a>>),
+        Vec<&'a str>
+        ),
+    Modifier(Vec<String>, Vec<&'a str>),
     Empty
 }
 
@@ -26,13 +29,13 @@ pub fn parse_command(string: &str) -> Vec<PredicatAST> {
         .map(|s| {
     if &s[0..3] == "get" {
        match parse_query(s) {
-           Ok((s, t)) => PredicatAST::Query(t),
+           Ok((t, v)) => PredicatAST::Query(t, v),
            _ => PredicatAST::Empty
        }
     }
     else {
         match parse_modifier(s) {
-            Ok((s, t)) => PredicatAST::Modifier(t),
+            Ok((s, t, v)) => PredicatAST::Modifier(t, v),
             _ => PredicatAST::Empty
         }
     }
