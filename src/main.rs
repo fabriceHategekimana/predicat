@@ -28,8 +28,6 @@ fn parse_and_execute<K: Knowledgeable>(_table: DataFrame, command: &str, knowled
                     .map(|x| x.unwrap())
                     .collect::<Vec<String>>();
     knowledge.execute(&fqueries)
-    //let res = queries.iter().map(|q| {
-        //}).collect::<Vec<DataFrame>>();
 }
 
 fn main() {

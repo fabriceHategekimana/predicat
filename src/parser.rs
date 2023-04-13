@@ -35,7 +35,7 @@ pub fn parse_command(string: &str) -> Vec<PredicatAST> {
     }
     else {
         match parse_modifier(s) {
-            Ok((s, t, v)) => PredicatAST::Modifier(t, v),
+            Ok((vs, v)) => PredicatAST::Modifier(vs, v),
             _ => PredicatAST::Empty
         }
     }

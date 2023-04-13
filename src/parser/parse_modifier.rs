@@ -13,6 +13,12 @@ pub use crate::parser::base_parser::{
     ErrorKind
 };
 
+use nom::Err;
+use nom::error::Error;
+
+type QueryAST<'a> = (Vec<Language<'a>>, Vec<Language<'a>>,Vec<Language<'a>>);
+type QueryVarAST<'a> = ((Vec<Language<'a>>, Vec<Language<'a>>,Vec<Language<'a>>), Vec<&'a str>);
+
 fn triplet_to_delete(tri: &Triplet) -> String {
     let tup = tri.to_tuple_with_variable();
     format!("DELETE FROM facts WHERE subject='{}',link='{}',goal='{}'",
@@ -59,11 +65,15 @@ fn parse_add_modifier(s: &str) -> IResult<&str, Vec<String>> {
     }
 }
 
-pub fn parse_modifier(s: &str) -> IResult<&str,Vec<String>> {
-    alt((
+pub fn parse_modifier(s: &str) -> Result<QueryVarAST,Err<Error<&str>>> {
+    let res = alt((
             parse_add_modifier,
             parse_delete_modifier
-        ))(s)
+        ))(s);
+    match res {
+        Ok((s,vs)) => Ok(((1, 2, 3), vs)),
+        Err(e) => Err(e)
+    }
 }
 
 #[cfg(test)]
