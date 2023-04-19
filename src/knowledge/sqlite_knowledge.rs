@@ -118,16 +118,16 @@ impl Knowledgeable for SqliteKnowledge {
         }
     }
 
-    fn translate(&self, asts: &[PredicatAST]) -> Vec<Result<String, &str>> {
+    fn translate(&self, asts: &[PredicatAST]) -> Vec<Result<(String, Vec<&str>), &str>> {
         asts.iter().map(|ast| {
             match ast {
-                Query((get, link, filter), variables) => Ok(query_to_sql(get, link, filter), variables),
-                Modifier(commands, variables) => Ok(commands
+                Query((get, link, filter), variables) => Ok((query_to_sql(get, link, filter), variables)),
+                Modifier(commands, variables) => Ok((commands
                                         .iter()
-                                        .fold("".to_string(), |acc, x| format!("{}{}", acc, x)), variables),
+                                        .fold("".to_string(), |acc, x| format!("{}{}", acc, x)), variables)),
                 Empty => Err("The AST is empty") 
             }
-        }).collect::<Vec<Result<String, &str>>>()
+        }).collect::<Vec<Result<(String, Vec<&str>), &str>>>()
     }
 
     fn execute(&self, s: &[String]) -> DataFrame {

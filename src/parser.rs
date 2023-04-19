@@ -13,13 +13,15 @@ use parse_query::{
 
 use self::base_parser::{Language, Triplet};
 
+type Context<'a> = Vec<&'a str>;
+
 #[derive(PartialEq, Debug)]
 pub enum PredicatAST<'a> {
     Query(
         (Vec<Language<'a>>, Vec<Language<'a>>, Vec<Language<'a>>),
-        Vec<&'a str>
+         Context<'a>
         ),
-    Modifier(Vec<String>, Vec<&'a str>),
+    Modifier(Vec<String>, Context<'a>),
     Empty
 }
 

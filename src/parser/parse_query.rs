@@ -162,8 +162,8 @@ pub fn parse_query(s: &str) -> Result<QueryVarAST,Err<Error<&str>>> {
         ))(s);
     match res {
         Ok((s,(var, tri, comp))) => {
-                        let extvar = var.iter()
-                            .map(|&v| {
+                        let extvar = var.into_iter()
+                            .map(|v| {
                                 let Language::Var(x) = v
                                 else { todo!() };
                                 x
