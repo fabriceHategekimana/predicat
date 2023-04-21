@@ -69,8 +69,9 @@ pub fn parse_modifier(s: &str) -> Result<QueryVarAST,Err<Error<&str>>> {
             parse_add_modifier, 
             parse_delete_modifier  
         ))(s);
+    let ve: Vec<&str> = vec![];
     match res {
-        Ok((s,vs)) => Ok((vs, vec![])),
+        Ok((s,vs)) => Ok((vs, ve)),
         Err(e) => Err(e)
     }
 }

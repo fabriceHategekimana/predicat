@@ -26,7 +26,7 @@ fn parse_and_execute<K: Knowledgeable>(_table: DataFrame, command: &str, knowled
                     .into_iter()
                     .filter(|x| x.is_ok())
                     .map(|x| x.unwrap())
-                    .collect::<Vec<String>>();
+                    .collect::<Vec<(String, &Vec<&str>)>>();
     knowledge.execute(&fqueries)
 }
 
