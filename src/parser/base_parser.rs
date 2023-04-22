@@ -16,7 +16,7 @@ pub use crate::parser::base_parser::Language::Tri;
 pub use crate::parser::base_parser::Language::Comp;
 pub use crate::parser::base_parser::Triplet::*;
 
-#[derive(PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub enum Language<'a> {
     Var(&'a str),
     Get,
@@ -27,7 +27,7 @@ pub enum Language<'a> {
     Empty
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub enum Triplet<'a> {
     Twww(&'a str, &'a str, &'a str),
     Tvww(&'a str, &'a str, &'a str),

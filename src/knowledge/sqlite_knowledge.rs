@@ -118,7 +118,7 @@ impl Knowledgeable for SqliteKnowledge {
         }
     }
 
-    fn translate(&self, asts: &[PredicatAST]) -> Vec<Result<(String, &Vec<&str>), &str>> {
+    fn translate<'a>(&'a self, asts: &'a [PredicatAST]) -> Vec<Result<(String, &Vec<&str>), &str>> {
         asts.clone().iter().map(|ast| {
             match ast {
                 Query((get, link, filter), variables) => Ok(
@@ -133,10 +133,10 @@ impl Knowledgeable for SqliteKnowledge {
         }).collect::<Vec<Result<(String, &Vec<&str>), &str>>>()
     }
 
-    fn execute(&self, s: &[(String, &str)]) -> DataFrame {
+    fn execute(&self, s: &Vec<(String, &Vec<&str>)>) -> DataFrame {
         let mut df = DataFrame::default();
         for cmd in s.iter() {
-            df = self.execute_helper(df, cmd.1)
+            df = self.execute_helper(df, &cmd.0)
         }
         df
     }
