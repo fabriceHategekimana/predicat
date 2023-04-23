@@ -20,7 +20,7 @@ type QueryVarAST<'a> = (Vec<String>, Vec<&'a str>);
 
 fn triplet_to_delete(tri: &Triplet) -> String {
     let tup = tri.to_tuple_with_variable();
-    format!("DELETE FROM facts WHERE subject='{}',link='{}',goal='{}'",
+    format!("DELETE FROM facts WHERE subject='{}' AND link='{}' AND goal='{}'",
             tup.0, tup.1, tup.2)
 }
 
