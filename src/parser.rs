@@ -4,45 +4,48 @@ mod parse_modifier;
 mod parse_query;
 pub mod base_parser;
 
-use parse_modifier::parse_modifier;
+use polars::frame::DataFrame;
 
 use parse_query::{
     parse_query,
     alt
 };
 
-use self::base_parser::{Language, Triplet};
+use parse_modifier::parse_modifier;
 
-type Context<'a> = Vec<&'a str>;
+use self::base_parser::{Language, Triplet};
 
 #[derive(PartialEq, Debug)]
 pub enum PredicatAST<'a> {
     Query(
-        (Vec<Language<'a>>, Vec<Language<'a>>, Vec<Language<'a>>),
-         Context<'a>
-        ),
-    Modifier(Vec<String>, Context<'a>),
+        (Vec<Language<'a>>,
+         Vec<Language<'a>>,
+         Vec<Language<'a>>)),
+    Modifier(Vec<String>),
     Empty
 }
 
 //main
-pub fn parse_command(string: &str) -> Vec<PredicatAST> {
+pub fn parse_command(string: &str, _context: DataFrame) -> Vec<PredicatAST> {
+    // TODO use the _context variable to generate the needed informations
     string.split(" | ")
-        .map(|s| {
-    if &s[0..3] == "get" {
-       match parse_query(s) {
-           Ok((t, v)) => PredicatAST::Query(t, v),
-           _ => PredicatAST::Empty
-       }
+          .map(parse_query_and_modifier)
+          .collect::<Vec<PredicatAST>>()
+}
+
+fn is_a_query(s: &str) -> bool {
+    &s[0..3] == "get"
+}
+
+fn parse_query_and_modifier(s: &str) -> PredicatAST {
+    if is_a_query(s) {
+       parse_query(s)
     }
     else {
-        match parse_modifier(s) {
-            Ok((vs, v)) => PredicatAST::Modifier(vs, v),
-            _ => PredicatAST::Empty
-        }
+       parse_modifier(s)
     }
-        }).collect::<Vec<PredicatAST>>()
 }
+
 
 
 #[cfg(test)]

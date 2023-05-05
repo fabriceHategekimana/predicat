@@ -118,29 +118,30 @@ impl Knowledgeable for SqliteKnowledge {
         }
     }
 
-    fn translate<'a>(&'a self, asts: &'a [PredicatAST]) -> Vec<Result<(String, &Vec<&str>), &str>> {
-        asts.clone().iter().map(|ast| {
+    fn translate<'a>(&'a self, asts: &'a [PredicatAST]) -> Vec<Result<String, &str>> {
+        asts.clone().iter().map(|ast| -> Result<String, &str> {
             match ast {
-                Query((get, link, filter), variables) => Ok(
-                    (query_to_sql(get, link, filter),
-                    variables)),
-                Modifier(commands, variables) => Ok((
-                        commands.iter()
-                                .fold("".to_string(), |acc, x| format!("{}{}", acc, x)),
-                        variables)),
+                Query((get, link, filter)) => Ok(query_to_sql(get, link, filter)),
+                Modifier(commands) => 
+                    Ok(commands.iter()
+                                .fold("".to_string(), string_concat)),
                 Empty => Err("The AST is empty") 
             }
-        }).collect::<Vec<Result<(String, &Vec<&str>), &str>>>()
+        }).collect::<Vec<Result<String, &str>>>()
     }
 
-    fn execute(&self, s: &Vec<(String, &Vec<&str>)>) -> DataFrame {
+    fn execute(&self, s: &Vec<String>) -> DataFrame {
         let mut df = DataFrame::default();
         for cmd in s.iter() {
-            df = self.execute_helper(df, &cmd.0)
+            df = self.execute_helper(df, &cmd)
         }
         df
     }
 
+}
+
+fn string_concat(acc: String, x: &String) -> String {
+    format!("{}{}", acc, x)
 }
 
 impl SqliteKnowledge{

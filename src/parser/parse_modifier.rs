@@ -15,6 +15,8 @@ pub use crate::parser::base_parser::{
 use nom::Err;
 use nom::error::Error;
 
+use super::PredicatAST;
+
 type QueryAST<'a> = (Vec<Language<'a>>, Vec<Language<'a>>,Vec<Language<'a>>);
 type QueryVarAST<'a> = (Vec<String>, Vec<&'a str>);
 
@@ -64,15 +66,14 @@ fn parse_add_modifier(s: &str) -> IResult<&str, Vec<String>> {
     }
 }
 
-pub fn parse_modifier(s: &str) -> Result<QueryVarAST,Err<Error<&str>>> {
+pub fn parse_modifier(s: &str) -> PredicatAST {
     let res: IResult<&str, Vec<String>> = alt((
             parse_add_modifier, 
             parse_delete_modifier  
         ))(s);
-    let ve: Vec<&str> = vec![];
     match res {
-        Ok((s,vs)) => Ok((vs, ve)),
-        Err(e) => Err(e)
+        Ok((s,vs)) => PredicatAST::Modifier(vs),
+        Err(e) => PredicatAST::Empty
     }
 }
 

@@ -29,6 +29,8 @@ pub use crate::parser::base_parser::{
 
 use nom::Err;
 
+use super::PredicatAST;
+
 type QueryAST<'a> = (Vec<Language<'a>>, Vec<Language<'a>>,Vec<Language<'a>>);
 type QueryVarAST<'a> = ((Vec<Language<'a>>, Vec<Language<'a>>,Vec<Language<'a>>), Vec<&'a str>);
 
@@ -154,23 +156,15 @@ fn parse_query_var3(s: &str) -> IResult<&str, QueryAST> {
     }
 }
 
-pub fn parse_query(s: &str) -> Result<QueryVarAST,Err<Error<&str>>> {
+pub fn parse_query(s: &str) -> PredicatAST {
     let res = alt((
         parse_query_var1,
         parse_query_var2,
         parse_query_var3
         ))(s);
     match res {
-        Ok((s,(var, tri, comp))) => {
-                        let extvar = var.clone().into_iter()
-                            .map(|v| {
-                                let Language::Var(x) = v
-                                else { todo!() };
-                                x
-                            }).collect::<Vec<&str>>();
-                        Ok(((var, tri, comp), extvar))
-                        },
-        Err(e) => Err(e)
+        Ok((s,(var, tri, comp))) => PredicatAST::Query((var, tri, comp)),
+        Err(e) => PredicatAST::Empty
     }
 }
 
