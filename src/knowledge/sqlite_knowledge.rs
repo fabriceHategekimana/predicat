@@ -114,7 +114,7 @@ impl Knowledgeable for SqliteKnowledge {
     fn modify(&self, cmd: &str) -> Result<(), &str>{
         match self.connection.execute(cmd) {
             Ok(r) => Ok(r),
-            Err(r) => Err("An error occured with the sqlite database")
+            Err(r) => {println!("r: {:?}", r); Err("An error occured with the sqlite database")}
         }
     }
 
@@ -202,7 +202,7 @@ fn format_triplets(tri: &[Language]) -> String {
                 }
             });
         let queries = sql_queries
-            .reduce(|acc, x| format!("{} natural join {}", acc, x)).unwrap();
+            .reduce(|acc, x| format!("({}) natural join ({})", acc, x)).unwrap();
         format!("({})", queries)
     }
 }

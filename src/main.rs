@@ -27,13 +27,11 @@ fn parse_and_execute<K>(command: &str, knowledge: K, table: Option<DataFrame>) -
     where K: Knowledgeable {
     let context = table.unwrap_or(DataFrame::default());
     let ast: Vec<PredicatAST> = parse_command(command, context); 
-    let queries = knowledge.translate(&ast);
-    let fqueries = queries
-                    .into_iter()
-                    .filter(|x| x.is_ok())
-                    .map(|x| x.unwrap())
-                    .collect::<Vec<String>>();
-    knowledge.execute(&fqueries)
+    let queries = knowledge.translate(&ast)
+                           .into_iter()
+                           .filter_map(|x| x.ok())
+                           .collect::<Vec<String>>();
+    knowledge.execute(&queries)
 }
 
 fn main() {
