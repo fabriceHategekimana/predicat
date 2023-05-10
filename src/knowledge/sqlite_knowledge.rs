@@ -107,7 +107,6 @@ impl Knowledgeable for SqliteKnowledge {
             true
         });
         let df = to_dataframe(hm);
-        println!("df: {:?}", df);
         DataFrame::default()
     }
 
@@ -135,7 +134,6 @@ impl Knowledgeable for SqliteKnowledge {
         for cmd in s.iter() {
             df = self.execute_helper(df, &cmd)
         }
-        df
     }
 
 }
@@ -146,7 +144,6 @@ fn string_concat(acc: String, x: &String) -> String {
 
 impl SqliteKnowledge{
     fn execute_helper(&self, df: DataFrame, s: &str) -> DataFrame {
-        println!("s: {:?}", s);
         let mut res = DataFrame::default();
         if &s[0..6]  == "SELECT" {
             res = self.get(s);
