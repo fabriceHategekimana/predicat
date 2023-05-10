@@ -107,12 +107,12 @@ mod tests {
     fn test_delete_modifier() {
         assert_eq!(
             parse_delete_modifier("delete pierre ami jean").unwrap().1,
-            vec!["DELETE FROM facts WHERE subject='pierre',link='ami',goal='jean'"]);
+            vec!["DELETE FROM facts WHERE subject='pierre' AND link='ami' AND goal='jean'"]);
 
         assert_eq!(
             parse_delete_modifier("delete pierre ami jean and julie ami susanne").unwrap().1,
-            vec!["DELETE FROM facts WHERE subject='pierre',link='ami',goal='jean'",
-                 "DELETE FROM facts WHERE subject='julie',link='ami',goal='susanne'"]);
+            vec!["DELETE FROM facts WHERE subject='pierre' AND link='ami' AND goal='jean'",
+                 "DELETE FROM facts WHERE subject='julie' AND link='ami' AND goal='susanne'"]);
     }
 
 }

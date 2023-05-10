@@ -70,15 +70,22 @@ impl <'a>Triplet<'a> {
     }
 }
 
-pub fn parse_variable(s: &str) -> IResult<&str,Language> {
-    let res = preceded(
-        space1,
-        preceded(char('$'), alphanumeric1),
-        )(s);
+fn parse_variable_or_star(s: &str) -> IResult<&str, Language> {
+    let res = alt((
+            preceded(char('$'), alphanumeric1),
+            tag("*")
+            ))(s);
     match res {
         Ok((t, s)) => Ok((t, Language::Var(s))),
         Err(e) => Err(e)
     }
+}
+
+pub fn parse_variable(s: &str) -> IResult<&str,Language> {
+    preceded(
+        space1,
+        parse_variable_or_star
+        )(s)
 }
 
 fn parse_word(s: &str) -> IResult<&str,Language> {

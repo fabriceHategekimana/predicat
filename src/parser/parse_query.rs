@@ -163,8 +163,8 @@ pub fn parse_query(s: &str) -> PredicatAST {
         parse_query_var3
         ))(s);
     match res {
-        Ok((s,(var, tri, comp))) => PredicatAST::Query((var, tri, comp)),
-        Err(e) => PredicatAST::Empty
+        Ok((s, (var, tri, comp))) => PredicatAST::Query((var, tri, comp)),
+        Err(e) => PredicatAST::Debug(format!("{}", e)) //TODO bring it back
     }
 }
 
@@ -199,7 +199,7 @@ mod tests {
             Err(nom::Err::Error(
                 Error {
                     input: "hey",
-                    code: ErrorKind::Char
+                    code: ErrorKind::Tag
                 }
             )));
     } 

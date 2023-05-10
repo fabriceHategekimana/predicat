@@ -3,10 +3,13 @@ mod importer;
 mod knowledge;
 use std::env;
 
+use crate::PredicatAST::Query;
 use polars::frame::DataFrame;
 use crate::parser::{
     parse_command,
-    PredicatAST
+    PredicatAST,
+    Language,
+    Triplet
 };
 
 use crate::knowledge::Knowledgeable;
@@ -39,4 +42,16 @@ fn main() {
     let Ok(knowledge) = new_knowledge("sqlite") else {panic!("Can't open the knowledge!")};
     let res = parse_and_execute(&command, knowledge, None);
     println!("res: {:?}", res);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn main_test(){
+        let ast = parse_command("get * such_as $A est mortel", DataFrame::default());
+        assert_eq!(ast,
+                   vec![Query((vec![Language::Var("*")], vec![Language::Tri(Triplet::Tvww("A", "est", "mortel"))], vec![Language::Empty]))]);
+    }
 }

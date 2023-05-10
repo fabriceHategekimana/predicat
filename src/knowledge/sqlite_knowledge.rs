@@ -125,7 +125,7 @@ impl Knowledgeable for SqliteKnowledge {
                 Modifier(commands) => 
                     Ok(commands.iter()
                                 .fold("".to_string(), string_concat)),
-                Empty => Err("The AST is empty") 
+                _ => Err("The AST is empty") 
             }
         }).collect::<Vec<Result<String, &str>>>()
     }
