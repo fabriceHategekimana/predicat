@@ -164,7 +164,7 @@ pub fn parse_query(s: &str) -> PredicatAST {
         ))(s);
     match res {
         Ok((s, (var, tri, comp))) => PredicatAST::Query((var, tri, comp)),
-        Err(e) => PredicatAST::Debug(format!("{}", e)) //TODO bring it back
+        Err(e) => PredicatAST::Debug(format!("{}", e)) 
     }
 }
 

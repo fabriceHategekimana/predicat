@@ -3,13 +3,10 @@ mod importer;
 mod knowledge;
 use std::env;
 
-use crate::PredicatAST::Query;
 use polars::frame::DataFrame;
 use crate::parser::{
     parse_command,
     PredicatAST,
-    Language,
-    Triplet
 };
 
 use crate::knowledge::Knowledgeable;
@@ -26,10 +23,14 @@ fn get_args_or(query: &str) -> String {
     }
 }
 
+fn get_context(table: Option<DataFrame>) -> DataFrame {
+    table.unwrap_or(DataFrame::default())
+}
+
 fn parse_and_execute<K>(command: &str, knowledge: K, table: Option<DataFrame>) -> DataFrame 
     where K: Knowledgeable {
-    let context = table.unwrap_or(DataFrame::default());
-    let ast: Vec<PredicatAST> = parse_command(command, context); 
+    let context = get_context(table);
+    let ast: Vec<PredicatAST> = parse_command(command, &context); 
     let queries = knowledge.translate(&ast)
                            .into_iter()
                            .filter_map(|x| x.ok())

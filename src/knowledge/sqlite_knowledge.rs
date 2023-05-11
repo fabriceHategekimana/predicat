@@ -117,16 +117,9 @@ impl Knowledgeable for SqliteKnowledge {
         }
     }
 
+
     fn translate<'a>(&'a self, asts: &'a [PredicatAST]) -> Vec<Result<String, &str>> {
-        asts.clone().iter().map(|ast| -> Result<String, &str> {
-            match ast {
-                Query((get, link, filter)) => Ok(query_to_sql(get, link, filter)),
-                Modifier(commands) => 
-                    Ok(commands.iter()
-                                .fold("".to_string(), string_concat)),
-                _ => Err("The AST is empty") 
-            }
-        }).collect::<Vec<Result<String, &str>>>()
+        asts.clone().iter().map(translate_one_ast).collect::<Vec<Result<String, &str>>>()
     }
 
     fn execute(&self, s: &Vec<String>) -> DataFrame {
@@ -134,8 +127,19 @@ impl Knowledgeable for SqliteKnowledge {
         for cmd in s.iter() {
             df = self.execute_helper(df, &cmd)
         }
+        df
     }
 
+}
+
+fn translate_one_ast<'a>(ast: &'a PredicatAST<'a>) -> Result<String, &'a str> {
+    match ast {
+        Query((get, link, filter)) => Ok(query_to_sql(get, link, filter)),
+        Modifier(commands) => 
+            Ok(commands.iter()
+                        .fold("".to_string(), string_concat)),
+        _ => Err("The AST is empty") 
+    }
 }
 
 fn string_concat(acc: String, x: &String) -> String {
