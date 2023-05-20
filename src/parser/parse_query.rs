@@ -31,8 +31,8 @@ use nom::Err;
 
 use super::PredicatAST;
 
-type QueryAST<'a> = (Vec<Language<'a>>, Vec<Language<'a>>,Vec<Language<'a>>);
-type QueryVarAST<'a> = ((Vec<Language<'a>>, Vec<Language<'a>>,Vec<Language<'a>>), Vec<&'a str>);
+type QueryAST = (Vec<Language>, Vec<Language>,Vec<Language>);
+type QueryVarAST<'a> = ((Vec<Language>, Vec<Language>,Vec<Language>), Vec<&'a str>);
 
 fn parse_operator(s: &str) -> IResult<&str,&str> {
     preceded(space1, alt((
@@ -91,7 +91,7 @@ fn parse_comparison(s: &str) -> IResult<&str,Language> {
                 parse_valvar
                 )))(s);
     match res {
-        Ok((t, s)) => Ok((t, Language::Comp(s))),
+        Ok((t, s)) => Ok((t, Language::Comp(s.to_string()))),
         Err(e) => Err(e)
     }
 }

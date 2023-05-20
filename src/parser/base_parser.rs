@@ -16,56 +16,62 @@ pub use crate::parser::base_parser::Language::Tri;
 pub use crate::parser::base_parser::Language::Comp;
 pub use crate::parser::base_parser::Triplet::*;
 
-#[derive(Copy, Clone, PartialEq, Debug)]
-pub enum Language<'a> {
-    Var(&'a str),
+#[derive(Clone, PartialEq, Debug)]
+pub enum Language {
+    Var(String),
     Get,
     Connector,
-    Word(&'a str),
-    Tri(Triplet<'a>),
-    Comp(&'a str),
+    Word(String),
+    Tri(Triplet),
+    Comp(String),
     Empty
 }
 
-#[derive(Copy, Clone, PartialEq, Debug)]
-pub enum Triplet<'a> {
-    Twww(&'a str, &'a str, &'a str),
-    Tvww(&'a str, &'a str, &'a str),
-    Twvw(&'a str, &'a str, &'a str),
-    Twwv(&'a str, &'a str, &'a str),
-    Tvvw(&'a str, &'a str, &'a str),
-    Tvwv(&'a str, &'a str, &'a str),
-    Twvv(&'a str, &'a str, &'a str),
-    Tvvv(&'a str, &'a str, &'a str)
+#[derive(Clone, PartialEq, Debug)]
+pub enum Triplet {
+    Twww(String, String, String),
+    Tvww(String, String, String),
+    Twvw(String, String, String),
+    Twwv(String, String, String),
+    Tvvw(String, String, String),
+    Tvwv(String, String, String),
+    Twvv(String, String, String),
+    Tvvv(String, String, String)
 }
 
 fn to_var(s: &str) -> String {
     format!("${}", s)
 }
 
-impl <'a>Triplet<'a> {
-    fn to_tuple(&self) -> (&'a str, &'a str, &'a str) {
-        match *self {
-            Twww(a,b,c) => (a,b,c),
-            Tvww(a,b,c) => (a,b,c),
-            Twvw(a,b,c) => (a,b,c),
-            Twwv(a,b,c) => (a,b,c),
-            Tvvw(a,b,c) => (a,b,c),
-            Tvwv(a,b,c) => (a,b,c),
-            Twvv(a,b,c) => (a,b,c),
-            Tvvv(a,b,c) => (a,b,c)
+fn format_tuple_of_three(t: (&String, &String, &String)) -> (String, String, String) {
+    match t {
+        (a, b, c) => (a.to_owned(), b.to_owned(), c.to_owned()) 
+    } 
+}
+
+impl Triplet {
+    fn to_tuple(&self) -> (String, String, String) {
+        match self {
+            Twww(a,b,c) => format_tuple_of_three((a,b,c)),
+            Tvww(a,b,c) => format_tuple_of_three((a,b,c)),
+            Twvw(a,b,c) => format_tuple_of_three((a,b,c)),
+            Twwv(a,b,c) => format_tuple_of_three((a,b,c)),
+            Tvvw(a,b,c) => format_tuple_of_three((a,b,c)),
+            Tvwv(a,b,c) => format_tuple_of_three((a,b,c)),
+            Twvv(a,b,c) => format_tuple_of_three((a,b,c)),
+            Tvvv(a,b,c) => format_tuple_of_three((a,b,c))
         }
     }
     pub fn to_tuple_with_variable(&self) -> (String, String, String) {
-        match *self {
+        match self {
             Twww(a,b,c) => (a.to_string(),b.to_string(),c.to_string()),
-            Tvww(a,b,c) => (to_var(a),b.to_string(),c.to_string()),
-            Twvw(a,b,c) => (a.to_string(),to_var(b),c.to_string()),
-            Twwv(a,b,c) => (a.to_string(),b.to_string(), to_var(c)),
-            Tvvw(a,b,c) => (to_var(a),to_var(b),c.to_string()),
-            Tvwv(a,b,c) => (to_var(a),b.to_string(),to_var(c)),
-            Twvv(a,b,c) => (a.to_string(),to_var(b),to_var(c)),
-            Tvvv(a,b,c) => (to_var(a),to_var(b),to_var(c))
+            Tvww(a,b,c) => (to_var(&a),b.to_string(),c.to_string()),
+            Twvw(a,b,c) => (a.to_string(),to_var(&b),c.to_string()),
+            Twwv(a,b,c) => (a.to_string(),b.to_string(), to_var(&c)),
+            Tvvw(a,b,c) => (to_var(&a),to_var(&b),c.to_string()),
+            Tvwv(a,b,c) => (to_var(&a),b.to_string(),to_var(&c)),
+            Twvv(a,b,c) => (a.to_string(),to_var(&b),to_var(&c)),
+            Tvvv(a,b,c) => (to_var(&a),to_var(&b),to_var(&c))
         }
     }
 }
@@ -76,7 +82,7 @@ fn parse_variable_or_star(s: &str) -> IResult<&str, Language> {
             tag("*")
             ))(s);
     match res {
-        Ok((t, s)) => Ok((t, Language::Var(s))),
+        Ok((t, s)) => Ok((t, Language::Var(s.to_string()))),
         Err(e) => Err(e)
     }
 }
@@ -91,7 +97,7 @@ pub fn parse_variable(s: &str) -> IResult<&str,Language> {
 fn parse_word(s: &str) -> IResult<&str,Language> {
     let res = preceded(space1, alphanumeric1)(s);
     match res {
-        Ok((t, s)) => Ok((t, Word(s))),
+        Ok((t, s)) => Ok((t, Word(s.to_string()))),
         Err(e) => Err(e)
     }
 }

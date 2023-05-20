@@ -22,11 +22,11 @@ use parse_modifier::parse_modifier;
 pub use self::base_parser::{Language, Triplet};
 
 #[derive(PartialEq, Debug)]
-pub enum PredicatAST<'a> {
+pub enum PredicatAST {
     Query(
-        (Vec<Language<'a>>,
-         Vec<Language<'a>>,
-         Vec<Language<'a>>)),
+        (Vec<Language>,
+         Vec<Language>,
+         Vec<Language>)),
     Modifier(Vec<String>),
     Empty,
     Debug(String)
@@ -79,7 +79,7 @@ fn substitute_with_context<'a>(command: &'a str, variables: &'a [String], contex
 }
 
 //main
-pub fn parse_command<'a>(string: &'a str, context: &'a DataFrame) -> Vec<PredicatAST<'a>> {
+pub fn parse_command<'a>(string: &'a str, context: &'a DataFrame) -> Vec<PredicatAST> {
     string.split(" | ")
           .map(soft_predicat)
           .flat_map(|x| substitute_context(x, context))
@@ -91,7 +91,7 @@ fn is_a_query(s: &str) -> bool {
     &s[0..3] == "get"
 }
 
-fn parse_query_and_modifier(s: String) -> PredicatAST<'static> {
+fn parse_query_and_modifier(s: String) -> PredicatAST {
     let command = &(s.clone())[..];
     if is_a_query(command) {
        parse_query(command)

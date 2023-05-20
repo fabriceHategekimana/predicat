@@ -9,6 +9,7 @@ use crate::parser::{
     PredicatAST,
 };
 
+
 use crate::knowledge::Knowledgeable;
 use crate::knowledge::new_knowledge;
 
@@ -48,6 +49,9 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::parser::base_parser::Language;
+    use crate::PredicatAST::Query;
+    use crate::parser::Triplet;
 
     #[test]
     fn main_test(){

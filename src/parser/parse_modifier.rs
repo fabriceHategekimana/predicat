@@ -17,7 +17,7 @@ use nom::error::Error;
 
 use super::PredicatAST;
 
-type QueryAST<'a> = (Vec<Language<'a>>, Vec<Language<'a>>,Vec<Language<'a>>);
+type QueryAST = (Vec<Language>, Vec<Language>,Vec<Language>);
 type QueryVarAST<'a> = (Vec<String>, Vec<&'a str>);
 
 fn triplet_to_delete(tri: &Triplet) -> String {

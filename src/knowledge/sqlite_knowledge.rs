@@ -132,7 +132,7 @@ impl Knowledgeable for SqliteKnowledge {
 
 }
 
-fn translate_one_ast<'a>(ast: &'a PredicatAST<'a>) -> Result<String, &'a str> {
+fn translate_one_ast<'a>(ast: &'a PredicatAST) -> Result<String, &'a str> {
     match ast {
         Query((get, link, filter)) => Ok(query_to_sql(get, link, filter)),
         Modifier(commands) => 
@@ -222,7 +222,7 @@ fn format_variables(vars: &[Language]) -> String {
                 }
             });
         let string_vars = extracted_vars
-            .fold("".to_string(), |acc, &x| acc +","+x)
+            .fold("".to_string(), |acc, x| acc +","+&x[..])
             .chars()
             .skip(1)
             .collect::<String>();
