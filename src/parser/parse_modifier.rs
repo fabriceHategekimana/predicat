@@ -98,7 +98,7 @@ mod tests {
     #[test]
     fn test_triplet_to_insert() {
         assert_eq!(
-            triplet_to_insert(&Twww("pierre","ami","jean")),
+            triplet_to_insert(&Twww("pierre".to_string(),"ami".to_string(),"jean".to_string())),
             "INSERT INTO facts (subject,link,goal) VALUES ('pierre','ami','jean')".to_string());
     }
 

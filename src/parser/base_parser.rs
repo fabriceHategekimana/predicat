@@ -142,7 +142,7 @@ mod tests {
     fn test_word() {
         assert_eq!(
             parse_word(" wow").unwrap().1,
-            Language::Word("wow"));
+            Language::Word("wow".to_string()));
         assert_eq!(
             parse_word(" $A"),
             Err(nom::Err::Error(
@@ -157,20 +157,20 @@ mod tests {
     fn test_triplet() {
         assert_eq!(
             parse_triplet(" un deux trois").unwrap().1,
-            Language::Tri(Twww("un", "deux", "trois")));
+            Language::Tri(Twww("un".to_string(), "deux".to_string(), "trois".to_string())));
         assert_eq!(
             parse_triplet(" un deux $A").unwrap().1,
-            Language::Tri(Twwv("un", "deux", "A")));
+            Language::Tri(Twwv("un".to_string(), "deux".to_string(), "A".to_string())));
         assert_eq!(
             parse_triplet(" $A deux trois").unwrap().1,
-            Language::Tri(Tvww("A", "deux", "trois")));
+            Language::Tri(Tvww("A".to_string(), "deux".to_string(), "trois".to_string())));
     }
 
     #[test]
     fn test_triplet_and() {
         assert_eq!(
             parse_triplet_and(" B ami C AND A ami C").unwrap().1,
-            Tri(Twww("B","ami","C"))
+            Language::Tri(Twww("B".to_string(),"ami".to_string(),"C".to_string()))
         );
     }
 

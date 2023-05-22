@@ -187,13 +187,13 @@ mod tests {
     fn test_variable() {
         assert_eq!(
             parse_variable(" $Hello").unwrap().1,
-            Language::Var("Hello"));
+            Language::Var("Hello".to_string()));
         assert_eq!(
             parse_variable(" $A").unwrap().1,
-            Language::Var("A"));
+            Language::Var("A".to_string()));
         assert_eq!(
             parse_variable(" $2").unwrap().1,
-            Language::Var("2"));
+            Language::Var("2".to_string()));
         assert_eq!(
             parse_variable(" hey"),
             Err(nom::Err::Error(
@@ -203,6 +203,7 @@ mod tests {
                 }
             )));
     } 
+
     #[test]
     fn test_connector() {
         assert_eq!(
@@ -245,10 +246,10 @@ mod tests {
     fn test_comparison() {
         assert_eq!(
             parse_comparison(" 4 < 5").unwrap().1,
-            Language::Comp(" 4 < 5"));
+            Language::Comp(" 4 < 5".to_string()));
         assert_eq!(
             parse_comparison(" $A > 5").unwrap().1,
-            Language::Comp(" $A > 5"));
+            Language::Comp(" $A > 5".to_string()));
         assert_eq!(
             parse_comparison(" F"),
             Err(
@@ -256,10 +257,10 @@ mod tests {
                     Error { input: "F", code: ErrorKind::Digit })));
         assert_eq!(
             parse_comparison(" 4 == 5").unwrap().1,
-            Language::Comp(" 4 == 5"));
+            Language::Comp(" 4 == 5".to_string()));
         assert_eq!(
             parse_comparison(" 4 == 'res'").unwrap().1,
-            Language::Comp(" 4 == 'res'"));
+            Language::Comp(" 4 == 'res'".to_string()));
     }
 
     #[test]
@@ -307,7 +308,7 @@ mod tests {
     fn test_comparison_and() {
         assert_eq!(
             parse_comparison_and(" 7 == 8 AND 6 < 9").unwrap().1,
-            Comp(" 7 == 8"));
+            Language::Comp(" 7 == 8".to_string()));
     }
 
     #[test]
@@ -332,7 +333,7 @@ mod tests {
     fn test_parse_query_var1() {
         assert_eq!(
             parse_query_var1("get $A where $A est mortel and $A > 4").unwrap().1,
-              (vec![Var("A")], vec![Tri(Tvww("A", "est", "mortel"))], vec![Comp(" $A > 4")]));
+              (vec![Language::Var("A".to_string())], vec![Language::Tri(Tvww("A".to_string(), "est".to_string(), "mortel".to_string()))], vec![Comp(" $A > 4".to_string())]));
     }
 
     #[test]
@@ -340,7 +341,7 @@ mod tests {
     fn test_parse_query_var2() {
         assert_eq!(
             parse_query_var2("get $A where $A est mortel").unwrap().1,
-              (vec![Var("A")], vec![Tri(Tvww("A", "est", "mortel"))], vec![Empty]));
+              (vec![Language::Var("A".to_string())], vec![Language::Tri(Tvww("A".to_string(), "est".to_string(), "mortel".to_string()))], vec![Empty]));
     }
 
     #[test]
@@ -348,7 +349,17 @@ mod tests {
     fn test_parse_query_var3() {
         assert_eq!(
             parse_query_var3("get $A where $A > 7").unwrap().1,
-              (vec![Var("A")], vec![Empty], vec![Comp(" $A > 7")]));
+              (vec![Language::Var("A".to_string())], vec![Empty], vec![Language::Comp(" $A > 7".to_string())]));
+    }
+
+    #[test]
+    fn test_parse_query() {
+        assert_eq!(parse_query("get $A $B $C such_as $A $B $C"),
+        PredicatAST::Query((
+                 vec![Language::Var("A".to_string()), Language::Var("B".to_string()), Language::Var("C".to_string())],
+                 vec![Language::Tri(Tvvv("A".to_string(), "B".to_string(), "C".to_string()))],
+                 vec![Language::Empty]
+        )));
     }
 
 }

@@ -9,7 +9,6 @@ use crate::parser::{
     PredicatAST,
 };
 
-
 use crate::knowledge::Knowledgeable;
 use crate::knowledge::new_knowledge;
 
@@ -32,6 +31,7 @@ fn parse_and_execute<K>(command: &str, knowledge: K, table: Option<DataFrame>) -
     where K: Knowledgeable {
     let context = get_context(table);
     let ast: Vec<PredicatAST> = parse_command(command, &context); 
+    println!("ast: {:?}", ast);
     let queries = knowledge.translate(&ast)
                            .into_iter()
                            .filter_map(|x| x.ok())
@@ -55,8 +55,18 @@ mod tests {
 
     #[test]
     fn main_test(){
-        let ast = parse_command("get * such_as $A est mortel", DataFrame::default());
+        let ast = parse_command("get * such_as $A est mortel", &DataFrame::default());
         assert_eq!(ast,
-                   vec![Query((vec![Language::Var("*")], vec![Language::Tri(Triplet::Tvww("A", "est", "mortel"))], vec![Language::Empty]))]);
+                   vec![
+                   Query((vec![Language::Var("*".to_string())],
+                          vec![Language::Tri(Triplet::Twww("Apple".to_string(), "est".to_string(), "mortel".to_string()))],
+                          vec![Language::Empty])),
+                   Query((vec![Language::Var("*".to_string())],
+                          vec![Language::Tri(Triplet::Twww("Apple".to_string(), "est".to_string(), "mortel".to_string()))],
+                          vec![Language::Empty])),
+                   Query((vec![Language::Var("*".to_string())],
+                          vec![Language::Tri(Triplet::Twww("Pear".to_string(), "est".to_string(), "mortel".to_string()))],
+                          vec![Language::Empty]))
+                   ]);
     }
 }
