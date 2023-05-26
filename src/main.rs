@@ -31,7 +31,6 @@ fn parse_and_execute<K>(command: &str, knowledge: K, table: Option<DataFrame>) -
     where K: Knowledgeable {
     let context = get_context(table);
     let ast: Vec<PredicatAST> = parse_command(command, &context); 
-    println!("ast: {:?}", ast);
     let queries = knowledge.translate(&ast)
                            .into_iter()
                            .filter_map(|x| x.ok())

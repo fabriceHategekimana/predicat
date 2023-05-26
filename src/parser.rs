@@ -45,10 +45,8 @@ fn extract_variables(command: &str) -> Vec<String> {
         .collect()
 }
 
-fn substitute_context<'a>(command:&'a str, _context: &'a DataFrame) -> Vec<String> {
+fn substitute_context<'a>(command:&'a str, context: &'a DataFrame) -> Vec<String> {
     let variables = extract_variables(command);
-    let context = df!("A" => &["Apple", "Apple", "Pear"],
-                 "B" => &["Red", "Yellow", "Green"]).unwrap();
     substitute_with_context(command, &variables, &context)
 }
 

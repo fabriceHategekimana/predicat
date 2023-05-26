@@ -77,13 +77,21 @@ static CREATE_UNIQUE_INDEX_HISTORICAL : &str = "
 CREATE UNIQUE INDEX historical_event ON historical (event);
 ";
 
-static INITIALYZE_STAGE : &str = "INSERT INTO stage (stage) VALUES (0)";
-static INITIALYZE_CONTEXT : &str = "INSERT INTO context (name) VALUES ('default')";
+static INITIALYZE_STAGE : &str = "INSERT or IGNORE INTO stage (stage) VALUES (0)";
+static INITIALYZE_CONTEXT : &str = "INSERT or IGNORE INTO context (name) VALUES ('default')";
 
 pub struct SqliteKnowledge {
     connection: Connection
 }
 
+fn extract_columns(sql_select_query: &str) -> Vec<&str> {
+   sql_select_query.split_once(" FROM")
+                   .unwrap().0
+                   .split_once(" ")
+                   .unwrap().1
+                   .split(",")
+                   .collect()
+}
 
 impl Knowledgeable for SqliteKnowledge {
     fn new() -> SqliteKnowledge {
@@ -95,9 +103,11 @@ impl Knowledgeable for SqliteKnowledge {
     }
 
     fn get(&self, cmd: &str) -> DataFrame {
-        let query = cmd.replace("from facts", "from facts_default");
+        //let query = cmd.replace("from facts", "from facts_default");
+        let query = cmd;
+        println!("query: {:?}", query);
         let mut hm: HashMap<String, Vec<String>> = HashMap::new();
-        let _res = self.connection.iterate(query, |sqlite_couple| {
+        let _ = self.connection.iterate(query, |sqlite_couple| {
             for couple in sqlite_couple.iter() {
                 match hm.get_mut(couple.0) {
                     None => hm.insert(couple.0.to_owned(), vec![couple.1.unwrap().to_owned()]),
@@ -106,8 +116,7 @@ impl Knowledgeable for SqliteKnowledge {
             }
             true
         });
-        let df = to_dataframe(hm);
-        DataFrame::default()
+        to_dataframe(hm, extract_columns(query))
     }
 
     fn modify(&self, cmd: &str) -> Result<(), &str>{
@@ -161,7 +170,7 @@ impl SqliteKnowledge{
 
 fn add<'l>(connection: &Connection, elements: &[(&str, Value)]) -> Result<(), sqlite::Error> {
     let sql_query = format!(
-        "INSERT INTO facts (subject, link, goal) VALUES ({subject}, {link}, {goal});",
+        "INSERT or IGNORE INTO facts (subject, link, goal) VALUES ({subject}, {link}, {goal});",
         subject=SUBJECT, link=LINK, goal=GOAL);
     let mut statement = connection.prepare(sql_query)?;
     statement.bind::<&[(_, Value)]>(elements)
@@ -178,8 +187,14 @@ fn to_hashmap<'a>(sqlite_couple: &[(&'a str, &'a str)]) -> HashMap<&'a str, Vec<
     hm
 }
 
-fn to_dataframe(hm: HashMap<String, Vec<String>>) -> DataFrame {
-    let vs = hm.iter().map(|(key, value)| Series::new(key, value)).collect();
+fn to_dataframe(hm: HashMap<String, Vec<String>>, columns: Vec<&str>) -> DataFrame {
+    let vs = columns
+                .iter()
+                .map(|x| Series::new(
+                            x,
+                            hm.get(&x.to_string()).unwrap()
+                            )
+                ).collect();
     DataFrame::new(vs).unwrap()
 }
 
@@ -269,11 +284,18 @@ pub fn triplet_to_sql(tri: &Triplet) -> String {
     }
 }
 
-/*
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    #[test]
+    fn test_column() {
+        assert_eq!(
+            extract_columns("SELECT A,B,C FROM (SELECT subject AS A,link AS B,goal AS C FROM facts);"),
+            vec!["A", "B", "C"]
+            );
+    }
+/*
     #[test]
     fn test_from_triplet_to_sql() {
         assert_eq!(
@@ -322,5 +344,5 @@ mod tests {
             format_comparisons(&vec![Comp(" $A == 8"), Comp(" 6 < 3")]),
             " WHERE A = 8 AND 6 < 3;".to_string()
         );
-    }
 */
+    }
