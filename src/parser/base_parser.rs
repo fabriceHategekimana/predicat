@@ -10,11 +10,18 @@ pub use nom::{
     IResult
 };
 
-pub use crate::parser::base_parser::Language::Word;
-pub use crate::parser::base_parser::Language::Var;
-pub use crate::parser::base_parser::Language::Tri;
-pub use crate::parser::base_parser::Language::Comp;
 pub use crate::parser::base_parser::Triplet::*;
+
+#[derive(PartialEq, Debug)]
+pub enum PredicatAST {
+    Query(
+        (Vec<Language>,
+         Vec<Language>,
+         Vec<Language>)),
+    Modifier(Vec<String>),
+    Empty,
+    Debug(String)
+}
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Language {
@@ -97,7 +104,7 @@ pub fn parse_variable(s: &str) -> IResult<&str,Language> {
 fn parse_word(s: &str) -> IResult<&str,Language> {
     let res = preceded(space1, alphanumeric1)(s);
     match res {
-        Ok((t, s)) => Ok((t, Word(s.to_string()))),
+        Ok((t, s)) => Ok((t, Language::Word(s.to_string()))),
         Err(e) => Err(e)
     }
 }
@@ -114,14 +121,14 @@ fn parse_triplet(s: &str) -> IResult<&str,Language> {
             tuple((parse_variable, parse_variable, parse_variable))
             ))(s);
     match res {
-        Ok((t, (Word(s1),Word(s2),Word(s3)))) => Ok((t, Tri(Twww(s1,s2,s3)))),
-        Ok((t, (Var(s1),Word(s2),Word(s3)))) => Ok((t, Tri(Tvww(s1,s2,s3)))),
-        Ok((t, (Word(s1),Var(s2),Word(s3)))) => Ok((t, Tri(Twvw(s1,s2,s3)))),
-        Ok((t, (Word(s1),Word(s2),Var(s3)))) => Ok((t, Tri(Twwv(s1,s2,s3)))),
-        Ok((t, (Var(s1),Var(s2),Word(s3)))) => Ok((t, Tri(Tvvw(s1,s2,s3)))),
-        Ok((t, (Var(s1),Word(s2),Var(s3)))) => Ok((t, Tri(Tvwv(s1,s2,s3)))),
-        Ok((t, (Word(s1),Var(s2),Var(s3)))) => Ok((t, Tri(Twvv(s1,s2,s3)))),
-        Ok((t, (Var(s1),Var(s2),Var(s3)))) => Ok((t, Tri(Tvvv(s1,s2,s3)))),
+        Ok((t, (Language::Word(s1),Language::Word(s2),Language::Word(s3)))) => Ok((t, Language::Tri(Twww(s1,s2,s3)))),
+        Ok((t, (Language::Var(s1),Language::Word(s2),Language::Word(s3)))) => Ok((t, Language::Tri(Tvww(s1,s2,s3)))),
+        Ok((t, (Language::Word(s1),Language::Var(s2),Language::Word(s3)))) => Ok((t, Language::Tri(Twvw(s1,s2,s3)))),
+        Ok((t, (Language::Word(s1),Language::Word(s2),Language::Var(s3)))) => Ok((t, Language::Tri(Twwv(s1,s2,s3)))),
+        Ok((t, (Language::Var(s1),Language::Var(s2),Language::Word(s3)))) => Ok((t, Language::Tri(Tvvw(s1,s2,s3)))),
+        Ok((t, (Language::Var(s1),Language::Word(s2),Language::Var(s3)))) => Ok((t, Language::Tri(Tvwv(s1,s2,s3)))),
+        Ok((t, (Language::Word(s1),Language::Var(s2),Language::Var(s3)))) => Ok((t, Language::Tri(Twvv(s1,s2,s3)))),
+        Ok((t, (Language::Var(s1),Language::Var(s2),Language::Var(s3)))) => Ok((t, Language::Tri(Tvvv(s1,s2,s3)))),
         Err(e) => Err(e),
         _ => todo!()
     }
@@ -133,10 +140,17 @@ pub fn parse_triplet_and(s: &str) -> IResult<&str,Language> {
         parse_triplet))(s)
 }
 
-
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{
+        ErrorKind,
+        parse_word,
+        parse_triplet,
+        parse_triplet_and,
+        Language,
+        Triplet::*,
+        Error
+    };
 
     #[test]
     fn test_word() {
@@ -173,6 +187,4 @@ mod tests {
             Language::Tri(Twww("B".to_string(),"ami".to_string(),"C".to_string()))
         );
     }
-
-
 }

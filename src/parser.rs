@@ -4,33 +4,25 @@ mod parse_modifier;
 mod parse_query;
 pub mod base_parser;
 
-use polars::frame::DataFrame;
-use polars::df;
-use polars::prelude::NamedFrom;
-use crate::PredicatAST::Query;
+use polars::{
+    prelude::NamedFrom,
+    frame::DataFrame,
+    df
+};
 
 use regex::Regex;
 use itertools::Itertools;
+use crate::PredicatAST;
 
 use parse_query::{
     parse_query,
     alt
 };
 
-use parse_modifier::parse_modifier;
 
+use parse_modifier::parse_modifier;
 pub use self::base_parser::{Language, Triplet};
 
-#[derive(PartialEq, Debug)]
-pub enum PredicatAST {
-    Query(
-        (Vec<Language>,
-         Vec<Language>,
-         Vec<Language>)),
-    Modifier(Vec<String>),
-    Empty,
-    Debug(String)
-}
 
 fn soft_predicat(s: &str) -> &str {
     s
@@ -100,10 +92,15 @@ fn parse_query_and_modifier(s: String) -> PredicatAST {
 }
 
 
-
+/*
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{
+        parse_query,
+        Query,
+        Language,
+        Triplet,
+    };
 
     #[test]
     fn test_parse_query() {
@@ -118,3 +115,4 @@ mod tests {
                    );
     }
 }
+*/

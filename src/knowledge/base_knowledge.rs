@@ -1,6 +1,6 @@
 use crate::knowledge::sqlite_knowledge::SqliteKnowledge;
 use polars::frame::DataFrame;
-use crate::parser;
+use crate::parser::base_parser::PredicatAST;
 
 pub fn new_knowledge(kind: &str) -> Result<impl Knowledgeable, String> {
     match kind {
@@ -13,6 +13,6 @@ pub trait Knowledgeable {
     fn new() -> SqliteKnowledge;
     fn get(&self, cmds: &str) -> DataFrame;
     fn modify(&self, cmds: &str) -> Result<(), &str>;
-    fn translate<'a>(&'a self, s: &'a [parser::PredicatAST]) -> Vec<Result<String, &str>>;
+    fn translate<'a>(&'a self, s: &'a [PredicatAST]) -> Vec<Result<String, &str>>;
     fn execute(&self, s: &Vec<String>) -> DataFrame;
 } 

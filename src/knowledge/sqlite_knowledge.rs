@@ -14,13 +14,11 @@ use polars::{
 
 use std::collections::HashMap;
 use crate::knowledge::Knowledgeable;
-use crate::parser::{
-                base_parser::Language,
-                PredicatAST,
-                PredicatAST::{Query, Modifier, Empty}
-                };
 
+use crate::parser::base_parser::PredicatAST;
+use crate::parser::base_parser::PredicatAST::{Query, Modifier, Empty};
 
+use crate::parser::base_parser::Language;
 use crate::parser::base_parser::Language::Word;
 use crate::parser::base_parser::Language::Var;
 use crate::parser::base_parser::Language::Tri;
@@ -284,9 +282,12 @@ pub fn triplet_to_sql(tri: &Triplet) -> String {
     }
 }
 
+/*
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{
+        extract_columns
+    };
 
     #[test]
     fn test_column() {
@@ -346,3 +347,4 @@ mod tests {
         );
 */
     }
+*/

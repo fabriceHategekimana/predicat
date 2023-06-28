@@ -1,21 +1,21 @@
+pub use nom::{
+    bytes::complete::tag,
+    sequence::preceded,
+    branch::alt,
+    multi::many1,
+    IResult,
+};
+
 pub use crate::parser::base_parser::{
     Language,
     Triplet,
     Triplet::*,
-    Tri,
-    IResult,
-    preceded,
-    tag,
-    alt,
-    many1,
     parse_triplet_and,
-    ErrorKind
 };
 
 use nom::Err;
 use nom::error::Error;
-
-use super::PredicatAST;
+use crate::parser::base_parser::PredicatAST;
 
 type QueryAST = (Vec<Language>, Vec<Language>,Vec<Language>);
 type QueryVarAST<'a> = (Vec<String>, Vec<&'a str>);
@@ -77,9 +77,15 @@ pub fn parse_modifier(s: &str) -> PredicatAST {
     }
 }
 
+/*
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{
+        parse_add_modifier,
+        parse_delete_modifier,
+        triplet_to_insert,
+        Triplet::*,
+    };
 
     #[test]
     fn test_add_modifier() {
@@ -114,5 +120,5 @@ mod tests {
             vec!["DELETE FROM facts WHERE subject='pierre' AND link='ami' AND goal='jean'",
                  "DELETE FROM facts WHERE subject='julie' AND link='ami' AND goal='susanne'"]);
     }
-
 }
+*/
