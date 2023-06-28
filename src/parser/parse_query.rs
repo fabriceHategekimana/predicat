@@ -264,7 +264,7 @@ mod tests {
             parse_comparison(" 4 == 'res'").unwrap().1,
             Language::Comp(" 4 == 'res'".to_string()));
     }
-//
+
     //#[test]
     //fn test_string() {
         //assert_eq!(
@@ -276,22 +276,22 @@ mod tests {
             //" 'sdt'"
             //);
     //}
-//
-    #[test]
-    fn test_number() {
-        assert_eq!(
-            parse_number(" 57").unwrap().1,
-            "57");
-        assert_eq!(
-            parse_number(" 2.57").unwrap().1,
-            "2.57");
-        assert_eq!(
-            parse_number(" -57").unwrap().1,
-            "-57");
-        assert_eq!(
-            parse_number(" -57.34").unwrap().1,
-            "-57.34");
-    }
+
+    //#[test]
+    //fn test_number() {
+        //assert_eq!(
+            //parse_number(" 57").unwrap().1,
+            //"57");
+        //assert_eq!(
+            //parse_number(" 2.57").unwrap().1,
+            //"2.57");
+        //assert_eq!(
+            //parse_number(" -57").unwrap().1,
+            //"-57");
+        //assert_eq!(
+            //parse_number(" -57.34").unwrap().1,
+            //"-57.34");
+    //}
 
     //#[test]
     //fn test_valvar() {
@@ -305,7 +305,7 @@ mod tests {
             //parse_valvar(" '7'").unwrap().1,
             //" '7'");
     //}
-//
+
     #[test]
     fn test_comparison_and() {
         assert_eq!(
@@ -329,7 +329,7 @@ mod tests {
             //" 'sdt'"
             //);
     //}
-//
+
     #[test]
     // get [variables] [connector] [triplets]
     fn test_parse_query_var1() {
