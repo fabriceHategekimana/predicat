@@ -16,6 +16,7 @@ pub use crate::parser::base_parser::{
 };
 
 use nom::Err;
+use nom::Needed;
 use crate::parser::base_parser::PredicatAST;
 
 type QueryAST = (Vec<Language>, Vec<Language>,Vec<Language>);
@@ -228,12 +229,12 @@ mod tests {
 
     #[test]
     fn test_operator() {
-        //assert_eq!(
-            //parse_operator(" ==").unwrap().1,
-            //"==");
-        //assert_eq!(
-            //parse_operator(" >").unwrap().1,
-            //">");
+        assert_eq!(
+            parse_operator(" ==").unwrap().1,
+            "==".to_string());
+        assert_eq!(
+            parse_operator(" >").unwrap().1,
+            ">".to_string());
         assert_eq!(
             parse_operator(" a"),
             Err(nom::Err::Error(
@@ -265,46 +266,46 @@ mod tests {
             Language::Comp(" 4 == 'res'".to_string()));
     }
 
-    //#[test]
-    //fn test_string() {
-        //assert_eq!(
-            //parse_string(" 'un deux trois'").unwrap().1,
-            //" 'un deux trois'"
-            //);
-        //assert_eq!(
-            //parse_string(" 'sdt'").unwrap().1,
-            //" 'sdt'"
-            //);
-    //}
+    #[test]
+    fn test_string() {
+        assert_eq!(
+            parse_string(" 'un deux trois'").unwrap().1,
+            " 'un deux trois'".to_string()
+            );
+        assert_eq!(
+            parse_string(" 'sdt'").unwrap().1,
+            " 'sdt'".to_string()
+            );
+    }
 
-    //#[test]
-    //fn test_number() {
-        //assert_eq!(
-            //parse_number(" 57").unwrap().1,
-            //"57");
-        //assert_eq!(
-            //parse_number(" 2.57").unwrap().1,
-            //"2.57");
-        //assert_eq!(
-            //parse_number(" -57").unwrap().1,
-            //"-57");
-        //assert_eq!(
-            //parse_number(" -57.34").unwrap().1,
-            //"-57.34");
-    //}
+    #[test]
+    fn test_number() {
+        assert_eq!(
+            parse_number(" 57").unwrap().1,
+            "57".to_string());
+        assert_eq!(
+            parse_number(" 2.57").unwrap().1,
+            "2.57".to_string());
+        assert_eq!(
+            parse_number(" -57").unwrap().1,
+            "-57".to_string());
+        assert_eq!(
+            parse_number(" -57.34").unwrap().1,
+            "-57.34".to_string());
+    }
 
-    //#[test]
-    //fn test_valvar() {
-        //assert_eq!(
-            //parse_valvar(" $A").unwrap().1,
-            //"$A");
-        //assert_eq!(
-            //parse_valvar(" 7").unwrap().1,
-            //"7");
-        //assert_eq!(
-            //parse_valvar(" '7'").unwrap().1,
-            //" '7'");
-    //}
+    #[test]
+    fn test_valvar() {
+        assert_eq!(
+            parse_valvar(" $A").unwrap().1,
+            "$A".to_string());
+        assert_eq!(
+            parse_valvar(" 7").unwrap().1,
+            "7".to_string());
+        assert_eq!(
+            parse_valvar(" '7'").unwrap().1,
+            " '7'".to_string());
+    }
 
     #[test]
     fn test_comparison_and() {
@@ -313,22 +314,22 @@ mod tests {
             Language::Comp(" 7 == 8".to_string()));
     }
 
-    //#[test]
-    //fn test_value() {
-        //assert_eq!(
-            //parse_value(" -57.34").unwrap().1,
-            //"-57.34");
-//
-        //assert_eq!(
-            //parse_value(" '3'").unwrap().1,
-            //" '3'"
-            //);
-//
-        //assert_eq!(
-            //parse_value(" 'sdt'").unwrap().1,
-            //" 'sdt'"
-            //);
-    //}
+    #[test]
+    fn test_value() {
+        assert_eq!(
+            parse_value(" -57.34").unwrap().1,
+            "-57.34".to_string());
+
+        assert_eq!(
+            parse_value(" '3'").unwrap().1,
+            " '3'".to_string()
+            );
+
+        assert_eq!(
+            parse_value(" 'sdt'").unwrap().1,
+            " 'sdt'".to_string()
+            );
+    }
 
     #[test]
     // get [variables] [connector] [triplets]
