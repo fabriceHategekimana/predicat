@@ -92,27 +92,25 @@ fn parse_query_and_modifier(s: String) -> PredicatAST {
 }
 
 
-/*
 #[cfg(test)]
 mod tests {
     use super::{
         parse_query,
-        Query,
         Language,
         Triplet,
     };
+use crate::PredicatAST::Query;
 
     #[test]
     fn test_parse_query() {
-        assert_eq!(parse_query("get $A such_as $A ami Bob $A == 7"),
-                   Query((vec![Language::Var("A".to_string())], vec![Language::Tri(Triplet::Tvww("A".to_string(),"ami".to_string(),"Bob".to_string()))], vec![Language::Comp(" $A == 7".to_string())]))
-                   );
-        assert_eq!(parse_query("get $A $B such_as $A ami $B and $A == 7"),
-                   Query((vec![Language::Var("A".to_string()), Language::Var("B".to_string())], vec![Language::Tri(Triplet::Tvwv("A".to_string(),"ami".to_string(),"B".to_string()))], vec![Language::Comp(" $A == 7".to_string())]))
-                   );
-        assert_eq!(parse_query("get $A $B such_as $A ami $B and $A == 7 and $B < 9"),
-                   Query((vec![Language::Var("A".to_string()), Language::Var("B".to_string())], vec![Language::Tri(Triplet::Tvwv("A".to_string(),"ami".to_string(),"B".to_string()))], vec![Language::Comp(" $A == 7".to_string()), Language::Comp(" $B < 9".to_string())]))
-                   );
+        //assert_eq!(parse_query("get $A such_as $A ami Bob $A == 7"),
+                   //Query((vec![Language::Var("A".to_string())], vec![Language::Tri(Triplet::Tvww("A".to_string(),"ami".to_string(),"Bob".to_string()))], vec![Language::Comp(" $A == 7".to_string())]))
+                   //);
+        //assert_eq!(parse_query("get $A $B such_as $A ami $B and $A == 7"),
+                   //Query((vec![Language::Var("A".to_string()), Language::Var("B".to_string())], vec![Language::Tri(Triplet::Tvwv("A".to_string(),"ami".to_string(),"B".to_string()))], vec![Language::Comp(" $A == 7".to_string())]))
+                   //);
+        //assert_eq!(parse_query("get $A $B such_as $A ami $B and $A == 7 and $B < 9"),
+                   //Query((vec![Language::Var("A".to_string()), Language::Var("B".to_string())], vec![Language::Tri(Triplet::Tvwv("A".to_string(),"ami".to_string(),"B".to_string()))], vec![Language::Comp(" $A == 7".to_string()), Language::Comp(" $B < 9".to_string())]))
+                   //);
     }
 }
-*/

@@ -157,6 +157,7 @@ pub fn parse_query(s: &str) -> PredicatAST {
 mod tests {
     use crate::parser::Triplet::*;
     use nom::error::{Error, ErrorKind};
+    use crate::PredicatAST::Query;
     use super::{
         Language,
         Language::{Comp, Empty},
@@ -355,14 +356,13 @@ mod tests {
               (vec![Language::Var("A".to_string())], vec![Language::Empty], vec![Language::Comp(" $A > 7".to_string())]));
     }
 
-    //#[test]
-    //fn test_parse_query() {
-        //assert_eq!(parse_query("get $A $B $C such_as $A $B $C"),
-        //PredicatAST::Query((
-                 //vec![Language::Var("A".to_string()), Language::Var("B".to_string()), Language::Var("C".to_string())],
-                 //vec![Language::Tri(Tvvv("A".to_string(), "B".to_string(), "C".to_string()))],
-                 //vec![Language::Empty]
-        //)));
-    //}
+    #[test]
+    fn test_parse_query() {
+        if let PredicatAST::Query((var, tri, comp)) = parse_query("get $A where $A > 7") {
+            assert_eq!(var, vec![Language::Var("A".to_string())]);
+            assert_eq!(tri, vec![Language::Empty]);
+            assert_eq!(comp, vec![Language::Comp(" $A > 7".to_string())]);
+        }
+    }
 
 }

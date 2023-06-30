@@ -282,69 +282,75 @@ pub fn triplet_to_sql(tri: &Triplet) -> String {
     }
 }
 
-/*
 #[cfg(test)]
 mod tests {
     use super::{
         extract_columns
     };
+    use crate::knowledge::sqlite_knowledge::triplet_to_sql;
+    use crate::knowledge::sqlite_knowledge::Triplet::*;
+    use crate::knowledge::sqlite_knowledge::format_triplets;
+    use crate::knowledge::sqlite_knowledge::Language::Tri;
+    use crate::knowledge::sqlite_knowledge::format_variables;
+    use crate::knowledge::sqlite_knowledge::Language::Var;
+    use crate::knowledge::sqlite_knowledge::format_comparisons;
+    use crate::knowledge::sqlite_knowledge::Language::Comp;
 
-    #[test]
-    fn test_column() {
-        assert_eq!(
-            extract_columns("SELECT A,B,C FROM (SELECT subject AS A,link AS B,goal AS C FROM facts);"),
-            vec!["A", "B", "C"]
-            );
-    }
-/*
+    //#[test]
+    //fn test_column() {
+        //assert_eq!(
+            //extract_columns("SELECT A,B,C FROM (SELECT subject AS A,link AS B,goal AS C FROM facts);"),
+            //vec!["A", "B", "C"]
+            //);
+    //}
+
     #[test]
     fn test_from_triplet_to_sql() {
         assert_eq!(
-            triplet_to_sql(&Tvvv("A","B","C")),
+            triplet_to_sql(&Tvvv("A".to_string(),"B".to_string(),"C".to_string())),
             "SELECT subject AS A,link AS B,goal AS C FROM facts".to_string()
         );
         assert_eq!(
-            triplet_to_sql(&Tvwv("A","B","C")),
+            triplet_to_sql(&Tvwv("A".to_string(),"B".to_string(),"C".to_string())),
             "SELECT subject AS A,goal AS C FROM facts WHERE link='B'"
         );
     }
-}
 
 
-    #[test]
-    fn test_format_triplets() {
-        assert_eq!(
-            format_triplets(&vec![Tri(Tvvv("A","B","C"))]),
-            "(SELECT subject AS A,link AS B,goal AS C FROM facts)".to_string()
-        );
-        assert_eq!(
-            format_triplets(&vec![Tri(Tvvv("A","B","C")),Tri(Twvv("D","E","F"))]),
-            "(SELECT subject AS A,link AS B,goal AS C FROM facts natural join SELECT link AS E,goal AS F FROM facts WHERE subject='D')".to_string()
-        );
-    }
+    //#[test]
+    //fn test_format_triplets() {
+        //assert_eq!(
+            //format_triplets(&vec![Tri(Tvvv("A".to_string(),"B".to_string(),"C".to_string()))]),
+            //"(SELECT subject AS A,link AS B,goal AS C FROM facts)".to_string()
+        //);
+        //assert_eq!(
+            //format_triplets(&vec![Tri(Tvvv("A".to_string(),"B".to_string(),"C".to_string())),Tri(Twvv("D".to_string(),"E".to_string(),"F".to_string()))]),
+            //"(SELECT subject AS A,link AS B,goal AS C FROM facts natural join SELECT link AS E,goal AS F FROM facts WHERE subject='D')".to_string()
+        //);
+    //}
 
     #[test]
     fn test_format_variables() {
         assert_eq!(
-            format_variables(&vec![Var("X"),Var("Y")]),
+            format_variables(&vec![Var("X".to_string()),Var("Y".to_string())]),
             "SELECT X,Y FROM "
         );
         assert_eq!(
-            format_variables(&vec![Var("X")]),
+            format_variables(&vec![Var("X".to_string())]),
             "SELECT X FROM "
         );
     }
 
-    #[test]
-    fn test_format_comparisons() {
-        assert_eq!(
-            format_comparisons(&vec![Comp(" $A == 8")]),
-            " WHERE A = 8;".to_string()
-        );
-        assert_eq!(
-            format_comparisons(&vec![Comp(" $A == 8"), Comp(" 6 < 3")]),
-            " WHERE A = 8 AND 6 < 3;".to_string()
-        );
-*/
-    }
-*/
+    //#[test]
+    //fn test_format_comparisons() {
+        //assert_eq!(
+            //format_comparisons(&vec![Comp(" $A == 8".to_string())]),
+            //" WHERE A = 8;".to_string()
+        //);
+        //assert_eq!(
+            //format_comparisons(&vec![Comp(" $A == 8".to_string()), Comp(" 6 < 3".to_string())]),
+            //" WHERE A = 8 AND 6 < 3;".to_string()
+        //);
+    //}
+
+}

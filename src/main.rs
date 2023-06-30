@@ -44,13 +44,3 @@ fn main() {
     let res = parse_and_execute(&command, knowledge, None);
     println!("res: {:?}", res);
 }
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    #[ignore]
-    fn main_test(){
-        assert_eq!(2, 2);
-        assert_eq!(3, 3);
-    }
-}
