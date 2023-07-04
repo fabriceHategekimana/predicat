@@ -99,18 +99,23 @@ mod tests {
         Language,
         Triplet,
     };
-use crate::PredicatAST::Query;
+    use crate::{PredicatAST::Query, parser::apply_context};
+    use polars::prelude::*;
+    use polars::df;
 
     #[test]
-    fn test_parse_query() {
-        //assert_eq!(parse_query("get $A such_as $A ami Bob $A == 7"),
-                   //Query((vec![Language::Var("A".to_string())], vec![Language::Tri(Triplet::Tvww("A".to_string(),"ami".to_string(),"Bob".to_string()))], vec![Language::Comp(" $A == 7".to_string())]))
-                   //);
-        //assert_eq!(parse_query("get $A $B such_as $A ami $B and $A == 7"),
-                   //Query((vec![Language::Var("A".to_string()), Language::Var("B".to_string())], vec![Language::Tri(Triplet::Tvwv("A".to_string(),"ami".to_string(),"B".to_string()))], vec![Language::Comp(" $A == 7".to_string())]))
-                   //);
-        //assert_eq!(parse_query("get $A $B such_as $A ami $B and $A == 7 and $B < 9"),
-                   //Query((vec![Language::Var("A".to_string()), Language::Var("B".to_string())], vec![Language::Tri(Triplet::Tvwv("A".to_string(),"ami".to_string(),"B".to_string()))], vec![Language::Comp(" $A == 7".to_string()), Language::Comp(" $B < 9".to_string())]))
-                   //);
+    fn test_apply_context() {
+        let df = df![
+            "A" => ["a", "b", "c"]
+        ].unwrap();
+        let cmds = vec!["delete $A ami Joe".to_string()];
+        assert_eq!(
+            apply_context("$A", &cmds, &df),
+            vec![
+            "delete a ami Joe",
+            "delete b ami Joe",
+            "delete c ami Joe",
+            ]
+        );
     }
 }

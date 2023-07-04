@@ -16,7 +16,7 @@ use std::collections::HashMap;
 use crate::knowledge::Knowledgeable;
 
 use crate::parser::base_parser::PredicatAST;
-use crate::parser::base_parser::PredicatAST::{Query, Modifier, Empty};
+use crate::parser::base_parser::PredicatAST::{Query, AddModifier, DeleteModifier, Empty};
 
 use crate::parser::base_parser::Language;
 use crate::parser::base_parser::Language::Word;
@@ -168,10 +168,13 @@ fn add_to_insert(l: &Language) -> String {
 fn translate_one_ast<'a>(ast: &'a PredicatAST) -> Result<String, &'a str> {
     match ast {
         Query((get, link, filter)) => Ok(query_to_sql(get, link, filter)),
-        //Ok((s, v)) => Ok((s, v.iter()
-        Modifier(commands) => 
+        AddModifier(commands) => 
             Ok(commands.iter()
                         .map(|x| add_to_insert(x))
+                        .fold("".to_string(), string_concat)),
+        DeleteModifier(commands) => 
+            Ok(commands.iter()
+                        .map(|x| delete_to_insert(x))
                         .fold("".to_string(), string_concat)),
         _ => Err("The AST is empty") 
     }
@@ -214,14 +217,18 @@ fn to_hashmap<'a>(sqlite_couple: &[(&'a str, &'a str)]) -> HashMap<&'a str, Vec<
 }
 
 fn to_dataframe(hm: HashMap<String, Vec<String>>, columns: Vec<&str>) -> DataFrame {
-    let vs = columns
-                .iter()
-                .map(|x| Series::new(
-                            x,
-                            hm.get(&x.to_string()).unwrap()
-                            )
-                ).collect();
-    DataFrame::new(vs).unwrap()
+    if hm.is_empty() {
+        DataFrame::default()
+    } else {
+        let vs = columns
+                    .iter()
+                    .map(|x| Series::new(
+                                x,
+                                hm.get(&x.to_string()).unwrap()
+                                )
+                    ).collect();
+        DataFrame::new(vs).unwrap()
+    }
 }
 
 fn query_to_sql(get: &[Language], link: &[Language], filter: &[Language]) -> String {
