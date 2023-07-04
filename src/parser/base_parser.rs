@@ -19,7 +19,7 @@ pub enum PredicatAST {
         (Vec<Language>,
          Vec<Language>,
          Vec<Language>)),
-    Modifier(Vec<String>),
+    Modifier(Vec<Language>),
     Empty,
     Debug(String)
 }

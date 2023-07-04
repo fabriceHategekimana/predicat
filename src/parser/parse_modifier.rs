@@ -20,61 +20,34 @@ use crate::parser::base_parser::PredicatAST;
 type QueryAST = (Vec<Language>, Vec<Language>,Vec<Language>);
 type QueryVarAST<'a> = (Vec<String>, Vec<&'a str>);
 
-fn triplet_to_delete(tri: &Triplet) -> String {
-    let tup = tri.to_tuple_with_variable();
-    format!("DELETE FROM facts WHERE subject='{}' AND link='{}' AND goal='{}'",
-            tup.0, tup.1, tup.2)
-}
-
-fn delete_to_insert(l: &Language) -> String {
-    match l {
-        Language::Tri(tri) => triplet_to_delete(&tri),
-        _ => String::from("")
-    }
-}
-
-fn parse_delete_modifier(s: &str) -> IResult<&str,Vec<String>> {
+fn parse_delete_modifier(s: &str) -> IResult<&str,Vec<Language>> {
     let res = preceded(tag("delete"),
         many1(parse_triplet_and)
     )(s);
     match res {
-        Ok((s, v)) => Ok((s, v.iter().map(|x| delete_to_insert(x)).collect::<Vec<String>>())),
+        Ok((s, v)) => Ok((s, v)),
         Err(e) => Err(e)
     }
 }
-
+ 
 fn triplet_to_insert(tri: &Triplet) -> String {
     let tup = tri.to_tuple_with_variable();
     format!("INSERT or IGNORE INTO facts (subject,link,goal) VALUES ('{}','{}','{}')",
             tup.0, tup.1, tup.2)
 }
 
-fn add_to_insert(l: &Language) -> String {
-    match l {
-        Language::Tri(tri) => triplet_to_insert(&tri),
-        _ => String::from("")
-    }
-}
-
-fn parse_add_modifier(s: &str) -> IResult<&str, Vec<String>> {
+fn parse_add_modifier(s: &str) -> IResult<&str, Vec<Language>> {
     let res = preceded(tag("add"),
         many1(parse_triplet_and)
     )(s);
     match res {
-        Ok((s, v)) => Ok((s, v.iter().map(|x| add_to_insert(x)).collect::<Vec<String>>())),
+        Ok((s, v)) => Ok((s, v)),
         Err(e) => Err(e)
     }
 }
 
-fn parse_add_modifier2(s: &str) -> IResult<&str, Vec<String>> {
-    let res = [
-        "INSERT or IGNORE INTO facts (subject,link,goal) VALUES ('pierre','ami','jean')".to_string()
-    ].into_iter().collect();
-    Ok(("", res))
-}
-
 pub fn parse_modifier(s: &str) -> PredicatAST {
-    let res: IResult<&str, Vec<String>> = alt((
+    let res: IResult<&str, Vec<Language>> = alt((
             parse_add_modifier, 
             parse_delete_modifier  
         ))(s);
@@ -88,41 +61,21 @@ pub fn parse_modifier(s: &str) -> PredicatAST {
 mod tests {
     use super::{
         parse_add_modifier,
-        parse_add_modifier2,
         parse_delete_modifier,
         triplet_to_insert,
         Triplet::*,
+        Language
     };
-
-fn return_vec_string() -> Vec<String> {
-    vec!["one".to_string(),
-         "two".to_string(),
-         "three".to_string()]
-}
-
 
     #[test]
     fn test_add_modifier() {
         let (s, args) =  parse_add_modifier("add pierre ami jean").unwrap();
-        //assert_eq!(args, 
-                   //vec!["INSERT or IGNORE INTO facts (subject,link,goal) VALUES ('pierre','ami','jean')".to_string()]
-            //);
+        assert_eq!(args, 
+                [Language::Tri(Twww("pierre".to_string(), "ami".to_string(), "jean".to_string()))]
+            );
         assert_eq!(s, 
                    "".to_string()
             );
-        //assert_eq!(
-            //parse_add_modifier("add pierre ami jean").unwrap().1[0],
-            //"INSERT or IGNORE INTO facts (subject,link,goal) VALUES ('pierre','ami','jean')".to_string()
-            //);
-        //assert_eq!(
-            //parse_add_modifier("add pierre ami jean").unwrap().1[0],
-            //"INSERT or IGNORE INTO facts (subject,link,goal) VALUES ('pierre','ami','jean')"
-                  //);
-        //assert_eq!(
-            //parse_add_modifier("add pierre ami jean and julie ami susanne").unwrap().1,
-            //vec!["INSERT or IGNORE INTO facts (subject,link,goal) VALUES ('pierre','ami','jean')",
-                 //"INSERT or IGNORE INTO facts (subject,link,goal) VALUES ('julie','ami','susanne')"
-            //]);
     } 
 
     #[test]
@@ -133,16 +86,16 @@ fn return_vec_string() -> Vec<String> {
     }
 
 
-    //#[test]
-    //fn test_delete_modifier() {
-        //assert_eq!(
-            //parse_delete_modifier("delete pierre ami jean").unwrap().1,
-            //vec!["DELETE FROM facts WHERE subject='pierre' AND link='ami' AND goal='jean'"]);
-//
-        //assert_eq!(
-            //parse_delete_modifier("delete pierre ami jean and julie ami susanne").unwrap().1,
-            //vec!["DELETE FROM facts WHERE subject='pierre' AND link='ami' AND goal='jean'",
-                 //"DELETE FROM facts WHERE subject='julie' AND link='ami' AND goal='susanne'"]);
-    //}
+    #[test]
+    fn test_delete_modifier() {
+        assert_eq!(
+            parse_delete_modifier("delete pierre ami jean").unwrap().1,
+            vec![Language::Tri(Twww("pierre".to_string(), "ami".to_string(), "jean".to_string()))]);
+
+        assert_eq!(
+            parse_delete_modifier("delete pierre ami jean and julie ami susanne").unwrap().1,
+            vec![Language::Tri(Twww("pierre".to_string(), "ami".to_string(), "jean".to_string())),
+                 Language::Tri(Twww("julie".to_string(), "ami".to_string(), "susanne".to_string()))]);
+    }
 
 }

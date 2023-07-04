@@ -139,17 +139,45 @@ impl Knowledgeable for SqliteKnowledge {
 
 }
 
+fn triplet_to_delete(tri: &Triplet) -> String {
+    let tup = tri.to_tuple_with_variable();
+    format!("DELETE FROM facts WHERE subject='{}' AND link='{}' AND goal='{}'",
+            tup.0, tup.1, tup.2)
+}
+
+fn delete_to_insert(l: &Language) -> String {
+    match l {
+        Language::Tri(tri) => triplet_to_delete(&tri),
+        _ => String::from("")
+    }
+}
+
+fn triplet_to_insert(tri: &Triplet) -> String {
+    let tup = tri.to_tuple_with_variable();
+    format!("INSERT or IGNORE INTO facts (subject,link,goal) VALUES ('{}','{}','{}')",
+            tup.0, tup.1, tup.2)
+}
+
+fn add_to_insert(l: &Language) -> String {
+    match l {
+        Language::Tri(tri) => triplet_to_insert(&tri),
+        _ => String::from("")
+    }
+}
+
 fn translate_one_ast<'a>(ast: &'a PredicatAST) -> Result<String, &'a str> {
     match ast {
         Query((get, link, filter)) => Ok(query_to_sql(get, link, filter)),
+        //Ok((s, v)) => Ok((s, v.iter()
         Modifier(commands) => 
             Ok(commands.iter()
+                        .map(|x| add_to_insert(x))
                         .fold("".to_string(), string_concat)),
         _ => Err("The AST is empty") 
     }
 }
 
-fn string_concat(acc: String, x: &String) -> String {
+fn string_concat(acc: String, x: String) -> String {
     format!("{}{}", acc, x)
 }
 
