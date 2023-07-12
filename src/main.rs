@@ -1,6 +1,7 @@
 mod parser;
 mod importer;
 mod knowledge;
+mod context;
 use std::env;
 
 use polars::frame::DataFrame;
