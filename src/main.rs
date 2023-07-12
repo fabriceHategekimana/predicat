@@ -28,8 +28,7 @@ fn get_context(table: Option<DataFrame>) -> DataFrame {
     table.unwrap_or(DataFrame::default())
 }
 
-fn parse_and_execute<K>(command: &str, knowledge: K, table: Option<DataFrame>) -> DataFrame 
-    where K: Knowledgeable {
+fn parse_and_execute(command: &str, knowledge: impl Knowledgeable, table: Option<DataFrame>) -> DataFrame {
     let context = get_context(table);
     let ast: Vec<PredicatAST> = parse_command(command, &context); 
     let queries: Vec<String> = knowledge.translate(&ast)
