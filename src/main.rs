@@ -5,9 +5,7 @@ mod context;
 use std::env;
 
 use polars::frame::DataFrame;
-use crate::parser::{
-    parse_command,
-};
+use crate::parser::parse_command;
 
 use crate::parser::base_parser::PredicatAST;
 use crate::knowledge::Knowledgeable;

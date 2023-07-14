@@ -1,55 +1,92 @@
-use std::collections::HashMap;
+
+
+use itertools::Itertools;
 
 trait Context {
     fn get_variables(&self) -> Vec<String>;
-    fn get_values(&self, key: String) -> Option<Vec<String>>;
-    fn add_column(&mut self, name: String, elements: Vec<String>);
+    fn get_values(&self, key: &str) -> Option<Vec<String>>;
+    fn add_column(&mut self, name: &str, elements: Vec<String>) -> Self;
+    fn is_in_context(&self, key: String) -> bool;
 }
 
-struct SimpleContext<'a> {
-    tab: HashMap<&'a str, &'a [&'a str]>
+#[derive(Debug)]
+struct SimpleContext {
+    tab: Vec<(String, String)> 
 }
 
 //Constructor
-impl SimpleContext<'_> {
-    fn new<'a>() -> SimpleContext<'a> {
+impl SimpleContext {
+    fn new() -> Self {
         SimpleContext{
-            tab: HashMap::new()
+            tab: vec![]
+        }
+    }
+    fn from(entry: Vec<(String, String)>) -> SimpleContext {
+        SimpleContext{
+            tab: entry
         }
     }
 }
 
-impl Context for SimpleContext<'_> {
+impl Context for SimpleContext {
     fn get_variables(&self) -> Vec<String>{
-        self.tab.keys().map(|x| x.to_string()).collect()
+        self.tab.iter().map(|x| x.0.clone()).sorted().unique().collect()
     }
 
-    fn get_values(&self, key: String) -> Option<Vec<String>> {
-        let res = self.tab.get(&key[..]);
-        match res {
-            Some(r) => Some(r.iter().map(|x| x.to_string()).collect()),
+    fn get_values(&self, key: &str) -> Option<Vec<String>> {
+        match self.is_in_context(key.to_string()) {
+            true => Some(self.tab.iter().filter(|x| x.0.clone() == key).map(|x| x.1.clone()).collect::<Vec<String>>()),
             _ => None
         }
     }
 
-    fn add_column(&mut self, name: String, elements: Vec<String>) {
-        self.tab.insert(&name[..], elements.iter().map(|s| s.as_str()).collect::<Vec<&str>>().as_slice());
+    fn add_column(&mut self, name: &str, elements: Vec<String>) -> SimpleContext {
+        let tab = elements.iter()
+                          .map(|x| (name.to_string(), x.to_string()))
+                          .collect::<Vec<(String, String)>>();
+        SimpleContext::from(tab)
+    }
+
+    fn is_in_context(&self, key: String) -> bool {
+        self.get_variables().iter().any(|x| &x[..] == key)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::context::SimpleContext;
-    use crate::context::Context;
+    use super::SimpleContext;
+    use super::Context;
 
     #[test]
-    fn test_context(){
+    fn test_context_get_variable(){
         let mut context = SimpleContext::new();
-        context.add_column("name".to_string(), vec!["Vestin".to_string(), "Rédempta".to_string(), "Fabrice".to_string()]);
-        //assert_eq!(
-            //context.get_variables(),
-            //vec!["name"]
-        //);
-        assert_eq!(2, 2);
+        context = context.add_column("name", vec!["Vestin".to_string(), "Rédempta".to_string(), "Fabrice".to_string()]);
+        assert_eq!(context.get_variables(), vec!["name"]);
+    }
+
+    #[test]
+    fn test_is_in_context() {
+        let mut context = SimpleContext::new();
+        context = context.add_column("name", vec!["Vestin".to_string(), "Rédempta".to_string(), "Fabrice".to_string()]);
+        assert_eq!(
+            context.is_in_context("name".to_string()),
+            true
+            );
+        assert_eq!(
+            context.is_in_context("truc".to_string()),
+            false
+            );
+    }
+
+    #[test]
+    fn test_context_get_value(){
+        let mut context = SimpleContext::new();
+        context = context.add_column("name", vec!["Vestin".to_string(), "Rédempta".to_string(), "Fabrice".to_string()]);
+        assert_eq!(
+            context.get_values("name"),
+            Some(vec!["Vestin".to_string(), "Rédempta".to_string(), "Fabrice".to_string()]));
+        assert_eq!(
+            context.get_values("truc"),
+            None);
     }
 }
