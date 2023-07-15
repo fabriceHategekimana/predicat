@@ -6,7 +6,7 @@ pub use nom::{
     IResult,
 };
 
-pub use crate::parser::base_parser::{
+pub use super::base_parser::{
     Language,
     Triplet,
     Triplet::*,
@@ -15,7 +15,7 @@ pub use crate::parser::base_parser::{
 
 use nom::Err;
 use nom::error::Error;
-use crate::parser::base_parser::PredicatAST;
+use super::base_parser::PredicatAST;
 
 type QueryAST = (Vec<Language>, Vec<Language>,Vec<Language>);
 type QueryVarAST<'a> = (Vec<String>, Vec<&'a str>);

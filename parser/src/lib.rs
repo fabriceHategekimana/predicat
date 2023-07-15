@@ -12,7 +12,7 @@ use polars::{
 
 use regex::Regex;
 use itertools::Itertools;
-use crate::PredicatAST;
+use base_parser::PredicatAST;
 
 use parse_query::{
     parse_query,
@@ -23,8 +23,9 @@ use parse_query::{
 use parse_modifier::parse_modifier;
 pub use self::base_parser::{Language, Triplet};
 
+use crate::Triplet::*;
 
-fn soft_predicat(s: &str) -> &str {
+pub fn soft_predicat(s: &str) -> &str {
     s
 }
 
@@ -98,8 +99,9 @@ mod tests {
         parse_query,
         Language,
         Triplet,
+        apply_context,
     };
-    use crate::{PredicatAST::Query, parser::apply_context};
+    use crate::{PredicatAST::Query};
     use polars::prelude::*;
     use polars::df;
 

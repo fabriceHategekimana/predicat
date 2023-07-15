@@ -8,7 +8,7 @@ pub use nom::{
     IResult,
 };
 
-pub use crate::parser::base_parser::{
+pub use super::base_parser::{
     Language,
     Triplet::*,
     parse_variable,
@@ -17,7 +17,7 @@ pub use crate::parser::base_parser::{
 
 use nom::Err;
 use nom::Needed;
-use crate::parser::base_parser::PredicatAST;
+use super::base_parser::PredicatAST;
 
 type QueryAST = (Vec<Language>, Vec<Language>,Vec<Language>);
 type QueryVarAST<'a> = ((Vec<Language>, Vec<Language>,Vec<Language>), Vec<&'a str>);
@@ -155,7 +155,7 @@ pub fn parse_query(s: &str) -> PredicatAST {
 
 #[cfg(test)]
 mod tests {
-    use crate::parser::Triplet::*;
+    use crate::parse_modifier::Triplet::*;
     use nom::error::{Error, ErrorKind};
     use crate::PredicatAST::Query;
     use super::{

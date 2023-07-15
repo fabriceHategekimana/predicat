@@ -1,5 +1,3 @@
-
-
 use itertools::Itertools;
 
 trait Context {

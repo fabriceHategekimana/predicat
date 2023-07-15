@@ -13,18 +13,20 @@ use polars::{
 };
 
 use std::collections::HashMap;
-use crate::knowledge::Knowledgeable;
+use super::Knowledgeable;
 
-use crate::parser::base_parser::PredicatAST;
-use crate::parser::base_parser::PredicatAST::{Query, AddModifier, DeleteModifier, Empty};
+use parser::soft_predicat;
 
-use crate::parser::base_parser::Language;
-use crate::parser::base_parser::Language::Word;
-use crate::parser::base_parser::Language::Var;
-use crate::parser::base_parser::Language::Tri;
-use crate::parser::base_parser::Language::Comp;
-use crate::parser::base_parser::Triplet::*;
-use crate::parser::base_parser::Triplet;
+use parser::base_parser::PredicatAST;
+use parser::base_parser::PredicatAST::{Query, AddModifier, DeleteModifier, Empty};
+
+use parser::base_parser::Language;
+use parser::base_parser::Language::Word;
+use parser::base_parser::Language::Var;
+use parser::base_parser::Language::Tri;
+use parser::base_parser::Language::Comp;
+use parser::base_parser::Triplet::*;
+use parser::base_parser::Triplet;
 
 static SUBJECT: &str = ":subject";
 static LINK: &str = ":link";
@@ -322,14 +324,14 @@ mod tests {
     use super::{
         extract_columns
     };
-    use crate::knowledge::sqlite_knowledge::triplet_to_sql;
-    use crate::knowledge::sqlite_knowledge::Triplet::*;
-    use crate::knowledge::sqlite_knowledge::format_triplets;
-    use crate::knowledge::sqlite_knowledge::Language::Tri;
-    use crate::knowledge::sqlite_knowledge::format_variables;
-    use crate::knowledge::sqlite_knowledge::Language::Var;
-    use crate::knowledge::sqlite_knowledge::format_comparisons;
-    use crate::knowledge::sqlite_knowledge::Language::Comp;
+    use super::triplet_to_sql;
+    use super::Triplet::*;
+    use super::format_triplets;
+    use super::Language::Tri;
+    use super::format_variables;
+    use super::Language::Var;
+    use super::format_comparisons;
+    use super::Language::Comp;
 
     //#[test]
     //fn test_column() {

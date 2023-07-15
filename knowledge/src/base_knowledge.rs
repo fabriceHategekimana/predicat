@@ -1,6 +1,6 @@
-use crate::knowledge::sqlite_knowledge::SqliteKnowledge;
+use super::sqlite_knowledge::SqliteKnowledge;
 use polars::frame::DataFrame;
-use crate::parser::base_parser::PredicatAST;
+use parser::base_parser::PredicatAST;
 
 pub fn new_knowledge(kind: &str) -> Result<impl Knowledgeable, String> {
     match kind {

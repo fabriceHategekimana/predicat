@@ -10,8 +10,7 @@ pub use nom::{
     IResult
 };
 
-use crate::PredicatAST::Query;
-pub use crate::parser::base_parser::Triplet::*;
+pub use Triplet::*;
 
 #[derive(PartialEq, Debug)]
 pub enum PredicatAST {
@@ -28,7 +27,7 @@ pub enum PredicatAST {
 impl PredicatAST{
     pub fn is_query(&self) -> bool {
         match self {
-            Query(q) => true,
+            PredicatAST::Query(q) => true,
             _ => false
         }
     }
