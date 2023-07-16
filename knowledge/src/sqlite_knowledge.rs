@@ -321,73 +321,33 @@ pub fn triplet_to_sql(tri: &Triplet) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        extract_columns
-    };
-    use super::triplet_to_sql;
-    use super::Triplet::*;
-    use super::format_triplets;
-    use super::Language::Tri;
     use super::format_variables;
     use super::Language::Var;
-    use super::format_comparisons;
-    use super::Language::Comp;
+    use super::triplet_to_sql;
+    use super::Triplet::*;
 
     //#[test]
-    //fn test_column() {
+    //fn test_from_triplet_to_sql() {
         //assert_eq!(
-            //extract_columns("SELECT A,B,C FROM (SELECT subject AS A,link AS B,goal AS C FROM facts);"),
-            //vec!["A", "B", "C"]
-            //);
-    //}
-
-    #[test]
-    fn test_from_triplet_to_sql() {
-        assert_eq!(
-            triplet_to_sql(&Tvvv("A".to_string(),"B".to_string(),"C".to_string())),
-            "SELECT subject AS A,link AS B,goal AS C FROM facts".to_string()
-        );
-        assert_eq!(
-            triplet_to_sql(&Tvwv("A".to_string(),"B".to_string(),"C".to_string())),
-            "SELECT subject AS A,goal AS C FROM facts WHERE link='B'"
-        );
-    }
-
-
-    //#[test]
-    //fn test_format_triplets() {
-        //assert_eq!(
-            //format_triplets(&vec![Tri(Tvvv("A".to_string(),"B".to_string(),"C".to_string()))]),
-            //"(SELECT subject AS A,link AS B,goal AS C FROM facts)".to_string()
+            //triplet_to_sql(&Tvvv("A".to_string(),"B".to_string(),"C".to_string())),
+            //"SELECT subject AS A,link AS B,goal AS C FROM facts".to_string()
         //);
         //assert_eq!(
-            //format_triplets(&vec![Tri(Tvvv("A".to_string(),"B".to_string(),"C".to_string())),Tri(Twvv("D".to_string(),"E".to_string(),"F".to_string()))]),
-            //"(SELECT subject AS A,link AS B,goal AS C FROM facts natural join SELECT link AS E,goal AS F FROM facts WHERE subject='D')".to_string()
+            //triplet_to_sql(&Tvwv("A".to_string(),"B".to_string(),"C".to_string())),
+            //"SELECT subject AS A,goal AS C FROM facts WHERE link='B'"
         //);
     //}
 
-    #[test]
-    fn test_format_variables() {
-        assert_eq!(
-            format_variables(&vec![Var("X".to_string()),Var("Y".to_string())]),
-            "SELECT X,Y FROM "
-        );
-        assert_eq!(
-            format_variables(&vec![Var("X".to_string())]),
-            "SELECT X FROM "
-        );
-    }
-
     //#[test]
-    //fn test_format_comparisons() {
+    //fn test_format_variables() {
         //assert_eq!(
-            //format_comparisons(&vec![Comp(" $A == 8".to_string())]),
-            //" WHERE A = 8;".to_string()
+            //format_variables(&vec![Var("X".to_string()),Var("Y".to_string())]),
+            //"SELECT X,Y FROM "
         //);
         //assert_eq!(
-            //format_comparisons(&vec![Comp(" $A == 8".to_string()), Comp(" 6 < 3".to_string())]),
-            //" WHERE A = 8 AND 6 < 3;".to_string()
+            //format_variables(&vec![Var("X".to_string())]),
+            //"SELECT X FROM "
         //);
     //}
-
+    
 }

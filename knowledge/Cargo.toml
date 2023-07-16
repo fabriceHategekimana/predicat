@@ -6,7 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-context = { path = "../context" }
 parser = { path = "../parser" }
 polars = "0.26.1"
 sqlite = "0.30.3"

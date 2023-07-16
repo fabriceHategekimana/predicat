@@ -440,7 +440,6 @@ dependencies = [
 name = "knowledge"
 version = "0.1.0"
 dependencies = [
- "context",
  "parser",
  "polars",
  "sqlite",
