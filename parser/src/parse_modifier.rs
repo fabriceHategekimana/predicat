@@ -90,11 +90,6 @@ mod tests {
             parse_delete_modifier("delete pierre ami jean").unwrap().1,
             PredicatAST::DeleteModifier(vec![Language::Tri(Twww("pierre".to_string(), "ami".to_string(), "jean".to_string()))]));
 
-        //assert_eq!(
-            //parse_delete_modifier("delete pierre ami jean and julie ami susanne").unwrap().1,
-            //vec![Language::Tri(Twww("pierre".to_string(), "ami".to_string(), "jean".to_string())),
-                 //Language::Tri(Twww("julie".to_string(), "ami".to_string(), "susanne".to_string()))]);
-                 
     }
 
 }

@@ -1,10 +1,12 @@
 use itertools::Itertools;
+use polars::frame::DataFrame;
 
-trait Context {
+pub trait Context {
     fn get_variables(&self) -> Vec<String>;
     fn get_values(&self, key: &str) -> Option<Vec<String>>;
     fn add_column(&mut self, name: &str, elements: Vec<String>) -> Self;
     fn is_in_context(&self, key: String) -> bool;
+    fn len(&self) -> usize;
 }
 
 #[derive(Debug)]
@@ -23,6 +25,27 @@ impl SimpleContext {
         SimpleContext{
             tab: entry
         }
+    }
+}
+
+// TODO: implement context for DataFrame
+impl Context for DataFrame {
+    fn get_variables(&self) -> Vec<String>{
+        todo!();
+    }
+    fn get_values(&self, key: &str) -> Option<Vec<String>>{
+        todo!();
+    }
+
+    fn add_column(&mut self, name: &str, elements: Vec<String>) -> Self{
+        todo!();
+    }
+    fn is_in_context(&self, key: String) -> bool{
+        todo!();
+    }
+
+    fn len(&self) -> usize{
+        todo!();
     }
 }
 
@@ -47,6 +70,13 @@ impl Context for SimpleContext {
 
     fn is_in_context(&self, key: String) -> bool {
         self.get_variables().iter().any(|x| &x[..] == key)
+    }
+
+    fn len(&self) -> usize {
+        match self.tab.len() {
+            0 => 0,
+            _ => self.get_values(&self.tab[0].0).unwrap().len()
+        }
     }
 }
 
@@ -87,4 +117,12 @@ mod tests {
             context.get_values("truc"),
             None);
     }
+
+    #[test]
+    fn test_simple_context_len() {
+        let mut context = SimpleContext::new();
+        context = context.add_column("name", vec!["Vestin".to_string(), "Rédempta".to_string(), "Fabrice".to_string()]);
+        assert_eq!(context.len(), 3);
+    }
 }
+

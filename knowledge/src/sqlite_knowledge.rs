@@ -326,28 +326,28 @@ mod tests {
     use super::triplet_to_sql;
     use super::Triplet::*;
 
-    //#[test]
-    //fn test_from_triplet_to_sql() {
-        //assert_eq!(
-            //triplet_to_sql(&Tvvv("A".to_string(),"B".to_string(),"C".to_string())),
-            //"SELECT subject AS A,link AS B,goal AS C FROM facts".to_string()
-        //);
-        //assert_eq!(
-            //triplet_to_sql(&Tvwv("A".to_string(),"B".to_string(),"C".to_string())),
-            //"SELECT subject AS A,goal AS C FROM facts WHERE link='B'"
-        //);
-    //}
+    #[test]
+    fn test_from_triplet_to_sql() {
+        assert_eq!(
+            triplet_to_sql(&Tvvv("A".to_string(),"B".to_string(),"C".to_string())),
+            "SELECT subject AS A,link AS B,goal AS C FROM facts".to_string()
+        );
+        assert_eq!(
+            triplet_to_sql(&Tvwv("A".to_string(),"B".to_string(),"C".to_string())),
+            "SELECT subject AS A,goal AS C FROM facts WHERE link='B'"
+        );
+    }
 
-    //#[test]
-    //fn test_format_variables() {
-        //assert_eq!(
-            //format_variables(&vec![Var("X".to_string()),Var("Y".to_string())]),
-            //"SELECT X,Y FROM "
-        //);
-        //assert_eq!(
-            //format_variables(&vec![Var("X".to_string())]),
-            //"SELECT X FROM "
-        //);
-    //}
+    #[test]
+    fn test_format_variables() {
+        assert_eq!(
+            format_variables(&vec![Var("X".to_string()),Var("Y".to_string())]),
+            "SELECT X,Y FROM "
+        );
+        assert_eq!(
+            format_variables(&vec![Var("X".to_string())]),
+            "SELECT X FROM "
+        );
+    }
     
 }

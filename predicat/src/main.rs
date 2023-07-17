@@ -1,6 +1,7 @@
 use parser;
 use importer;
 use knowledge;
+use context::Context;
 use std::env;
 
 use polars::frame::DataFrame;
