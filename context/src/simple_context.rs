@@ -34,11 +34,11 @@ impl Context for SimpleContext {
         }
     }
 
-    fn add_column(&mut self, name: &str, elements: Vec<String>) -> &mut SimpleContext {
+    fn add_column(&mut self, name: &str, elements: Vec<String>) -> SimpleContext {
         let tab = elements.iter()
                           .map(|x| (name.to_string(), x.to_string()))
                           .collect::<Vec<(String, String)>>();
-        &mut SimpleContext::from(tab)
+        SimpleContext::from(tab)
     }
 
     fn is_in_context(&self, key: String) -> bool {
@@ -60,14 +60,14 @@ mod tests {
 
     #[test]
     fn test_context_get_variable(){
-        let mut context = &mut SimpleContext::new();
+        let mut context = SimpleContext::new();
         context = context.add_column("name", vec!["Vestin".to_string(), "Rédempta".to_string(), "Fabrice".to_string()]);
         assert_eq!(context.get_variables(), vec!["name"]);
     }
 
     #[test]
     fn test_is_in_context() {
-        let mut context = &mut SimpleContext::new();
+        let mut context = SimpleContext::new();
         context = context.add_column("name", vec!["Vestin".to_string(), "Rédempta".to_string(), "Fabrice".to_string()]);
         assert_eq!(
             context.is_in_context("name".to_string()),
@@ -81,7 +81,7 @@ mod tests {
 
     #[test]
     fn test_context_get_value(){
-        let mut context = &mut SimpleContext::new();
+        let mut context = SimpleContext::new();
         context = context.add_column("name", vec!["Vestin".to_string(), "Rédempta".to_string(), "Fabrice".to_string()]);
         assert_eq!(
             context.get_values("name"),
