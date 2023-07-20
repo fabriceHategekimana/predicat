@@ -3,8 +3,12 @@ use crate::base_context::Context;
 use polars::series::Series;
 use polars::prelude::NamedFrom;
 
-// TODO: implement context for DataFrame
 impl Context for DataFrame {
+
+    fn new() -> DataFrame {
+        DataFrame::default()
+    }
+
     fn get_variables(&self) -> Vec<String> {
         self.get_columns().iter().map(|x| x.name().to_string()).collect()
     }

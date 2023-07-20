@@ -3,17 +3,12 @@ use crate::base_context::Context;
 
 
 #[derive(Debug)]
-struct SimpleContext {
+pub struct SimpleContext {
     tab: Vec<(String, String)> 
 }
 
 //Constructor
 impl SimpleContext {
-    fn new() -> Self {
-        SimpleContext{
-            tab: vec![]
-        }
-    }
     fn from(entry: Vec<(String, String)>) -> SimpleContext {
         SimpleContext{
             tab: entry
@@ -23,6 +18,12 @@ impl SimpleContext {
 
 
 impl Context for SimpleContext {
+    fn new() -> SimpleContext {
+        SimpleContext{
+            tab: vec![]
+        }
+    }
+
     fn get_variables(&self) -> Vec<String>{
         self.tab.iter().map(|x| x.0.clone()).sorted().unique().collect()
     }

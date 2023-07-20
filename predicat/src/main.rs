@@ -1,15 +1,16 @@
 use parser;
 use importer;
 use knowledge;
-use context::Context;
 use std::env;
 
 use polars::frame::DataFrame;
 use crate::parser::parse_command;
 
-use crate::parser::base_parser::PredicatAST;
 use crate::knowledge::Knowledgeable;
 use crate::knowledge::new_knowledge;
+use context::simple_context::SimpleContext;
+use context::base_context::Context;
+use crate::parser::base_parser::PredicatAST;
 
 fn get_args_or(query: &str) -> String {
     let args: String = env::args().skip(1)
@@ -22,11 +23,14 @@ fn get_args_or(query: &str) -> String {
     }
 }
 
-fn get_context(table: Option<DataFrame>) -> DataFrame {
-    table.unwrap_or(DataFrame::default())
+fn get_context(table: Option<impl Context>) -> impl Context {
+    match table {
+        Some(data) => data,
+        None => Context::new()
+    }
 }
 
-fn parse_and_execute(command: &str, knowledge: impl Knowledgeable, table: Option<DataFrame>) -> DataFrame {
+fn parse_and_execute(command: &str, knowledge: impl Knowledgeable, table: Option<impl Context>) -> DataFrame {
     let context = get_context(table);
     let ast: Vec<PredicatAST> = parse_command(command, &context); 
     let queries: Vec<String> = knowledge.translate(&ast)
@@ -39,6 +43,6 @@ fn parse_and_execute(command: &str, knowledge: impl Knowledgeable, table: Option
 fn main() {
     let command = get_args_or("add Socrate est mortel");
     let Ok(knowledge) = new_knowledge("sqlite") else {panic!("Can't open the knowledge!")};
-    let res = parse_and_execute(&command, knowledge, None);
+    let res = parse_and_execute(&command, knowledge, None::<SimpleContext>);
     println!("res: {:?}", res);
 }

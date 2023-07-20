@@ -1,3 +1,3 @@
-mod base_context;
-mod simple_context;
-mod dataframe_context;
+pub mod base_context;
+pub mod simple_context;
+pub mod dataframe_context;

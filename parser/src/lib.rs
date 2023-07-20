@@ -13,7 +13,9 @@ use parse_query::{
     alt
 };
 
-use context::Context;
+use context::base_context::Context;
+use context::simple_context::SimpleContext;
+
 
 use parse_modifier::parse_modifier;
 pub use self::base_parser::{Language, Triplet};
