@@ -45,14 +45,14 @@ fn apply_context<'a>(variable: &'a str, commands: &'a [String], context: &impl C
     let values = &(context.get_values(variable).unwrap());
     let mut res: Vec<String> = vec![];
     for (val, cmd) in values.into_iter().zip(commands){
-        let replaced = cmd.replace(&("$".to_string() + variable)[..], val);
+        let replaced = cmd.replace(&(variable)[..], val);
         res.push(replaced);
     }
     res
 }
 
 fn duplicate_command(command: &str, context: &impl Context) -> Vec<String> {
-    (0..=context.len()).into_iter().map(|_x| command.to_string()).collect()
+    (0..context.len()).into_iter().map(|_x| command.to_string()).collect()
 }
 
 fn substitute_with_context<'a>(command: &'a str, variables: &'a [String], context: &impl Context) -> Vec<String> {
@@ -88,31 +88,49 @@ fn parse_query_and_modifier(s: String) -> PredicatAST {
 
 #[cfg(test)]
 mod tests {
+    use context::base_context::Context;
+    use context::simple_context::SimpleContext;
+
     use super::{
         parse_query,
         Language,
         Triplet,
         apply_context,
+        substitute_with_context,
+        duplicate_command,
     };
-    use crate::PredicatAST::Query;
-    use polars::prelude::*;
-    use polars::df;
 
-    //#[test]
-    //fn test_apply_context() {
-        //// TODO : apply a mock for the context
-        //let df = df![
-            //"A" => ["a", "b", "c"]
-        //].unwrap();
-        //let cmds = vec!["delete $A ami Joe".to_string()];
-        //assert_eq!(
-            //apply_context("$A", &cmds, &df),
-            //vec![
-            //"delete a ami Joe",
-            //"delete b ami Joe",
-            //"delete c ami Joe",
-            //]
-        //);
-    //}
+    #[test]
+    fn test_duplicate_commande() {
+        let mut context = SimpleContext::new();
+        context = context.add_column("$A", vec!["pierre".to_string(), "anne".to_string(), "murielle".to_string()]);
+        assert_eq!(
+            context.len(),
+            3);
+        assert_eq!(
+            duplicate_command("add $A ami julie", &context),
+            vec!["add $A ami julie".to_string(), "add $A ami julie".to_string(), "add $A ami julie".to_string()]
+                  );
+    }
+
+    #[test]
+    fn test_substitute_with_context() {
+        let mut context = SimpleContext::new();
+        context = context.add_column("$A", vec!["pierre".to_string(), "anne".to_string(), "murielle".to_string()]);
+        assert_eq!(
+            substitute_with_context("add $A ami julie", &["$A".to_string()], &context),
+            vec!["add pierre ami julie", "add anne ami julie", "add murielle ami julie"]
+                  );
+    }
+
+    #[test]
+    fn test_apply_context() {
+        let mut context = SimpleContext::new();
+        context = context.add_column("$A", vec!["pierre".to_string(), "anne".to_string(), "murielle".to_string()]);
+        assert_eq!(
+            apply_context("$A", &["add $A ami julie".to_string(), "add $A ami julie".to_string(), "add $A ami julie".to_string()], &context),
+            vec!["add pierre ami julie", "add anne ami julie", "add murielle ami julie"]
+                  );
+    }
 
 }
