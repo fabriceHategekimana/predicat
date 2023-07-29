@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use crate::base_context::Context;
+use base_context::Context;
 
 
 #[derive(Debug)]
@@ -57,7 +57,7 @@ impl Context for SimpleContext {
 #[cfg(test)]
 mod tests {
     use super::SimpleContext;
-    use crate::base_context::Context;
+    use base_context::Context;
 
     #[test]
     fn test_context_get_variable(){

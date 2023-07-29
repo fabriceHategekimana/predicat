@@ -13,8 +13,8 @@ use parse_query::{
     alt
 };
 
-use context::base_context::Context;
-use context::simple_context::SimpleContext;
+use base_context::Context;
+use simple_context::SimpleContext;
 
 
 use parse_modifier::parse_modifier;
@@ -88,8 +88,8 @@ fn parse_query_and_modifier(s: String) -> PredicatAST {
 
 #[cfg(test)]
 mod tests {
-    use context::base_context::Context;
-    use context::simple_context::SimpleContext;
+    use base_context::Context;
+    use simple_context::SimpleContext;
 
     use super::{
         parse_query,

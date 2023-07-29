@@ -8,8 +8,8 @@ use crate::parser::parse_command;
 
 use crate::knowledge::Knowledgeable;
 use crate::knowledge::new_knowledge;
-use context::simple_context::SimpleContext;
-use context::base_context::Context;
+use simple_context::SimpleContext;
+use base_context::Context;
 use crate::parser::base_parser::PredicatAST;
 
 fn get_args_or(query: &str) -> String {

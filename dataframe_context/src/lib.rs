@@ -1,12 +1,21 @@
 use polars::frame::DataFrame;
-use crate::base_context::Context;
 use polars::series::Series;
 use polars::prelude::NamedFrom;
+
+pub trait Context {
+    fn new() -> Self;
+    fn get_variables(&self) -> Vec<String>;
+    fn get_values(&self, key: &str) -> Option<Vec<String>>;
+    fn add_column(&mut self, name: &str, elements: Vec<String>) -> Self;
+    fn is_in_context(&self, key: String) -> bool;
+    fn len(&self) -> usize;
+}
 
 impl Context for DataFrame {
 
     fn new() -> DataFrame {
-        DataFrame::default()
+        let res = DataFrame::default();
+        res
     }
 
     fn get_variables(&self) -> Vec<String> {
@@ -47,7 +56,7 @@ impl Context for DataFrame {
 #[cfg(test)]
 mod tests {
     use super::DataFrame;
-    use crate::base_context::Context;
+    use super::Context;
 
     #[test]
     fn test_context_get_variable_dataframe(){
