@@ -35,13 +35,13 @@ fn extract_variables(command: &str) -> Vec<String> {
         .collect()
 }
 
-fn substitute_context<'a>(command:&'a str, context: &'a impl Context) -> Vec<String> {
+fn substitute_context<'a>(command:&'a str, context: &'a SimpleContext) -> Vec<String> {
     let variables = extract_variables(command);
     substitute_with_context(command, &variables, context)
 }
 
 // TODO apply context
-fn apply_context<'a>(variable: &'a str, commands: &'a [String], context: &impl Context) -> Vec<String> {
+fn apply_context<'a>(variable: &'a str, commands: &'a [String], context: &SimpleContext) -> Vec<String> {
     let values = &(context.get_values(variable).unwrap());
     let mut res: Vec<String> = vec![];
     for (val, cmd) in values.into_iter().zip(commands){
@@ -51,19 +51,22 @@ fn apply_context<'a>(variable: &'a str, commands: &'a [String], context: &impl C
     res
 }
 
-fn duplicate_command(command: &str, context: &impl Context) -> Vec<String> {
+fn duplicate_command(command: &str, context: &SimpleContext) -> Vec<String> {
     (0..context.len()).into_iter().map(|_x| command.to_string()).collect()
 }
 
-fn substitute_with_context<'a>(command: &'a str, variables: &'a [String], context: &impl Context) -> Vec<String> {
+fn substitute_with_context<'a>(command: &'a str, variables: &'a [String], context: &SimpleContext) -> Vec<String> {
     let commands : Vec<String> = duplicate_command(command, context);
-    variables.iter()
+    let new_commands = variables.iter()
         .filter(|x| context.is_in_context(x.to_string()))
-        .fold(commands, |cmd, x| apply_context(x, &cmd, context))
+        .fold(commands.clone(), |cmd, x| apply_context(x, &cmd, context));
+    match new_commands.len() {
+        0 => vec![command.to_string()],
+        _ => new_commands
+    }
 }
 
-//TODO: test parse command
-pub fn parse_command<'a>(string: &'a str, context: &'a impl Context) -> Vec<PredicatAST> {
+pub fn parse_command<'a>(string: &'a str, context: &'a SimpleContext) -> Vec<PredicatAST> {
     string.split(" | ")
           .map(soft_predicat)
           .flat_map(|x| substitute_context(x, context))
@@ -90,6 +93,9 @@ fn parse_query_and_modifier(s: String) -> PredicatAST {
 mod tests {
     use base_context::Context;
     use simple_context::SimpleContext;
+    use crate::base_parser::PredicatAST;
+
+    use super::parse_command;
 
     use super::{
         parse_query,
@@ -131,6 +137,24 @@ mod tests {
             apply_context("$A", &["add $A ami julie".to_string(), "add $A ami julie".to_string(), "add $A ami julie".to_string()], &context),
             vec!["add pierre ami julie", "add anne ami julie", "add murielle ami julie"]
                   );
+    }
+    
+    #[test]
+    fn test_parse_command() {
+        assert_eq!(
+            parse_command("get $A $B $C where $A $B $C", &SimpleContext::new()),
+            vec![PredicatAST::Query((
+                vec![Language::Var("A".to_string()), Language::Var("B".to_string()), Language::Var("C".to_string())],
+                vec![Language::Tri(Triplet::Tvvv("A".to_string(), "B".to_string(), "C".to_string()))],
+                vec![Language::Empty]) 
+                  )]);
+    }
+
+    #[test]
+    fn test_substitute_with_context2() {
+        assert_eq!(
+            substitute_with_context("add $A ami emi", &["$A".to_string()], &SimpleContext::new()),
+            vec!["add $A ami emi"]);
     }
 
 }

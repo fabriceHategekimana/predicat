@@ -1,18 +1,30 @@
+use cli_table::{format::Justify, print_stdout, Cell, Style, Table};
 use itertools::Itertools;
 use base_context::Context;
 
-
-#[derive(Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct SimpleContext {
     tab: Vec<(String, String)> 
 }
 
-//Constructor
 impl SimpleContext {
     fn from(entry: Vec<(String, String)>) -> SimpleContext {
         SimpleContext{
             tab: entry
         }
+    }
+
+    pub fn display(&self) {
+        let variables = self.get_variables();
+        let table = self.get_variables().iter()
+            .map(|x| self.get_values(x).unwrap())
+            //.collect::<Vec<_>>()
+            .table()
+            .title(variables)
+            .bold(true)
+            .display()
+            .unwrap();
+            println!("{}", table);
     }
 }
 
@@ -99,4 +111,3 @@ mod tests {
         assert_eq!(context.len(), 3);
     }
 }
-

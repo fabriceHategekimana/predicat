@@ -6,5 +6,4 @@ members = [
 	"importer",
 	"base_context",
 	"simple_context",
-	"dataframe_context",
 ]

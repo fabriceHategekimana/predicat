@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 itertools = "0.11.0"
 base_context = { path = "../base_context" }
+cli-table = "0.4.7"

@@ -3,7 +3,6 @@ use importer;
 use knowledge;
 use std::env;
 
-use polars::frame::DataFrame;
 use crate::parser::parse_command;
 
 use crate::knowledge::Knowledgeable;
@@ -23,14 +22,14 @@ fn get_args_or(query: &str) -> String {
     }
 }
 
-fn get_context(table: Option<impl Context>) -> impl Context {
+fn get_context(table: Option<SimpleContext>) -> SimpleContext {
     match table {
         Some(data) => data,
         None => Context::new()
     }
 }
 
-fn parse_and_execute(command: &str, knowledge: impl Knowledgeable, table: Option<impl Context>) -> DataFrame {
+fn parse_and_execute(command: &str, knowledge: impl Knowledgeable, table: Option<SimpleContext>) -> SimpleContext {
     let context = get_context(table);
     let ast: Vec<PredicatAST> = parse_command(command, &context); 
     let queries: Vec<String> = knowledge.translate(&ast)
@@ -44,5 +43,5 @@ fn main() {
     let command = get_args_or("add Socrate est mortel");
     let Ok(knowledge) = new_knowledge("sqlite") else {panic!("Can't open the knowledge!")};
     let res = parse_and_execute(&command, knowledge, None::<SimpleContext>);
-    println!("res: {:?}", res);
+    res.display();
 }

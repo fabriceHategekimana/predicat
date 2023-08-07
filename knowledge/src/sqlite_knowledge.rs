@@ -6,11 +6,8 @@ use sqlite::{
         Statement,
 };
 
-use polars::{
-    frame::DataFrame,
-    series::Series,
-    prelude::NamedFrom
-};
+use simple_context::SimpleContext;
+use base_context::Context;
 
 use std::collections::HashMap;
 use super::Knowledgeable;
@@ -102,10 +99,8 @@ impl Knowledgeable for SqliteKnowledge {
         knowledge
     }
 
-    fn get(&self, cmd: &str) -> DataFrame {
-        //let query = cmd.replace("from facts", "from facts_default");
+    fn get(&self, cmd: &str) -> SimpleContext {
         let query = cmd;
-        println!("query: {:?}", query);
         let mut hm: HashMap<String, Vec<String>> = HashMap::new();
         let _ = self.connection.iterate(query, |sqlite_couple| {
             for couple in sqlite_couple.iter() {
@@ -116,7 +111,10 @@ impl Knowledgeable for SqliteKnowledge {
             }
             true
         });
-        to_dataframe(hm, extract_columns(query))
+        println!("hm: {:?}", &hm);
+        let sc = to_context(hm, extract_columns(query));
+        println!("sc: {:?}", &sc);
+        sc
     }
 
     fn modify(&self, cmd: &str) -> Result<(), &str>{
@@ -131,8 +129,8 @@ impl Knowledgeable for SqliteKnowledge {
         asts.clone().iter().map(translate_one_ast).collect::<Vec<Result<String, &str>>>()
     }
 
-    fn execute(&self, s: &Vec<String>) -> DataFrame {
-        let mut df = DataFrame::default();
+    fn execute(&self, s: &Vec<String>) -> SimpleContext {
+        let mut df = SimpleContext::new();
         for cmd in s.iter() {
             df = self.execute_helper(df, &cmd)
         }
@@ -187,8 +185,8 @@ fn string_concat(acc: String, x: String) -> String {
 }
 
 impl SqliteKnowledge{
-    fn execute_helper(&self, df: DataFrame, s: &str) -> DataFrame {
-        let mut res = DataFrame::default();
+    fn execute_helper(&self, df: SimpleContext, s: &str) -> SimpleContext {
+        let mut res = SimpleContext::new();
         if &s[0..6]  == "SELECT" {
             res = self.get(s);
         }
@@ -218,18 +216,12 @@ fn to_hashmap<'a>(sqlite_couple: &[(&'a str, &'a str)]) -> HashMap<&'a str, Vec<
     hm
 }
 
-fn to_dataframe(hm: HashMap<String, Vec<String>>, columns: Vec<&str>) -> DataFrame {
-    if hm.is_empty() {
-        DataFrame::default()
-    } else {
-        let vs = columns
-                    .iter()
-                    .map(|x| Series::new(
-                                x,
-                                hm.get(&x.to_string()).unwrap()
-                                )
-                    ).collect();
-        DataFrame::new(vs).unwrap()
+fn to_context(hm: HashMap<String, Vec<String>>, columns: Vec<&str>) -> SimpleContext {
+    match !hm.is_empty() {
+        true => columns.iter().fold(SimpleContext::new(), 
+                          |mut acc, x| acc.add_column(x, hm.get(&x.to_string()).unwrap().to_vec())
+                    ),
+        false => SimpleContext::new()
     }
 }
 
@@ -321,10 +313,18 @@ pub fn triplet_to_sql(tri: &Triplet) -> String {
 
 #[cfg(test)]
 mod tests {
+    use crate::sqlite_knowledge::translate_one_ast;
+
     use super::format_variables;
     use super::Language::Var;
     use super::triplet_to_sql;
     use super::Triplet::*;
+    use parser::Language;
+    use parser::base_parser::PredicatAST;
+    use super::HashMap;
+    use super::to_context;
+    use super::SimpleContext;
+    use super::Context;
 
     #[test]
     fn test_from_triplet_to_sql() {
@@ -349,5 +349,37 @@ mod tests {
             "SELECT X FROM "
         );
     }
-    
+
+    #[test]
+    fn test_translate_one_ast_get() {
+        assert_eq!(
+            translate_one_ast(&PredicatAST::Query((
+                    vec![Language::Var("A".to_string())], 
+                    vec![Language::Tri(Tvww("A".to_string(), "est".to_string(), "mortel".to_string()))], 
+                    vec![Language::Empty]))).unwrap(),
+            "SELECT A FROM (SELECT subject AS A FROM facts WHERE link='est' AND goal='mortel');".to_string());
+    }
+
+    #[test]
+    fn test_translate_one_ast_add_modifier() {
+        assert_eq!(
+            translate_one_ast(&PredicatAST::AddModifier(vec![Language::Tri(Twww("pierre".to_string(), "ami".to_string(), "jean".to_string()))])).unwrap(),
+            "INSERT or IGNORE INTO facts (subject,link,goal) VALUES ('pierre','ami','jean')".to_string())
+    }
+
+    #[test]
+    fn test_to_context() {
+        let hm = HashMap::from([
+                               ("A".to_string(), vec!["emy".to_string(), "julie".to_string()]),
+                               ("B".to_string(), vec!["eric".to_string(), "anna".to_string()]),
+        ]);
+        let mut sc = SimpleContext::new();
+        sc =  sc.add_column("A", vec!["emy".to_string(), "julie".to_string()]);
+        assert_eq!(
+            to_context(hm, vec!["A", "B"]),
+            sc);
+
+//hm: {"C": ["alice"], "B": ["ami"], "A": ["emy"]}
+    }
+
 }
