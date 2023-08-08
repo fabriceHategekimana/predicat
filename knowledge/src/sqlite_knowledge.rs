@@ -111,6 +111,7 @@ impl Knowledgeable for SqliteKnowledge {
             }
             true
         });
+        println!("query: {:?}", query);
         println!("hm: {:?}", &hm);
         let sc = to_context(hm, extract_columns(query));
         println!("sc: {:?}", &sc);
@@ -313,6 +314,7 @@ pub fn triplet_to_sql(tri: &Triplet) -> String {
 
 #[cfg(test)]
 mod tests {
+    use crate::sqlite_knowledge::extract_columns;
     use crate::sqlite_knowledge::translate_one_ast;
 
     use super::format_variables;
@@ -370,16 +372,26 @@ mod tests {
     #[test]
     fn test_to_context() {
         let hm = HashMap::from([
-                               ("A".to_string(), vec!["emy".to_string(), "julie".to_string()]),
-                               ("B".to_string(), vec!["eric".to_string(), "anna".to_string()]),
+                               ("C".to_string(), vec!["alice".to_string()]),
+                               ("A".to_string(), vec!["emy".to_string()]),
+                               ("B".to_string(), vec!["ami".to_string()]),
         ]);
         let mut sc = SimpleContext::new();
-        sc =  sc.add_column("A", vec!["emy".to_string(), "julie".to_string()]);
-        assert_eq!(
-            to_context(hm, vec!["A", "B"]),
-            sc);
+        sc =  sc.add_column("A", vec!["emy".to_string()]);
+        sc =  sc.add_column("B", vec!["ami".to_string()]);
+        sc =  sc.add_column("C", vec!["alice".to_string()]);
 
-//hm: {"C": ["alice"], "B": ["ami"], "A": ["emy"]}
+        assert_eq!(
+            to_context(hm, vec!["A", "B", "C"]),
+            sc);
+    }
+
+    #[test]
+    fn test_extract_column() {
+        assert_eq!(
+            extract_columns("SELECT A,B,C FROM (SELECT subject AS A,link AS B,goal AS C FROM facts);"),
+            vec!["A", "B", "C"]
+            );
     }
 
 }

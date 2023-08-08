@@ -44,4 +44,15 @@ fn main() {
     let Ok(knowledge) = new_knowledge("sqlite") else {panic!("Can't open the knowledge!")};
     let res = parse_and_execute(&command, knowledge, None::<SimpleContext>);
     res.display();
+    let mut context = SimpleContext::new();
+    context = context.add_column( "name", vec!["Vestin".to_string(), "Rédempta".to_string(), "Fabrice".to_string()]);
+    context = context.add_column("age", vec![28.to_string(), 23.to_string(), 28.to_string()]);
+    context.display();
+    //let context = SimpleContext::from(vec![("A".to_string(), "emy".to_string()), ("B".to_string(), "ami".to_string()), ("C".to_string(), "alice".to_string())]);
+    //context.display()
+    let mut context = SimpleContext::new();
+    context = context.add_column("A", vec!["emy".to_string(),"emy".to_string()]);
+    context = context.add_column("B", vec!["ami".to_string(),"ami".to_string()]);
+    context = context.add_column("C", vec!["alice".to_string(), "alice".to_string()]);
+    context.display();
 }

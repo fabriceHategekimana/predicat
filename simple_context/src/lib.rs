@@ -8,7 +8,7 @@ pub struct SimpleContext {
 }
 
 impl SimpleContext {
-    fn from(entry: Vec<(String, String)>) -> SimpleContext {
+    pub fn from(entry: Vec<(String, String)>) -> SimpleContext {
         SimpleContext{
             tab: entry
         }
@@ -18,7 +18,6 @@ impl SimpleContext {
         let variables = self.get_variables();
         let table = self.get_variables().iter()
             .map(|x| self.get_values(x).unwrap())
-            //.collect::<Vec<_>>()
             .table()
             .title(variables)
             .bold(true)
@@ -51,7 +50,8 @@ impl Context for SimpleContext {
         let tab = elements.iter()
                           .map(|x| (name.to_string(), x.to_string()))
                           .collect::<Vec<(String, String)>>();
-        SimpleContext::from(tab)
+        let new_tab = self.tab.iter().chain(tab.iter()).map(|x| x.clone()).collect::<Vec<_>>();
+        SimpleContext::from(new_tab)
     }
 
     fn is_in_context(&self, key: String) -> bool {
@@ -75,7 +75,8 @@ mod tests {
     fn test_context_get_variable(){
         let mut context = SimpleContext::new();
         context = context.add_column("name", vec!["Vestin".to_string(), "Rédempta".to_string(), "Fabrice".to_string()]);
-        assert_eq!(context.get_variables(), vec!["name"]);
+        context = context.add_column("age", vec![28.to_string(), 23.to_string(), 28.to_string()]);
+        assert_eq!(context.get_variables(), vec!["age", "name"]);
     }
 
     #[test]
@@ -95,13 +96,17 @@ mod tests {
     #[test]
     fn test_context_get_value(){
         let mut context = SimpleContext::new();
-        context = context.add_column("name", vec!["Vestin".to_string(), "Rédempta".to_string(), "Fabrice".to_string()]);
+        context = context.add_column( "name", vec!["Vestin".to_string(), "Rédempta".to_string(), "Fabrice".to_string()]);
+        context = context.add_column("age", vec![28.to_string(), 23.to_string(), 28.to_string()]);
         assert_eq!(
             context.get_values("name"),
             Some(vec!["Vestin".to_string(), "Rédempta".to_string(), "Fabrice".to_string()]));
         assert_eq!(
             context.get_values("truc"),
             None);
+        assert_eq!(
+            context.get_values("age"),
+            Some(vec!["28".to_string(), "23".to_string(), "28".to_string()]));
     }
 
     #[test]
@@ -110,4 +115,25 @@ mod tests {
         context = context.add_column("name", vec!["Vestin".to_string(), "Rédempta".to_string(), "Fabrice".to_string()]);
         assert_eq!(context.len(), 3);
     }
+
+
+    #[test]
+    fn test_context_get_variable2(){
+        let context = SimpleContext::from(
+                        vec![("A".to_string(), "emy".to_string()), ("B".to_string(), "ami".to_string()), ("C".to_string(), "alice".to_string())]);
+        assert_eq!(context.get_variables(), vec!["A", "B", "C"]);
+    }
+
+    #[test]
+    fn test_context_get_value2(){
+        let context = SimpleContext::from(
+                        vec![("A".to_string(), "emy".to_string()), ("B".to_string(), "ami".to_string()), ("C".to_string(), "alice".to_string())]);
+        assert_eq!(
+            context.get_values("A"),
+            Some(vec!["emy".to_string()]));
+        assert_eq!(
+            context.get_values("C"),
+            Some(vec!["alice".to_string()]));
+    }
+
 }
