@@ -111,10 +111,7 @@ impl Knowledgeable for SqliteKnowledge {
             }
             true
         });
-        println!("query: {:?}", query);
-        println!("hm: {:?}", &hm);
         let sc = to_context(hm, extract_columns(query));
-        println!("sc: {:?}", &sc);
         sc
     }
 

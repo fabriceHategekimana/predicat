@@ -16,8 +16,10 @@ impl SimpleContext {
 
     pub fn display(&self) {
         let variables = self.get_variables();
-        let table = self.get_variables().iter()
+        let body = self.get_variables().iter()
             .map(|x| self.get_values(x).unwrap())
+            .collect::<Vec<_>>();
+        let table = (0..self.len()).map(|x| get_line(x, &body))
             .table()
             .title(variables)
             .bold(true)
@@ -25,6 +27,10 @@ impl SimpleContext {
             .unwrap();
             println!("{}", table);
     }
+}
+
+fn get_line(num: usize, body: &[Vec<String>]) -> Vec<String> {
+    body.iter().map(|x| x[num].clone()).collect()
 }
 
 

@@ -40,7 +40,6 @@ fn substitute_context<'a>(command:&'a str, context: &'a SimpleContext) -> Vec<St
     substitute_with_context(command, &variables, context)
 }
 
-// TODO apply context
 fn apply_context<'a>(variable: &'a str, commands: &'a [String], context: &SimpleContext) -> Vec<String> {
     let values = &(context.get_values(variable).unwrap());
     let mut res: Vec<String> = vec![];
