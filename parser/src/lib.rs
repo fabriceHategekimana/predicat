@@ -44,7 +44,7 @@ fn apply_context<'a>(variable: &'a str, commands: &'a [String], context: &Simple
     let values = &(context.get_values(variable).unwrap());
     let mut res: Vec<String> = vec![];
     for (val, cmd) in values.into_iter().zip(commands){
-        let replaced = cmd.replace(&(variable)[..], val);
+        let replaced = cmd.replace(variable, val).replace("$", "");
         res.push(replaced);
     }
     res
@@ -58,27 +58,26 @@ fn substitute_with_context<'a>(command: &'a str, variables: &'a [String], contex
     let commands : Vec<String> = duplicate_command(command, context);
     let new_commands = variables.iter()
         .filter(|x| context.is_in_context(x.to_string()))
-        .fold(commands.clone(), |cmd, x| apply_context(x, &cmd, context));
+        .fold(commands.clone(), |cmd, var| apply_context(var, &cmd, context));
     match new_commands.len() {
         0 => vec![command.to_string()],
         _ => new_commands
     }
 }
 
-pub fn parse_command<'a>(string: &'a str, context: &'a SimpleContext) -> Vec<PredicatAST> {
-    string.split(" | ")
-          .map(soft_predicat)
-          .flat_map(|x| substitute_context(x, context))
-          .map(parse_query_and_modifier)
-          .collect::<Vec<PredicatAST>>()
+
+pub fn parse_command<'a>(s: &'a str, context: &'a SimpleContext) -> Vec<PredicatAST> {
+    substitute_context(s, context)
+        .iter().map(parse_query_and_modifier)
+        .collect()
 }
 
 fn is_a_query(s: &str) -> bool {
     &s[0..3] == "get"
 }
 
-fn parse_query_and_modifier(s: String) -> PredicatAST {
-    let command = &(s.clone())[..];
+fn parse_query_and_modifier(s: &String) -> PredicatAST {
+    let command = s;
     if is_a_query(command) {
        parse_query(command)
     }
@@ -95,6 +94,7 @@ mod tests {
     use crate::base_parser::PredicatAST;
 
     use super::parse_command;
+    use super::extract_variables;
 
     use super::{
         parse_query,
@@ -119,21 +119,11 @@ mod tests {
     }
 
     #[test]
-    fn test_substitute_with_context() {
-        let mut context = SimpleContext::new();
-        context = context.add_column("$A", vec!["pierre".to_string(), "anne".to_string(), "murielle".to_string()]);
-        assert_eq!(
-            substitute_with_context("add $A ami julie", &["$A".to_string()], &context),
-            vec!["add pierre ami julie", "add anne ami julie", "add murielle ami julie"]
-                  );
-    }
-
-    #[test]
     fn test_apply_context() {
         let mut context = SimpleContext::new();
-        context = context.add_column("$A", vec!["pierre".to_string(), "anne".to_string(), "murielle".to_string()]);
+        context = context.add_column("A", vec!["pierre".to_string(), "anne".to_string(), "murielle".to_string()]);
         assert_eq!(
-            apply_context("$A", &["add $A ami julie".to_string(), "add $A ami julie".to_string(), "add $A ami julie".to_string()], &context),
+            apply_context("A", &["add $A ami julie".to_string(), "add $A ami julie".to_string(), "add $A ami julie".to_string()], &context),
             vec!["add pierre ami julie", "add anne ami julie", "add murielle ami julie"]
                   );
     }
@@ -150,10 +140,26 @@ mod tests {
     }
 
     #[test]
+    fn test_substitute_with_context() {
+        let mut context = SimpleContext::new();
+        context = context.add_column("A", vec!["pierre".to_string(), "anne".to_string(), "murielle".to_string()]);
+        assert_eq!(
+            substitute_with_context("add $A ami julie", &["A".to_string()], &context),
+            vec!["add pierre ami julie", "add anne ami julie", "add murielle ami julie"]);
+    }
+
+    #[test]
     fn test_substitute_with_context2() {
         assert_eq!(
-            substitute_with_context("add $A ami emi", &["$A".to_string()], &SimpleContext::new()),
+            substitute_with_context("add $A ami emi", &["A".to_string()], &SimpleContext::new()),
             vec!["add $A ami emi"]);
+    }
+
+    #[test]
+    fn test_extract_variable() {
+        assert_eq!(
+            extract_variables("add $C ami julie"),
+            vec!["C".to_string()]);
     }
 
 }

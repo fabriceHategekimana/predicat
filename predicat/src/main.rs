@@ -11,37 +11,31 @@ use simple_context::SimpleContext;
 use base_context::Context;
 use crate::parser::base_parser::PredicatAST;
 
-fn get_args_or(query: &str) -> String {
+fn get_args_or(query: &[&str]) -> Vec<String> {
     let args: String = env::args().skip(1)
         .fold(String::new(), |acc, arg| format!("{}{} ", acc, &arg));
     if args == "".to_string() {
-        String::from(query)
+        query.iter().map(|x| *x).map(String::from).collect()
     }
     else{
-        args
+        args.split(" | ").map(String::from).collect()
     }
 }
 
-fn get_context(table: Option<SimpleContext>) -> SimpleContext {
-    match table {
-        Some(data) => data,
-        None => Context::new()
-    }
-}
-
-fn parse_and_execute(command: &str, knowledge: impl Knowledgeable, table: Option<SimpleContext>) -> SimpleContext {
-    let context = get_context(table);
+fn parse_and_execute(command: &str, knowledge: &impl Knowledgeable, context: SimpleContext) -> SimpleContext {
     let ast: Vec<PredicatAST> = parse_command(command, &context); 
     let queries: Vec<String> = knowledge.translate(&ast)
                            .into_iter()
                            .filter_map(|x| x.ok())
                            .collect::<Vec<String>>();
-    knowledge.execute(&queries)
+    knowledge.execute(&queries, &context)
 }
 
 fn main() {
-    let command = get_args_or("add Socrate est mortel");
+    let commands = get_args_or(&["add Socrate est mortel"]);
     let Ok(knowledge) = new_knowledge("sqlite") else {panic!("Can't open the knowledge!")};
-    let res = parse_and_execute(&command, knowledge, None::<SimpleContext>);
+    let context = SimpleContext::new();
+    let res = commands.iter()
+        .fold(context, |context, command| parse_and_execute(command, &knowledge, context));
     res.display();
 }

@@ -12,7 +12,7 @@ pub fn new_knowledge(kind: &str) -> Result<impl Knowledgeable, String> {
 pub trait Knowledgeable {
     fn new() -> SqliteKnowledge;
     fn get(&self, cmds: &str) -> SimpleContext;
-    fn modify(&self, cmds: &str) -> Result<(), &str>;
+    fn modify(&self, cmds: &str) -> Result<SimpleContext, &str>;
     fn translate<'a>(&'a self, s: &'a [PredicatAST]) -> Vec<Result<String, &str>>;
-    fn execute(&self, s: &Vec<String>) -> SimpleContext;
+    fn execute(&self, s: &Vec<String>, context: &SimpleContext) -> SimpleContext;
 } 

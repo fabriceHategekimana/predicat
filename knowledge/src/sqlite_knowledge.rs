@@ -115,9 +115,9 @@ impl Knowledgeable for SqliteKnowledge {
         sc
     }
 
-    fn modify(&self, cmd: &str) -> Result<(), &str>{
+    fn modify(&self, cmd: &str) -> Result<SimpleContext, &str> {
         match self.connection.execute(cmd) {
-            Ok(r) => Ok(r),
+            Ok(r) => Ok(SimpleContext::new()),
             Err(r) => {println!("r: {:?}", r); Err("An error occured with the sqlite database")}
         }
     }
@@ -127,10 +127,10 @@ impl Knowledgeable for SqliteKnowledge {
         asts.clone().iter().map(translate_one_ast).collect::<Vec<Result<String, &str>>>()
     }
 
-    fn execute(&self, s: &Vec<String>) -> SimpleContext {
+    fn execute(&self, s: &Vec<String>, context: &SimpleContext) -> SimpleContext {
         let mut df = SimpleContext::new();
         for cmd in s.iter() {
-            df = self.execute_helper(df, &cmd)
+            df = self.execute_helper(context, &cmd)
         }
         df
     }
@@ -183,14 +183,11 @@ fn string_concat(acc: String, x: String) -> String {
 }
 
 impl SqliteKnowledge{
-    fn execute_helper(&self, df: SimpleContext, s: &str) -> SimpleContext {
-        let mut res = SimpleContext::new();
-        if &s[0..6]  == "SELECT" {
-            res = self.get(s);
-        }
-        else {
-            let _ = self.modify(s);
-        }
+    fn execute_helper(&self, df: &SimpleContext, s: &str) -> SimpleContext {
+        let res = match &s[0..6]  {
+            "SELECT" => self.get(s),
+            _ => self.modify(s).unwrap()
+        }.clone();
         res
     }
 }
