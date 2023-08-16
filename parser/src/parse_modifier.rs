@@ -46,14 +46,14 @@ fn parse_add_modifier(s: &str) -> IResult<&str, PredicatAST> {
     }
 }
 
-pub fn parse_modifier(s: &str) -> PredicatAST {
+pub fn parse_modifier(s: &str) -> IResult<&str, PredicatAST> {
     let res: IResult<&str, PredicatAST> = alt((
             parse_add_modifier, 
             parse_delete_modifier  
         ))(s);
     match res {
-        Ok((s, modifier)) => modifier,
-        Err(e) => PredicatAST::Empty
+        Ok((s, modifier)) => Ok((s, modifier)),
+        Err(e) => Err(e)
     }
 }
 

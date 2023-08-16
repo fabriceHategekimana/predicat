@@ -141,21 +141,21 @@ fn parse_query_var3(s: &str) -> IResult<&str, QueryAST> {
     }
 }
 
-pub fn parse_query(s: &str) -> PredicatAST {
+pub fn parse_query(s: &str) -> IResult<&str, PredicatAST> {
     let res = alt((
         parse_query_var1,
         parse_query_var2,
         parse_query_var3
         ))(s);
     match res {
-        Ok((s, (var, tri, comp))) => PredicatAST::Query((var, tri, comp)),
-        Err(e) => PredicatAST::Debug(format!("{}", e)) 
+        Ok((s, (var, tri, comp))) => Ok((s, PredicatAST::Query((var, tri, comp)))),
+        Err(e) => Err(e)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::parse_modifier::Triplet::*;
+    use crate::{parse_modifier::Triplet::*, parse_query::recognize_variable};
     use nom::error::{Error, ErrorKind};
     use crate::PredicatAST::Query;
     use super::{
@@ -268,6 +268,13 @@ mod tests {
     }
 
     #[test]
+    fn test_comparison2() {
+        assert_eq!(
+            parse_comparison(" 4 < 5 | ").unwrap(),
+            (" | ", Language::Comp(" 4 < 5".to_string())));
+    }
+
+    #[test]
     fn test_string() {
         assert_eq!(
             parse_string(" 'un deux trois'").unwrap().1,
@@ -316,6 +323,13 @@ mod tests {
     }
 
     #[test]
+    fn test_comparison_and2() {
+        assert_eq!(
+            parse_comparison_and(" 7 == 8 AND 6 < 9 | ").unwrap(),
+            (" AND 6 < 9 | ", Language::Comp(" 7 == 8".to_string())));
+    }
+
+    #[test]
     fn test_value() {
         assert_eq!(
             parse_value(" -57.34").unwrap().1,
@@ -357,12 +371,42 @@ mod tests {
     }
 
     #[test]
+    // get [variables] [connector] [triplets]
+    fn test_parse_query_var3_2() {
+        assert_eq!(
+            parse_query_var3("get $A where $A > 7 | ").unwrap(),
+              (" | ", (vec![Language::Var("A".to_string())], vec![Language::Empty], vec![Language::Comp(" $A > 7".to_string())])));
+    }
+
+    #[test]
     fn test_parse_query() {
-        if let PredicatAST::Query((var, tri, comp)) = parse_query("get $A where $A > 7") {
+        if let PredicatAST::Query((var, tri, comp)) = parse_query("get $A where $A > 7").unwrap().1 {
             assert_eq!(var, vec![Language::Var("A".to_string())]);
             assert_eq!(tri, vec![Language::Empty]);
             assert_eq!(comp, vec![Language::Comp(" $A > 7".to_string())]);
         }
     }
+
+    #[test]
+    fn test_recognize_variable() {
+        assert_eq!(
+            recognize_variable(" | ").unwrap_or(("", "not")).1,
+            "not");
+    }
+
+    #[test]
+    fn test_parse_value() {
+        assert_eq!(
+            parse_value(" | ").unwrap_or(("", "not")).1,
+            "not");
+    }
+    
+    #[test]
+    fn test_parse_valvar() {
+        assert_eq!(
+            parse_valvar(" | ").unwrap_or(("", "not")).1,
+            "not");
+    }
+
 
 }

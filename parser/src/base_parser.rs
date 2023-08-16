@@ -56,6 +56,7 @@ pub enum Triplet {
     Tvvv(String, String, String)
 }
 
+
 fn to_var(s: &str) -> String {
     format!("${}", s)
 }
@@ -91,6 +92,15 @@ impl Triplet {
             Tvvv(a,b,c) => (to_var(&a),to_var(&b),to_var(&c))
         }
     }
+}
+
+pub fn parse_bar(s: &str) -> IResult<&str, &str> {
+    alt((
+            tag(" | "),
+            tag("| "),
+            tag(" |"),
+            tag("|")
+        ))(s)
 }
 
 fn parse_variable_or_star(s: &str) -> IResult<&str, Language> {
@@ -155,6 +165,7 @@ mod tests {
     use super::{
         ErrorKind,
         parse_word,
+        parse_bar,
         parse_triplet,
         parse_triplet_and,
         Language,
@@ -197,4 +208,12 @@ mod tests {
             Language::Tri(Twww("B".to_string(),"ami".to_string(),"C".to_string()))
         );
     }
+
+    #[test]
+    fn test_parse_bar() {
+        assert_eq!(
+            parse_bar(" | ").unwrap().1,
+            " | ");
+    }
+
 }

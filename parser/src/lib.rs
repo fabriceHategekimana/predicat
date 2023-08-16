@@ -15,10 +15,14 @@ use parse_query::{
 
 use base_context::Context;
 use simple_context::SimpleContext;
+use nom::multi::many1;
+use nom::sequence::terminated;
+use nom::bytes::complete::tag;
+use nom::IResult;
 
 
 use parse_modifier::parse_modifier;
-pub use self::base_parser::{Language, Triplet};
+pub use self::base_parser::{Language, Triplet, parse_bar};
 
 use crate::Triplet::*;
 
@@ -65,18 +69,28 @@ fn substitute_with_context<'a>(command: &'a str, variables: &'a [String], contex
     }
 }
 
+fn parse_query_and_modifier_bar(s: &str) -> IResult<&str, PredicatAST> {
+    terminated(parse_query_and_modifier, parse_bar)(s)
+}
 
 pub fn parse_command<'a>(s: &'a str, context: &'a SimpleContext) -> Vec<PredicatAST> {
-    substitute_context(s, context)
-        .iter().map(parse_query_and_modifier)
-        .collect()
+    let res = many1(
+        alt((
+            parse_query_and_modifier,
+            parse_query_and_modifier_bar,
+            ))
+        )(s);
+    match res {
+        Ok((s, v)) => v,
+        Err(e) => vec![]
+    }
 }
 
 fn is_a_query(s: &str) -> bool {
-    &s[0..3] == "get"
+    s.len() > 0 && &s[0..3] == "get"
 }
 
-fn parse_query_and_modifier(s: &String) -> PredicatAST {
+fn parse_query_and_modifier(s: &str) -> IResult<&str, PredicatAST> {
     let command = s;
     if is_a_query(command) {
        parse_query(command)
@@ -95,6 +109,8 @@ mod tests {
 
     use super::parse_command;
     use super::extract_variables;
+    use super::parse_query_and_modifier;
+    use super::parse_query_and_modifier_bar;
 
     use super::{
         parse_query,
@@ -126,6 +142,39 @@ mod tests {
             apply_context("A", &["add $A ami julie".to_string(), "add $A ami julie".to_string(), "add $A ami julie".to_string()], &context),
             vec!["add pierre ami julie", "add anne ami julie", "add murielle ami julie"]
                   );
+    }
+
+    #[test]
+    fn test_parse_query_and_modifier() {
+        assert_eq!(
+            parse_query_and_modifier("get $A $B $C where $A $B $C").unwrap().1,
+            PredicatAST::Query((
+                vec![Language::Var("A".to_string()), Language::Var("B".to_string()), Language::Var("C".to_string())],
+                vec![Language::Tri(Triplet::Tvvv("A".to_string(), "B".to_string(), "C".to_string()))],
+                vec![Language::Empty]) 
+                  ));
+    }
+
+    #[test]
+    fn test_parse_query_and_modifier2() {
+        assert_eq!(
+            parse_query_and_modifier("get $A $B $C where $A $B $C").unwrap().1,
+            PredicatAST::Query((
+                vec![Language::Var("A".to_string()), Language::Var("B".to_string()), Language::Var("C".to_string())],
+                vec![Language::Tri(Triplet::Tvvv("A".to_string(), "B".to_string(), "C".to_string()))],
+                vec![Language::Empty]) 
+                  ));
+    }
+
+    #[test]
+    fn test_parse_query_and_modifier_bar() {
+        assert_eq!(
+            parse_query_and_modifier_bar("get $A $B $C where $A $B $C | ").unwrap().1,
+            PredicatAST::Query((
+                vec![Language::Var("A".to_string()), Language::Var("B".to_string()), Language::Var("C".to_string())],
+                vec![Language::Tri(Triplet::Tvvv("A".to_string(), "B".to_string(), "C".to_string()))],
+                vec![Language::Empty]) 
+                  ));
     }
     
     #[test]
