@@ -17,9 +17,9 @@ use parser::soft_predicat;
 use parser::base_parser::PredicatAST;
 use parser::base_parser::PredicatAST::{Query, AddModifier, DeleteModifier, Empty};
 
+use parser::base_parser::Var;
 use parser::base_parser::Language;
 use parser::base_parser::Language::Word;
-use parser::base_parser::Language::Var;
 use parser::base_parser::Language::Tri;
 use parser::base_parser::Language::Comp;
 use parser::base_parser::Triplet::*;
@@ -220,25 +220,20 @@ fn to_context(hm: HashMap<String, Vec<String>>, columns: Vec<&str>) -> SimpleCon
     }
 }
 
-fn query_to_sql(get: &[Language], link: &[Language], filter: &[Language]) -> String {
+fn query_to_sql(get: &[Var], link: &[Triplet], filter: &[Language]) -> String {
     let head = format_variables(get);
     let columns = format_triplets(link); // warning, put the result into a parenthese
     let comparisons = format_comparisons(filter);
     format!("{}{}{}", head, columns, comparisons )
 }
 
-fn format_triplets(tri: &[Language]) -> String {
-    if tri == [Language::Empty]{
+fn format_triplets(tri: &[Triplet]) -> String {
+    if tri == [Triplet::Empty]{
         String::from("facts")
     }
     else {
         let sql_queries = tri.iter()
-            .filter_map(|x| {
-                match x {
-                    Tri(t) => Some(triplet_to_sql(&t)),
-                    _ => None
-                }
-            });
+            .filter_map(|x| Some(triplet_to_sql(x)));
         let queries = sql_queries
             .reduce(|acc, x| format!("({}) natural join ({})", acc, x)).unwrap();
         format!("({})", queries)
@@ -246,18 +241,14 @@ fn format_triplets(tri: &[Language]) -> String {
 }
 
 
-fn format_variables(vars: &[Language]) -> String {
-    if vars == [Language::Empty]{
+fn format_variables(vars: &[Var]) -> String {
+    // todo: check if it don't lead to problem
+    if vars == []{
         String::from("SELECT * FROM ")
     }
     else {
         let extracted_vars = vars.iter()
-            .filter_map(|x| {
-                match x {
-                    Var(v) => Some(v),
-                    _ => None
-                }
-            });
+            .map(|Var(x)| x);
         let string_vars = extracted_vars
             .fold("".to_string(), |acc, x| acc +","+&x[..])
             .chars()
@@ -303,6 +294,7 @@ pub fn triplet_to_sql(tri: &Triplet) -> String {
             format!("SELECT link AS {},goal AS {} FROM facts WHERE subject='{}'",b,c,a),
         Tvvv(a,b,c) => 
             format!("SELECT subject AS {},link AS {},goal AS {} FROM facts",a,b,c),
+        Triplet::Empty => todo!()
     }
 }
 
@@ -312,12 +304,12 @@ mod tests {
     use crate::sqlite_knowledge::translate_one_ast;
 
     use super::format_variables;
-    use super::Language::Var;
+    use super::Language;
     use super::triplet_to_sql;
     use super::Triplet::*;
-    use parser::Language;
     use parser::base_parser::PredicatAST;
     use super::HashMap;
+    use super::Var;
     use super::to_context;
     use super::SimpleContext;
     use super::Context;
@@ -350,8 +342,8 @@ mod tests {
     fn test_translate_one_ast_get() {
         assert_eq!(
             translate_one_ast(&PredicatAST::Query((
-                    vec![Language::Var("A".to_string())], 
-                    vec![Language::Tri(Tvww("A".to_string(), "est".to_string(), "mortel".to_string()))], 
+                    vec![Var("A".to_string())], 
+                    vec![Tvww("A".to_string(), "est".to_string(), "mortel".to_string())], 
                     vec![Language::Empty]))).unwrap(),
             "SELECT A FROM (SELECT subject AS A FROM facts WHERE link='est' AND goal='mortel');".to_string());
     }

@@ -22,7 +22,7 @@ use nom::IResult;
 
 
 use parse_modifier::parse_modifier;
-pub use self::base_parser::{Language, Triplet, parse_bar};
+pub use self::base_parser::{Language, Var, Triplet, parse_bar};
 
 use crate::Triplet::*;
 
@@ -39,41 +39,15 @@ fn extract_variables(command: &str) -> Vec<String> {
         .collect()
 }
 
-fn substitute_context<'a>(command:&'a str, context: &'a SimpleContext) -> Vec<String> {
-    let variables = extract_variables(command);
-    substitute_with_context(command, &variables, context)
-}
-
-fn apply_context<'a>(variable: &'a str, commands: &'a [String], context: &SimpleContext) -> Vec<String> {
-    let values = &(context.get_values(variable).unwrap());
-    let mut res: Vec<String> = vec![];
-    for (val, cmd) in values.into_iter().zip(commands){
-        let replaced = cmd.replace(variable, val).replace("$", "");
-        res.push(replaced);
-    }
-    res
-}
-
 fn duplicate_command(command: &str, context: &SimpleContext) -> Vec<String> {
     (0..context.len()).into_iter().map(|_x| command.to_string()).collect()
-}
-
-fn substitute_with_context<'a>(command: &'a str, variables: &'a [String], context: &SimpleContext) -> Vec<String> {
-    let commands : Vec<String> = duplicate_command(command, context);
-    let new_commands = variables.iter()
-        .filter(|x| context.is_in_context(x.to_string()))
-        .fold(commands.clone(), |cmd, var| apply_context(var, &cmd, context));
-    match new_commands.len() {
-        0 => vec![command.to_string()],
-        _ => new_commands
-    }
 }
 
 fn parse_query_and_modifier_bar(s: &str) -> IResult<&str, PredicatAST> {
     terminated(parse_query_and_modifier, parse_bar)(s)
 }
 
-pub fn parse_command<'a>(s: &'a str, context: &'a SimpleContext) -> Vec<PredicatAST> {
+pub fn parse_command<'a>(s: &'a str) -> Vec<PredicatAST> {
     let res = many1(
         alt((
             parse_query_and_modifier,
@@ -115,9 +89,8 @@ mod tests {
     use super::{
         parse_query,
         Language,
+        Var,
         Triplet,
-        apply_context,
-        substitute_with_context,
         duplicate_command,
     };
 
@@ -134,23 +107,14 @@ mod tests {
                   );
     }
 
-    #[test]
-    fn test_apply_context() {
-        let mut context = SimpleContext::new();
-        context = context.add_column("A", vec!["pierre".to_string(), "anne".to_string(), "murielle".to_string()]);
-        assert_eq!(
-            apply_context("A", &["add $A ami julie".to_string(), "add $A ami julie".to_string(), "add $A ami julie".to_string()], &context),
-            vec!["add pierre ami julie", "add anne ami julie", "add murielle ami julie"]
-                  );
-    }
 
     #[test]
     fn test_parse_query_and_modifier() {
         assert_eq!(
             parse_query_and_modifier("get $A $B $C where $A $B $C").unwrap().1,
             PredicatAST::Query((
-                vec![Language::Var("A".to_string()), Language::Var("B".to_string()), Language::Var("C".to_string())],
-                vec![Language::Tri(Triplet::Tvvv("A".to_string(), "B".to_string(), "C".to_string()))],
+                vec![Var("A".to_string()), Var("B".to_string()), Var("C".to_string())],
+                vec![Triplet::Tvvv("A".to_string(), "B".to_string(), "C".to_string())],
                 vec![Language::Empty]) 
                   ));
     }
@@ -160,8 +124,8 @@ mod tests {
         assert_eq!(
             parse_query_and_modifier("get $A $B $C where $A $B $C").unwrap().1,
             PredicatAST::Query((
-                vec![Language::Var("A".to_string()), Language::Var("B".to_string()), Language::Var("C".to_string())],
-                vec![Language::Tri(Triplet::Tvvv("A".to_string(), "B".to_string(), "C".to_string()))],
+                vec![Var("A".to_string()), Var("B".to_string()), Var("C".to_string())],
+                vec![Triplet::Tvvv("A".to_string(), "B".to_string(), "C".to_string())],
                 vec![Language::Empty]) 
                   ));
     }
@@ -171,8 +135,8 @@ mod tests {
         assert_eq!(
             parse_query_and_modifier_bar("get $A $B $C where $A $B $C | ").unwrap().1,
             PredicatAST::Query((
-                vec![Language::Var("A".to_string()), Language::Var("B".to_string()), Language::Var("C".to_string())],
-                vec![Language::Tri(Triplet::Tvvv("A".to_string(), "B".to_string(), "C".to_string()))],
+                vec![Var("A".to_string()), Var("B".to_string()), Var("C".to_string())],
+                vec![Triplet::Tvvv("A".to_string(), "B".to_string(), "C".to_string())],
                 vec![Language::Empty]) 
                   ));
     }
@@ -180,28 +144,12 @@ mod tests {
     #[test]
     fn test_parse_command() {
         assert_eq!(
-            parse_command("get $A $B $C where $A $B $C", &SimpleContext::new()),
+            parse_command("get $A $B $C where $A $B $C"),
             vec![PredicatAST::Query((
-                vec![Language::Var("A".to_string()), Language::Var("B".to_string()), Language::Var("C".to_string())],
-                vec![Language::Tri(Triplet::Tvvv("A".to_string(), "B".to_string(), "C".to_string()))],
+                vec![Var("A".to_string()), Var("B".to_string()), Var("C".to_string())],
+                vec![Triplet::Tvvv("A".to_string(), "B".to_string(), "C".to_string())],
                 vec![Language::Empty]) 
                   )]);
-    }
-
-    #[test]
-    fn test_substitute_with_context() {
-        let mut context = SimpleContext::new();
-        context = context.add_column("A", vec!["pierre".to_string(), "anne".to_string(), "murielle".to_string()]);
-        assert_eq!(
-            substitute_with_context("add $A ami julie", &["A".to_string()], &context),
-            vec!["add pierre ami julie", "add anne ami julie", "add murielle ami julie"]);
-    }
-
-    #[test]
-    fn test_substitute_with_context2() {
-        assert_eq!(
-            substitute_with_context("add $A ami emi", &["A".to_string()], &SimpleContext::new()),
-            vec!["add $A ami emi"]);
     }
 
     #[test]

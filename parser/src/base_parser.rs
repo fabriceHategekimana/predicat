@@ -10,13 +10,15 @@ pub use nom::{
     IResult
 };
 
+use simple_context::SimpleContext;
+
 pub use Triplet::*;
 
 #[derive(PartialEq, Debug)]
 pub enum PredicatAST {
     Query(
-        (Vec<Language>,
-         Vec<Language>,
+        (Vec<Var>,
+         Vec<Triplet>,
          Vec<Language>)),
     AddModifier(Vec<Language>),
     DeleteModifier(Vec<Language>),
@@ -25,13 +27,24 @@ pub enum PredicatAST {
 }
 
 impl PredicatAST{
+
     pub fn is_query(&self) -> bool {
         match self {
             PredicatAST::Query(q) => true,
             _ => false
         }
     }
+
+    pub fn substitute(&self, context: &SimpleContext) -> Vec<PredicatAST> {
+        match self {
+            _ => todo!()
+        }
+    }
+
 }
+
+#[derive(PartialEq, Debug, Clone)]
+pub struct Var(pub String);
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Language {
@@ -44,6 +57,15 @@ pub enum Language {
     Empty
 }
 
+impl Language {
+    pub fn get_var(&self) -> Option<Var> {
+        match self {
+            Language::Var(s) => Some(Var(s.to_string())),
+            _ => None
+        }
+    }
+}
+
 #[derive(Clone, PartialEq, Debug)]
 pub enum Triplet {
     Twww(String, String, String),
@@ -53,7 +75,8 @@ pub enum Triplet {
     Tvvw(String, String, String),
     Tvwv(String, String, String),
     Twvv(String, String, String),
-    Tvvv(String, String, String)
+    Tvvv(String, String, String),
+    Empty
 }
 
 
@@ -77,7 +100,8 @@ impl Triplet {
             Tvvw(a,b,c) => format_tuple_of_three((a,b,c)),
             Tvwv(a,b,c) => format_tuple_of_three((a,b,c)),
             Twvv(a,b,c) => format_tuple_of_three((a,b,c)),
-            Tvvv(a,b,c) => format_tuple_of_three((a,b,c))
+            Tvvv(a,b,c) => format_tuple_of_three((a,b,c)),
+            _ => todo!()
         }
     }
     pub fn to_tuple_with_variable(&self) -> (String, String, String) {
@@ -89,7 +113,8 @@ impl Triplet {
             Tvvw(a,b,c) => (to_var(&a),to_var(&b),c.to_string()),
             Tvwv(a,b,c) => (to_var(&a),b.to_string(),to_var(&c)),
             Twvv(a,b,c) => (a.to_string(),to_var(&b),to_var(&c)),
-            Tvvv(a,b,c) => (to_var(&a),to_var(&b),to_var(&c))
+            Tvvv(a,b,c) => (to_var(&a),to_var(&b),to_var(&c)),
+            _ => todo!()
         }
     }
 }
@@ -150,7 +175,7 @@ fn parse_triplet(s: &str) -> IResult<&str,Language> {
         Ok((t, (Language::Word(s1),Language::Var(s2),Language::Var(s3)))) => Ok((t, Language::Tri(Twvv(s1,s2,s3)))),
         Ok((t, (Language::Var(s1),Language::Var(s2),Language::Var(s3)))) => Ok((t, Language::Tri(Tvvv(s1,s2,s3)))),
         Err(e) => Err(e),
-        _ => todo!()
+        _ => Ok(("", Language::Empty))
     }
 }
 

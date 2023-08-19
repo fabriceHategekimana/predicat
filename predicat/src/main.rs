@@ -23,7 +23,8 @@ fn get_args_or(query: &[&str]) -> Vec<String> {
 }
 
 fn parse_and_execute(command: &str, knowledge: &impl Knowledgeable, context: SimpleContext) -> SimpleContext {
-    let ast: Vec<PredicatAST> = parse_command(command, &context); 
+    let ast: Vec<PredicatAST> = parse_command(command); 
+    //let asts: Vec<PredicatAST> = substitute(ast, context);
     let queries: Vec<String> = knowledge.translate(&ast)
                            .into_iter()
                            .filter_map(|x| x.ok())
