@@ -8,6 +8,8 @@ pub use nom::{
 
 pub use super::base_parser::{
     Language,
+    Var,
+    Comp,
     Triplet,
     Triplet::*,
     parse_triplet_and,
@@ -17,7 +19,7 @@ use nom::Err;
 use nom::error::Error;
 use super::base_parser::PredicatAST;
 
-type QueryAST = (Vec<Language>, Vec<Language>,Vec<Language>);
+type QueryAST = (Vec<Var>, Vec<Language>,Vec<Comp>);
 type QueryVarAST<'a> = (Vec<String>, Vec<&'a str>);
 
 fn parse_delete_modifier(s: &str) -> IResult<&str, PredicatAST> {

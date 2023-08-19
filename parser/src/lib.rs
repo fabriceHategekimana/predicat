@@ -115,7 +115,7 @@ mod tests {
             PredicatAST::Query((
                 vec![Var("A".to_string()), Var("B".to_string()), Var("C".to_string())],
                 vec![Triplet::Tvvv("A".to_string(), "B".to_string(), "C".to_string())],
-                vec![Language::Empty]) 
+                vec![]) 
                   ));
     }
 
@@ -126,7 +126,7 @@ mod tests {
             PredicatAST::Query((
                 vec![Var("A".to_string()), Var("B".to_string()), Var("C".to_string())],
                 vec![Triplet::Tvvv("A".to_string(), "B".to_string(), "C".to_string())],
-                vec![Language::Empty]) 
+                vec![]) 
                   ));
     }
 
@@ -137,7 +137,7 @@ mod tests {
             PredicatAST::Query((
                 vec![Var("A".to_string()), Var("B".to_string()), Var("C".to_string())],
                 vec![Triplet::Tvvv("A".to_string(), "B".to_string(), "C".to_string())],
-                vec![Language::Empty]) 
+                vec![]) 
                   ));
     }
     
@@ -148,7 +148,7 @@ mod tests {
             vec![PredicatAST::Query((
                 vec![Var("A".to_string()), Var("B".to_string()), Var("C".to_string())],
                 vec![Triplet::Tvvv("A".to_string(), "B".to_string(), "C".to_string())],
-                vec![Language::Empty]) 
+                vec![]) 
                   )]);
     }
 

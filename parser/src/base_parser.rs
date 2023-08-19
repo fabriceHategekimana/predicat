@@ -19,7 +19,7 @@ pub enum PredicatAST {
     Query(
         (Vec<Var>,
          Vec<Triplet>,
-         Vec<Language>)),
+         Vec<Comp>)),
     AddModifier(Vec<Language>),
     DeleteModifier(Vec<Language>),
     Empty,
@@ -46,6 +46,9 @@ impl PredicatAST{
 #[derive(PartialEq, Debug, Clone)]
 pub struct Var(pub String);
 
+#[derive(PartialEq, Debug, Clone)]
+pub struct Comp(pub String);
+
 #[derive(Clone, PartialEq, Debug)]
 pub enum Language {
     Var(String),
@@ -61,6 +64,12 @@ impl Language {
     pub fn get_var(&self) -> Option<Var> {
         match self {
             Language::Var(s) => Some(Var(s.to_string())),
+            _ => None
+        }
+    }
+    pub fn get_comp(&self) -> Option<Comp> {
+        match self {
+            Language::Comp(s) => Some(Comp(s.to_string())),
             _ => None
         }
     }

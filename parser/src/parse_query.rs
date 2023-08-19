@@ -11,6 +11,7 @@ pub use nom::{
 pub use super::base_parser::{
     Language,
     Var,
+    Comp,
     Triplet,
     Triplet::*,
     parse_variable,
@@ -21,7 +22,7 @@ use nom::Err;
 use nom::Needed;
 use super::base_parser::PredicatAST;
 
-type QueryAST = (Vec<Var>, Vec<Triplet>,Vec<Language>);
+type QueryAST = (Vec<Var>, Vec<Triplet>,Vec<Comp>);
 type QueryVarAST<'a> = ((Vec<Language>, Vec<Language>,Vec<Language>), Vec<&'a str>);
 
 fn parse_operator(s: &str) -> IResult<&str,&str> {
@@ -121,8 +122,10 @@ fn parse_query_var1(s: &str) -> IResult<&str, QueryAST> {
           many1(parse_triplet_and),
           many1(parse_comparison_and)))(s);
     match res {
-        Ok((r, (g, var, c, vtri, comp))) => Ok((r, (var.iter().flat_map(Language::get_var).collect(),
-                vtri.iter().flat_map(extract_triplet).collect(), comp))),
+        Ok((r, (g, var, c, vtri, comp))) => Ok((r, 
+                        (var.iter().flat_map(Language::get_var).collect(),
+                        vtri.iter().flat_map(extract_triplet).collect(),
+                        comp.iter().flat_map(Language::get_comp).collect()))),
         Err(e) => Err(e)
     }
 }
@@ -135,7 +138,8 @@ fn parse_query_var2(s: &str) -> IResult<&str, QueryAST> {
           many1(parse_triplet_and)))(s);
     match res {
         Ok((r, (g,var,c,vtri))) => Ok((r, (var.iter().flat_map(Language::get_var).collect()
-                                           , vtri.iter().flat_map(extract_triplet).collect(), vec![Language::Empty]))),
+                                           , vtri.iter().flat_map(extract_triplet).collect(), 
+                                           vec![]))),
         Err(e) => Err(e)
     }
 }
@@ -148,7 +152,8 @@ fn parse_query_var3(s: &str) -> IResult<&str, QueryAST> {
           many1(parse_comparison_and)))(s);
     match res {
         Ok((r, (g,var,c,comp))) => Ok((r, (var.iter().flat_map(Language::get_var).collect(),
-                                           vec![Triplet::Empty], comp))),
+                                           vec![Triplet::Empty], 
+                                           comp.iter().flat_map(Language::get_comp).collect()))),
         Err(e) => Err(e)
     }
 }
@@ -173,8 +178,8 @@ mod tests {
     use super::{
         Language,
         Var,
+        Comp,
         Triplet,
-        Language::{Comp, Empty},
         PredicatAST,
         parse_get,
         parse_variable,
@@ -377,7 +382,7 @@ mod tests {
             parse_query_var2("get $A where $A est mortel").unwrap().1,
               (vec![Var("A".to_string())], 
                vec![Tvww("A".to_string(), "est".to_string(), "mortel".to_string())], 
-               vec![Language::Empty]));
+               vec![]));
     }
 
     #[test]
@@ -387,7 +392,7 @@ mod tests {
             parse_query_var3("get $A where $A > 7").unwrap().1,
               (vec![Var("A".to_string())], 
                vec![Triplet::Empty], 
-               vec![Language::Comp(" $A > 7".to_string())]));
+               vec![Comp(" $A > 7".to_string())]));
     }
 
     #[test]
@@ -399,7 +404,7 @@ mod tests {
                (vec![
                 Var("A".to_string())],
                 vec![Triplet::Empty],
-                vec![Language::Comp(" $A > 7".to_string())])));
+                vec![Comp(" $A > 7".to_string())])));
     }
 
     #[test]
@@ -407,7 +412,7 @@ mod tests {
         if let PredicatAST::Query((var, tri, comp)) = parse_query("get $A where $A > 7").unwrap().1 {
             assert_eq!(var, vec![Var("A".to_string())]);
             assert_eq!(tri, vec![Triplet::Empty]);
-            assert_eq!(comp, vec![Language::Comp(" $A > 7".to_string())]);
+            assert_eq!(comp, vec![Comp(" $A > 7".to_string())]);
         }
     }
 

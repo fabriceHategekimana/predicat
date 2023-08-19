@@ -21,7 +21,7 @@ use parser::base_parser::Var;
 use parser::base_parser::Language;
 use parser::base_parser::Language::Word;
 use parser::base_parser::Language::Tri;
-use parser::base_parser::Language::Comp;
+use parser::base_parser::Comp;
 use parser::base_parser::Triplet::*;
 use parser::base_parser::Triplet;
 
@@ -220,7 +220,7 @@ fn to_context(hm: HashMap<String, Vec<String>>, columns: Vec<&str>) -> SimpleCon
     }
 }
 
-fn query_to_sql(get: &[Var], link: &[Triplet], filter: &[Language]) -> String {
+fn query_to_sql(get: &[Var], link: &[Triplet], filter: &[Comp]) -> String {
     let head = format_variables(get);
     let columns = format_triplets(link); // warning, put the result into a parenthese
     let comparisons = format_comparisons(filter);
@@ -258,18 +258,13 @@ fn format_variables(vars: &[Var]) -> String {
     }
 }
 
-fn format_comparisons(comp: &[Language]) -> String {
-    if  comp == [Language::Empty] {
+fn format_comparisons(comp: &[Comp]) -> String {
+    if  comp == [] {
         String::from(";")
     }
     else {
         let comparisons = comp.iter()
-            .filter_map(|x| {
-                match x {
-                    Comp(c) => Some(c.replace("$","").replace("==","=")),
-                    _ => None
-                }
-            });
+            .filter_map(|Comp(c)| Some(c.replace("$","").replace("==","=")));
         let final_comparisons = comparisons
             .reduce(|acc, x| format!("{} AND{}", acc, x)).unwrap();
         format!(" WHERE{};", final_comparisons)
@@ -344,7 +339,7 @@ mod tests {
             translate_one_ast(&PredicatAST::Query((
                     vec![Var("A".to_string())], 
                     vec![Tvww("A".to_string(), "est".to_string(), "mortel".to_string())], 
-                    vec![Language::Empty]))).unwrap(),
+                    vec![]))).unwrap(),
             "SELECT A FROM (SELECT subject AS A FROM facts WHERE link='est' AND goal='mortel');".to_string());
     }
 
