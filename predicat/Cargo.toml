@@ -13,3 +13,4 @@ simple_context = { path = "../simple_context" }
 knowledge = { path = "../knowledge" }
 parser = { path = "../parser" }
 importer = { path = "../importer" }
+metaprogramming = { path = "../metaprogramming" }

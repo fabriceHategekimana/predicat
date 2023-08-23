@@ -123,16 +123,23 @@ impl Knowledgeable for SqliteKnowledge {
     }
 
 
-    fn translate<'a>(&'a self, asts: &'a [PredicatAST]) -> Vec<Result<String, &str>> {
-        asts.clone().iter().map(translate_one_ast).collect::<Vec<Result<String, &str>>>()
+    fn translate<'a>(&'a self, ast: &PredicatAST) -> Result<String, &str> {
+        match ast {
+            Query((get, link, filter)) => Ok(query_to_sql(get, link, filter)),
+            AddModifier(commands) => 
+                Ok(commands.iter()
+                            .map(|x| add_to_insert(x))
+                            .fold("".to_string(), string_concat)),
+            DeleteModifier(commands) => 
+                Ok(commands.iter()
+                            .map(|x| delete_to_insert(x))
+                            .fold("".to_string(), string_concat)),
+            _ => Err("The AST is empty") 
+        }
     }
 
-    fn execute(&self, s: &Vec<String>, context: &SimpleContext) -> SimpleContext {
-        let mut df = SimpleContext::new();
-        for cmd in s.iter() {
-            df = self.execute_helper(context, &cmd)
-        }
-        df
+    fn execute(&self, cmd: &str) -> SimpleContext {
+        self.execute_helper(cmd)
     }
 
 }
@@ -183,7 +190,7 @@ fn string_concat(acc: String, x: String) -> String {
 }
 
 impl SqliteKnowledge{
-    fn execute_helper(&self, df: &SimpleContext, s: &str) -> SimpleContext {
+    fn execute_helper(&self, s: &str) -> SimpleContext {
         let res = match &s[0..6]  {
             "SELECT" => self.get(s),
             _ => self.modify(s).unwrap()

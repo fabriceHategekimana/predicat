@@ -13,6 +13,6 @@ pub trait Knowledgeable {
     fn new() -> SqliteKnowledge;
     fn get(&self, cmds: &str) -> SimpleContext;
     fn modify(&self, cmds: &str) -> Result<SimpleContext, &str>;
-    fn translate<'a>(&'a self, s: &'a [PredicatAST]) -> Vec<Result<String, &str>>;
-    fn execute(&self, s: &Vec<String>, context: &SimpleContext) -> SimpleContext;
+    fn translate<'a>(&'a self, s: &PredicatAST) -> Result<String, &str>;
+    fn execute(&self, s: &str) -> SimpleContext;
 } 

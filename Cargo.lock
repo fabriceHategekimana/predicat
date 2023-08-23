@@ -616,6 +616,11 @@ dependencies = [
 [[package]]
 name = "metaprogramming"
 version = "0.1.0"
+dependencies = [
+ "base_context",
+ "parser",
+ "simple_context",
+]
 
 [[package]]
 name = "minimal-lexical"
@@ -990,6 +995,7 @@ dependencies = [
  "base_context",
  "importer",
  "knowledge",
+ "metaprogramming",
  "parser",
  "polars",
  "simple_context",
