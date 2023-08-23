@@ -27,9 +27,6 @@ fn get_args_or(query: &str) -> String {
     }
 }
 
-fn join_context(s1: SimpleContext, s2: SimpleContext) -> SimpleContext {
-    todo!();
-}
 
 fn parse_and_execute(command: &str, knowledge: &impl Knowledgeable, context: SimpleContext) -> SimpleContext {
     let asts: Vec<PredicatAST> = parse_command(command); 
@@ -39,7 +36,7 @@ fn parse_and_execute(command: &str, knowledge: &impl Knowledgeable, context: Sim
        substitute(ast, ctx).into_iter()
                .flat_map(translate)
                .map(execute)
-               .fold(SimpleContext::new(), |ctx1, ctx2| join_context(ctx1, ctx2))
+               .fold(SimpleContext::new(), |ctx1, ctx2| ctx1.join(ctx2))
     })
 }
 

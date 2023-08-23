@@ -27,6 +27,10 @@ impl SimpleContext {
             .unwrap();
             println!("{}", table);
     }
+
+    pub fn get_tab(&self) -> Vec<(String, String)> {
+        self.tab.clone()
+    }
 }
 
 fn get_line(num: usize, body: &[Vec<String>]) -> Vec<String> {
@@ -35,6 +39,9 @@ fn get_line(num: usize, body: &[Vec<String>]) -> Vec<String> {
 
 
 impl Context for SimpleContext {
+
+    type FellowContext = SimpleContext;
+
     fn new() -> SimpleContext {
         SimpleContext{
             tab: vec![]
@@ -70,6 +77,18 @@ impl Context for SimpleContext {
             _ => self.get_values(&self.tab[0].0).unwrap().len()
         }
     }
+
+    fn join(&self, c2: SimpleContext) -> SimpleContext {
+        let vec = self.get_tab()
+                    .iter()
+                    .chain(c2.get_tab().iter())
+                    .map(|x| x.clone())
+                    .collect::<Vec<_>>();
+        SimpleContext {
+            tab: vec.clone()
+        }
+    }
+
 }
 
 #[cfg(test)]
