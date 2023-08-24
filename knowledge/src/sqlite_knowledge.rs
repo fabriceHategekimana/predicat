@@ -296,7 +296,7 @@ pub fn triplet_to_sql(tri: &Triplet) -> String {
             format!("SELECT link AS {},goal AS {} FROM facts WHERE subject='{}'",b,c,a),
         Tvvv(a,b,c) => 
             format!("SELECT subject AS {},link AS {},goal AS {} FROM facts",a,b,c),
-        Triplet::Empty => todo!()
+        Triplet::Empty => String::from("")
     }
 }
 
