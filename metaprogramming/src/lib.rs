@@ -97,8 +97,24 @@ fn substitute_triplet(triplets: &[Triplet], context: &SimpleContext) -> Vec<Trip
     }).collect()
 }
 
-fn substitute_comp(comps: &[Comp]) -> Vec<PredicatAST> {
-    todo!();
+fn format_comp(arg1: &str, arg2: &str, arg3: &str) -> Comp {
+    Comp(format!("{} {} {}", arg1.to_string(), arg2.to_string(), arg3.to_string()))
+}
+
+fn substitute_comp(comps: &[Comp], context: SimpleContext) -> Vec<Comp> {
+    comps.iter().flat_map(|comp| {
+        let (val1, op, val2) = comp.get_content();
+        match (context.get_values(&val1), context.get_values(&val2)) {
+            (None, None) => 
+                vec![format_comp(&val1, &op, &val2)],
+            (Some(v), None) => 
+                v.iter().map(|x| format_comp(x, &op, &val2)).collect(),
+            (None, Some(v)) => 
+                v.iter().map(|x| format_comp(&val1, &op, x)).collect(),
+            (Some(v1), Some(v2)) => 
+                v1.iter().zip(v2.iter()).map(|(x1, x2)| format_comp(x1, &op, x2)).collect()
+        }
+    }).collect()
 }
 
 fn substitute_query(vars: &[Var], triplets: &[Triplet], comps: &[Comp], context: SimpleContext) -> Vec<PredicatAST> {
@@ -226,5 +242,12 @@ mod tests {
             Triplet::Twww("sophie".to_string(), "collegue".to_string(), "marc".to_string())
             ]);
     }
+
+    //#[test]
+    //fn test_substitute_comp_1() {
+        //assert_eq!(
+            //substitute_comp(comps, context),
+                  //);
+    //}
 
 }

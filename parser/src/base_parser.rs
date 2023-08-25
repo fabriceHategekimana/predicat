@@ -49,6 +49,13 @@ pub struct Var(pub String);
 #[derive(PartialEq, Debug, Clone)]
 pub struct Comp(pub String);
 
+impl Comp {
+    pub fn get_content(&self) -> (String, String, String) {
+        let val = self.0.split(" ").collect::<Vec<&str>>();
+        (val[0].to_string(), val[1].to_string(), val[2].to_string())
+    }
+}
+
 #[derive(Clone, PartialEq, Debug)]
 pub enum Language {
     Var(String),
