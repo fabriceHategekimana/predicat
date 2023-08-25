@@ -19,6 +19,16 @@ enum DoublePos {
     SecondThird,
 }
 
+fn transpose<T>(v: Vec<Vec<T>>) -> Vec<Vec<T>>
+where
+    T: Clone,
+{
+    assert!(!v.is_empty());
+    (0..v[0].len())
+        .map(|i| v.iter().map(|inner| inner[i].clone()).collect::<Vec<T>>())
+        .collect()
+}
+
 fn substitute_1_var_triplet(v1: &str, ws: (&str, &str), pos: Pos, context: &SimpleContext) -> Vec<Triplet> {
     match (context.get_values(&v1), pos) {
         (None, Pos::First) => vec![Triplet::Tvww(v1.to_string(), ws.0.to_string(), ws.1.to_string())],
@@ -81,8 +91,8 @@ fn substitute_3_var_triplet(va1: &str, va2:&str, va3: &str, context: &SimpleCont
    }
 }
 
-fn substitute_triplet(triplets: &[Triplet], context: &SimpleContext) -> Vec<Triplet> {
-    triplets.iter().flat_map(|x| {
+fn substitute_triplet(triplets: &[Triplet], context: &SimpleContext) -> Vec<Vec<Triplet>> {
+    let vec = triplets.iter().map(|x| {
         match x {
             Triplet::Twww(w1, w2, w3) => vec![Triplet::Twww(w1.clone(), w2.clone(), w3.clone())],
             Triplet::Tvww(v1, w1, w2) => substitute_1_var_triplet(v1, (w1, w2), Pos::First, context),
@@ -94,15 +104,16 @@ fn substitute_triplet(triplets: &[Triplet], context: &SimpleContext) -> Vec<Trip
             Triplet::Tvvv(v1, v2, v3) => substitute_3_var_triplet(v1, v2, v3, context),
             Triplet::Empty => vec![Triplet::Empty]
         }
-    }).collect()
+    }).collect();
+    transpose(vec)
 }
 
 fn format_comp(arg1: &str, arg2: &str, arg3: &str) -> Comp {
     Comp(format!("{} {} {}", arg1.to_string(), arg2.to_string(), arg3.to_string()))
 }
 
-fn substitute_comp(comps: &[Comp], context: SimpleContext) -> Vec<Comp> {
-    comps.iter().flat_map(|comp| {
+fn substitute_comp(comps: &[Comp], context: &SimpleContext) -> Vec<Vec<Comp>> {
+    let vec = comps.iter().map(|comp| {
         let (val1, op, val2) = comp.get_content();
         match (context.get_values(&val1), context.get_values(&val2)) {
             (None, None) => 
@@ -114,27 +125,38 @@ fn substitute_comp(comps: &[Comp], context: SimpleContext) -> Vec<Comp> {
             (Some(v1), Some(v2)) => 
                 v1.iter().zip(v2.iter()).map(|(x1, x2)| format_comp(x1, &op, x2)).collect()
         }
-    }).collect()
+    }).collect();
+    transpose(vec)
 }
 
-fn substitute_query(vars: &[Var], triplets: &[Triplet], comps: &[Comp], context: SimpleContext) -> Vec<PredicatAST> {
-    todo!();
+fn substitute_query_helper(query: &PredicatAST, context: &SimpleContext) -> Vec<PredicatAST> {
+    match query {
+        PredicatAST::Query((a, b, c)) => substitute_query(&a, &b, &c, context),
+        _ => vec![PredicatAST::Empty]
+    }
+}
+
+fn substitute_query(vars: &[Var], triplets: &[Triplet], comps: &[Comp], context: &SimpleContext) -> Vec<PredicatAST> {
    // The vars cant' be substituate (there are for extraction)
-   // get A B where A age B and B < 18 and A ami C & context = (C = pierre, marc)
-   // get A B where A age B and B < 18 and A ami pierre 
-   // get A B where A age B and B < 18 and A ami marc 
    // TODO check the validity of the Language type (get variable should appear in the and elements)
+   // compute triplets and comps if triplets and comps have same size: zip and build
+   let tripletss = substitute_triplet(triplets, context);
+   let compss = substitute_comp(comps, context);
+   //dbg!(&tripletss);
+   //dbg!(&compss);
+   tripletss.iter().zip(compss.iter())
+       .map(|(triplets, comps)| PredicatAST::Query((vars.to_vec(), triplets.clone(), comps.clone()))).collect()
 }
 
-fn substitute_add_modifier(langs: &[Language], context: SimpleContext) -> Vec<PredicatAST> {
+fn substitute_add_modifier(langs: &[Language], context: &SimpleContext) -> Vec<PredicatAST> {
     todo!();
 }
 
-fn substitute_delete_modifier(langs: &[Language], context: SimpleContext) -> Vec<PredicatAST> {
+fn substitute_delete_modifier(langs: &[Language], context: &SimpleContext) -> Vec<PredicatAST> {
     todo!();
 }
 
-pub fn substitute(ast: &PredicatAST, context: SimpleContext) -> Vec<PredicatAST> {
+pub fn substitute(ast: &PredicatAST, context: &SimpleContext) -> Vec<PredicatAST> {
     match ast {
         PredicatAST::Query((vars, triplets, comps)) => substitute_query(vars, triplets, comps, context),
         PredicatAST::AddModifier(langs) => substitute_add_modifier(langs, context),
@@ -243,11 +265,49 @@ mod tests {
             ]);
     }
 
-    //#[test]
-    //fn test_substitute_comp_1() {
-        //assert_eq!(
-            //substitute_comp(comps, context),
-                  //);
-    //}
+    #[test]
+    fn test_substitute_comp_1() {
+       // A == C   |   context = (C = pierre, marc, A = eva, sophie, B = ami, collegue)
+       // eva == pierre 
+       // sophie == marc 
+       let comps = [Comp("A == C".to_string())];
+       let mut context = SimpleContext::new();
+       context = context.add_column("C", vec!["pierre".to_string(), "marc".to_string()]);
+       context = context.add_column("A", vec!["eva".to_string(), "sophie".to_string()]);
+       context = context.add_column("B", vec!["ami".to_string(), "collegue".to_string()]);
+       assert_eq!(
+           substitute_comp(&comps, &context),
+           vec![vec![Comp("eva == pierre".to_string())], vec![Comp("sophie == marc".to_string())]]
+                 );
+    }
+
+    #[test]
+    fn test_substitute_query1() {
+       // get A B where A age B and B < 18 and A ami C & context = (C = pierre, marc)
+       // get A B where A age B and B < 18 and A ami pierre 
+       // get A B where A age B and B < 18 and A ami marc 
+       let query = PredicatAST::Query((
+                    vec![Var("A".to_string()), Var("B".to_string())],
+                    vec![Triplet::Tvwv("A".to_string(), "age".to_string(), "B".to_string()),
+                         Triplet::Tvwv("A".to_string(), "ami".to_string(), "C".to_string())],
+                    vec![Comp("B < 18".to_string())]));
+       let mut context = SimpleContext::new();
+       context = context.add_column("C", vec!["pierre".to_string(), "marc".to_string()]);
+       assert_eq!(
+            substitute_query_helper(&query, &context),
+            vec![
+            PredicatAST::Query((
+                    vec![Var("A".to_string()), Var("B".to_string())],
+                    vec![Triplet::Tvwv("A".to_string(), "age".to_string(), "B".to_string()),
+                         Triplet::Tvwv("A".to_string(), "ami".to_string(), "pierre".to_string())],
+                    vec![Comp("B < 18".to_string())])),
+            PredicatAST::Query((
+                    vec![Var("A".to_string()), Var("B".to_string())],
+                    vec![Triplet::Tvwv("A".to_string(), "age".to_string(), "B".to_string()),
+                         Triplet::Tvwv("A".to_string(), "ami".to_string(), "marc".to_string())],
+                    vec![Comp("B < 18".to_string())]))
+            ]
+                  );
+    }
 
 }
