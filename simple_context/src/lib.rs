@@ -105,6 +105,14 @@ mod tests {
     }
 
     #[test]
+    fn test_len(){
+        let mut context = SimpleContext::new();
+        context = context.add_column("name", vec!["Vestin".to_string(), "Rédempta".to_string(), "Fabrice".to_string()]);
+        context = context.add_column("age", vec![28.to_string(), 23.to_string(), 28.to_string()]);
+        assert_eq!(context.len(), 3);
+    }
+
+    #[test]
     fn test_is_in_context() {
         let mut context = SimpleContext::new();
         context = context.add_column("name", vec!["Vestin".to_string(), "Rédempta".to_string(), "Fabrice".to_string()]);
