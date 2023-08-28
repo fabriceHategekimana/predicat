@@ -34,24 +34,28 @@ fn join_contexts(ctx1: SimpleContext, ctx2: SimpleContext) -> SimpleContext {
 fn execute((kcmd, cmd): (String, PredicatAST), knowledge: &impl Knowledgeable) -> Option<SimpleContext> {
     match knowledge.is_invalid(&cmd){
         true => None,
-        false => Some({
-            let _ = knowledge.execute(&kcmd);
-            let cmds = knowledge.get_commands_from(&cmd);
-            cmds.iter()
-                .map(|cmd| parse_and_execute(cmd, knowledge, SimpleContext::new()))
-                .fold(SimpleContext::new(), join_contexts)
-            })
+        false => Some(knowledge.execute(&kcmd))
     }
+}
+
+fn after_execution(cmds: &[PredicatAST], knowledge: &impl Knowledgeable) {
+        knowledge.get_commands_from(&cmds).iter()
+        .map(|cmd| parse_and_execute(&cmd, knowledge, SimpleContext::new()))
+        .fold(SimpleContext::new(), join_contexts);
+    todo!();    
 }
 
 fn parse_and_execute(command: &str, knowledge: &impl Knowledgeable, context: SimpleContext) -> SimpleContext {
     let translate_cmd = |x| (knowledge.translate(&x).unwrap_or("".to_string()), x);
     let execute_cmd = |x| execute(x, knowledge);
     parse_command(command).iter().fold(context, |ctx, ast| {
-       substitute(ast, &ctx).into_iter()
+       let cmds = substitute(ast, &ctx);
+       let final_context = cmds.clone().into_iter()
                .map(translate_cmd)
                .flat_map(execute_cmd)
-               .fold(SimpleContext::new(), join_contexts)
+               .fold(SimpleContext::new(), join_contexts);
+       after_execution(&cmds, knowledge);
+       final_context
     })
 }
 

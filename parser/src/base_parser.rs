@@ -14,7 +14,7 @@ use simple_context::SimpleContext;
 
 pub use Triplet::*;
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum PredicatAST {
     Query(
         (Vec<Var>,

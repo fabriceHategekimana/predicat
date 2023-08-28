@@ -145,7 +145,7 @@ impl Knowledgeable for SqliteKnowledge {
     fn is_invalid(&self, cmd: &PredicatAST) -> bool {
         todo!();
     }
-    fn get_commands_from(&self, cmd: &PredicatAST) -> Vec<String> {
+    fn get_commands_from(&self, cmd: &[PredicatAST]) -> Vec<String> {
         todo!();
     }
 
