@@ -142,6 +142,13 @@ impl Knowledgeable for SqliteKnowledge {
         self.execute_helper(cmd)
     }
 
+    fn is_invalid(&self, cmd: &PredicatAST) -> bool {
+        todo!();
+    }
+    fn get_commands_from(&self, cmd: &PredicatAST) -> Vec<String> {
+        todo!();
+    }
+
 }
 
 fn triplet_to_delete(tri: &Triplet) -> String {

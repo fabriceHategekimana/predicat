@@ -26,7 +26,7 @@ pub enum PredicatAST {
     Debug(String)
 }
 
-impl PredicatAST{
+impl PredicatAST {
 
     pub fn is_query(&self) -> bool {
         match self {
@@ -34,13 +34,6 @@ impl PredicatAST{
             _ => false
         }
     }
-
-    pub fn substitute(&self, context: &SimpleContext) -> Vec<PredicatAST> {
-        match self {
-            _ => todo!()
-        }
-    }
-
 }
 
 #[derive(PartialEq, Debug, Clone)]

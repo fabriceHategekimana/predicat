@@ -155,9 +155,6 @@ fn fullfill2<E: Clone>(v: Vec<E>, context: &SimpleContext) -> Vec<E> {
 }
 
 fn substitute_query(vars: &[Var], triplets: &[Triplet], comps: &[Comp], context: &SimpleContext) -> Vec<PredicatAST> {
-   // The vars cant' be substituate (there are for extraction)
-   // TODO check the validity of the Language type (get variable should appear in the and elements)
-   // compute triplets and comps if triplets and comps have same size: zip and build
    let tripletss = substitute_triplet(triplets, context);
    let compss = substitute_comp(comps, context);
    tripletss.iter().zip(compss.iter())
@@ -177,8 +174,7 @@ pub fn substitute(ast: &PredicatAST, context: &SimpleContext) -> Vec<PredicatAST
         PredicatAST::DeleteModifier(tri) => substitute_triplet_to_predicat_ast(tri, PredicatAST::DeleteModifier, context),
         PredicatAST::Empty => vec![PredicatAST::Empty],
         PredicatAST::Debug(s) => vec![PredicatAST::Debug(s.clone())]
-    };
-    todo!();
+    }
 }
 
 #[cfg(test)]
@@ -407,6 +403,55 @@ mod tests {
                                 Triplet::Tvwv("B".to_string(), "ami".to_string(), "C".to_string())];
         assert_eq!(
                 substitute_triplet_to_predicat_ast(&add_mod, PredicatAST::AddModifier, &context),
+                vec![
+                PredicatAST::AddModifier(vec![
+                                Triplet::Tvwv("A".to_string(), "ami".to_string(), "B".to_string()),
+                                Triplet::Tvww("B".to_string(), "ami".to_string(), "pierre".to_string())]),
+                PredicatAST::AddModifier(vec![
+                                Triplet::Tvwv("A".to_string(), "ami".to_string(), "B".to_string()),
+                                Triplet::Tvww("B".to_string(), "ami".to_string(), "marc".to_string())]),
+
+                ]
+                  );
+    }
+
+    fn test_substitute1() {
+       // get A B where A age B and B < 18 and A ami C & context = (C = pierre, marc)
+       // get A B where A age B and B < 18 and A ami pierre 
+       // get A B where A age B and B < 18 and A ami marc 
+       let query = PredicatAST::Query((
+                    vec![Var("A".to_string()), Var("B".to_string())],
+                    vec![Triplet::Tvwv("A".to_string(), "age".to_string(), "B".to_string()),
+                         Triplet::Tvwv("A".to_string(), "ami".to_string(), "C".to_string())],
+                    vec![Comp("B < 18".to_string())]));
+       let mut context = SimpleContext::new();
+       context = context.add_column("C", vec!["pierre".to_string(), "marc".to_string()]);
+       assert_eq!(
+            substitute(&query, &context),
+            vec![
+            PredicatAST::Query((
+                    vec![Var("A".to_string()), Var("B".to_string())],
+                    vec![Triplet::Tvwv("A".to_string(), "age".to_string(), "B".to_string()),
+                         Triplet::Tvww("A".to_string(), "ami".to_string(), "pierre".to_string())],
+                    vec![Comp("B < 18".to_string())])),
+            PredicatAST::Query((
+                    vec![Var("A".to_string()), Var("B".to_string())],
+                    vec![Triplet::Tvwv("A".to_string(), "age".to_string(), "B".to_string()),
+                         Triplet::Tvww("A".to_string(), "ami".to_string(), "marc".to_string())],
+                    vec![Comp("B < 18".to_string())]))
+            ]
+                  );
+    }
+
+    #[test]
+    fn test_substitute2() {
+       let mut context = SimpleContext::new();
+       context = context.add_column("C", vec!["pierre".to_string(), "marc".to_string()]);
+       let add_mod = PredicatAST::AddModifier(vec![
+                                Triplet::Tvwv("A".to_string(), "ami".to_string(), "B".to_string()),
+                                Triplet::Tvwv("B".to_string(), "ami".to_string(), "C".to_string())]);
+        assert_eq!(
+                substitute(&add_mod, &context),
                 vec![
                 PredicatAST::AddModifier(vec![
                                 Triplet::Tvwv("A".to_string(), "ami".to_string(), "B".to_string()),
