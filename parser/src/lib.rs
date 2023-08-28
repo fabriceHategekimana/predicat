@@ -7,6 +7,9 @@ pub mod base_parser;
 use regex::Regex;
 use itertools::Itertools;
 use base_parser::PredicatAST;
+use base_parser::Event;
+use base_parser::Action;
+use base_parser::ModifierType;
 
 use parse_query::{
     parse_query,
@@ -18,7 +21,9 @@ use simple_context::SimpleContext;
 use nom::multi::many1;
 use nom::sequence::terminated;
 use nom::bytes::complete::tag;
+use nom::sequence::tuple;
 use nom::IResult;
+use nom::combinator::recognize;
 
 
 use parse_modifier::parse_modifier;
@@ -47,11 +52,58 @@ fn parse_query_and_modifier_bar(s: &str) -> IResult<&str, PredicatAST> {
     terminated(parse_query_and_modifier, parse_bar)(s)
 }
 
+fn parse_event(s: &str) -> IResult<&str, Event> {
+    let res = alt((tag("before"), (tag("after"))))(s);
+    match res {
+        Ok((s, "before")) => Ok((s, Event::Before)),
+        Ok((s, "after")) => Ok((s, Event::After)),
+        Err(r) => Err(r),
+        _ => todo!()
+    }
+}
+
+fn parse_trigger(s: &str) -> IResult<&str, (ModifierType, Triplet)> {
+    let res = parse_modifier(s);
+    match res {
+        Ok((s, PredicatAST::AddModifier(v))) => Ok((s, (ModifierType::Add, v[0].clone()))),
+        Ok((s, PredicatAST::DeleteModifier(v))) => Ok((s, (ModifierType::Delete, v[0].clone()))),
+        Err(r) => Err(r),
+        _ => todo!()
+    }
+}
+
+fn parse_action(s: &str) -> IResult<&str, Action> {
+    let res = alt((
+    tag("block"),
+    recognize(parse_query_and_modifier_bar)
+        ))(s);
+    match res {
+        Ok((s, "block")) => Ok((s, Action::Block)),
+        Ok((s, cmd)) => Ok((s, Action::Command(cmd.to_string()))),
+        Err(r) => Err(r)
+    }
+}
+
+fn parse_rule(s: &str) -> IResult<&str, PredicatAST> {
+    // rule [event] [trigger] [action] 
+    let res = tuple((
+            tag("rule "),
+            parse_event,
+            parse_trigger,
+            parse_action
+          ))(s);
+    match res {
+        Ok((s, (r, e, (ty, tri), a))) => Ok((s, PredicatAST::Rule(e, (ty, tri), a))),
+        Err(r) => Err(r)
+    }
+}
+
 pub fn parse_command<'a>(s: &'a str) -> Vec<PredicatAST> {
     let res = many1(
         alt((
             parse_query_and_modifier,
             parse_query_and_modifier_bar,
+            parse_rule
             ))
         )(s);
     match res {

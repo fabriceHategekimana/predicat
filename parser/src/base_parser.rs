@@ -14,6 +14,24 @@ use simple_context::SimpleContext;
 
 pub use Triplet::*;
 
+#[derive(PartialEq, Debug, Clone, Copy)]
+pub enum Event {
+    Before,
+    After
+}
+
+#[derive(PartialEq, Debug, Clone, Copy)]
+pub enum ModifierType {
+    Add,
+    Delete
+}
+
+#[derive(PartialEq, Clone, Debug)]
+pub enum Action {
+    Block,
+    Command(String)
+}
+
 #[derive(PartialEq, Debug, Clone)]
 pub enum PredicatAST {
     Query(
@@ -22,6 +40,8 @@ pub enum PredicatAST {
          Vec<Comp>)),
     AddModifier(Vec<Triplet>),
     DeleteModifier(Vec<Triplet>),
+    // rule [event] [trigger] [action] 
+    Rule(Event, (ModifierType, Triplet), Action),
     Empty,
     Debug(String)
 }

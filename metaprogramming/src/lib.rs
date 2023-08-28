@@ -172,8 +172,7 @@ pub fn substitute(ast: &PredicatAST, context: &SimpleContext) -> Vec<PredicatAST
         PredicatAST::Query((vars, triplets, comps)) => substitute_query(vars, triplets, comps, context),
         PredicatAST::AddModifier(tri) => substitute_triplet_to_predicat_ast(tri, PredicatAST::AddModifier, context),
         PredicatAST::DeleteModifier(tri) => substitute_triplet_to_predicat_ast(tri, PredicatAST::DeleteModifier, context),
-        PredicatAST::Empty => vec![PredicatAST::Empty],
-        PredicatAST::Debug(s) => vec![PredicatAST::Debug(s.clone())]
+        x => vec![x.clone()]
     }
 }
 
