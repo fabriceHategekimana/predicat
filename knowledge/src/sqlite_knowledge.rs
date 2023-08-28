@@ -128,11 +128,11 @@ impl Knowledgeable for SqliteKnowledge {
             Query((get, link, filter)) => Ok(query_to_sql(get, link, filter)),
             AddModifier(commands) => 
                 Ok(commands.iter()
-                            .map(|x| add_to_insert(x))
+                            .map(|x| triplet_to_insert(x))
                             .fold("".to_string(), string_concat)),
             DeleteModifier(commands) => 
                 Ok(commands.iter()
-                            .map(|x| delete_to_insert(x))
+                            .map(|x| triplet_to_insert(x))
                             .fold("".to_string(), string_concat)),
             _ => Err("The AST is empty") 
         }
@@ -150,12 +150,12 @@ fn triplet_to_delete(tri: &Triplet) -> String {
             tup.0, tup.1, tup.2)
 }
 
-fn delete_to_insert(l: &Language) -> String {
-    match l {
-        Language::Tri(tri) => triplet_to_delete(&tri),
-        _ => String::from("")
-    }
-}
+//fn delete_to_insert(l: &Language) -> String {
+    //match l {
+        //Language::Tri(tri) => triplet_to_delete(&tri),
+        //_ => String::from("")
+    //}
+//}
 
 fn triplet_to_insert(tri: &Triplet) -> String {
     let tup = tri.to_tuple_with_variable();
@@ -163,23 +163,23 @@ fn triplet_to_insert(tri: &Triplet) -> String {
             tup.0, tup.1, tup.2)
 }
 
-fn add_to_insert(l: &Language) -> String {
-    match l {
-        Language::Tri(tri) => triplet_to_insert(&tri),
-        _ => String::from("")
-    }
-}
+//fn add_to_insert_old(l: &Language) -> String {
+    //match l {
+        //Language::Tri(tri) => triplet_to_insert(&tri),
+        //_ => String::from("")
+    //}
+//}
 
 fn translate_one_ast<'a>(ast: &'a PredicatAST) -> Result<String, &'a str> {
     match ast {
         Query((get, link, filter)) => Ok(query_to_sql(get, link, filter)),
         AddModifier(commands) => 
             Ok(commands.iter()
-                        .map(|x| add_to_insert(x))
+                        .map(|x| triplet_to_insert(x))
                         .fold("".to_string(), string_concat)),
         DeleteModifier(commands) => 
             Ok(commands.iter()
-                        .map(|x| delete_to_insert(x))
+                        .map(|x| triplet_to_insert(x))
                         .fold("".to_string(), string_concat)),
         _ => Err("The AST is empty") 
     }
@@ -353,7 +353,7 @@ mod tests {
     #[test]
     fn test_translate_one_ast_add_modifier() {
         assert_eq!(
-            translate_one_ast(&PredicatAST::AddModifier(vec![Language::Tri(Twww("pierre".to_string(), "ami".to_string(), "jean".to_string()))])).unwrap(),
+            translate_one_ast(&PredicatAST::AddModifier(vec![Twww("pierre".to_string(), "ami".to_string(), "jean".to_string())])).unwrap(),
             "INSERT or IGNORE INTO facts (subject,link,goal) VALUES ('pierre','ami','jean')".to_string())
     }
 

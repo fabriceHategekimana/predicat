@@ -27,13 +27,12 @@ fn get_args_or(query: &str) -> String {
     }
 }
 
-
 fn parse_and_execute(command: &str, knowledge: &impl Knowledgeable, context: SimpleContext) -> SimpleContext {
     let asts: Vec<PredicatAST> = parse_command(command); 
     let translate = |x| knowledge.translate(&x);
     let execute = |x: String| knowledge.execute(&x);
     asts.iter().fold(context, |ctx, ast| {
-       substitute(ast, ctx).into_iter()
+       substitute(ast, &ctx).into_iter()
                .flat_map(translate)
                .map(execute)
                .fold(SimpleContext::new(), |ctx1, ctx2| ctx1.join(ctx2))

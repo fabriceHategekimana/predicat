@@ -13,6 +13,7 @@ pub use super::base_parser::{
     Triplet,
     Triplet::*,
     parse_triplet_and,
+    extract_triplet,
 };
 
 use nom::Err;
@@ -27,7 +28,8 @@ fn parse_delete_modifier(s: &str) -> IResult<&str, PredicatAST> {
         many1(parse_triplet_and)
     )(s);
     match res {
-        Ok((s, v)) => Ok((s, PredicatAST::DeleteModifier(v))),
+        Ok((s, v)) => Ok((s, 
+                PredicatAST::DeleteModifier(v.iter().flat_map(|x| extract_triplet(x)).collect()))),
         Err(e) => Err(e)
     }
 }
@@ -43,7 +45,8 @@ fn parse_add_modifier(s: &str) -> IResult<&str, PredicatAST> {
         many1(parse_triplet_and)
     )(s);
     match res {
-        Ok((s, v)) => Ok((s, PredicatAST::AddModifier(v))),
+        Ok((s, v)) => Ok((s, 
+                PredicatAST::AddModifier(v.iter().flat_map(|x| extract_triplet(x)).collect()))),
         Err(e) => Err(e) 
     }
 }
@@ -74,7 +77,7 @@ mod tests {
     fn test_add_modifier() {
         let (s, args) =  parse_add_modifier("add pierre ami jean").unwrap();
         assert_eq!(args, 
-                PredicatAST::AddModifier(vec![Language::Tri(Twww("pierre".to_string(), "ami".to_string(), "jean".to_string()))])
+                PredicatAST::AddModifier(vec![Twww("pierre".to_string(), "ami".to_string(), "jean".to_string())])
             );
     } 
 
@@ -90,7 +93,7 @@ mod tests {
     fn test_delete_modifier() {
         assert_eq!(
             parse_delete_modifier("delete pierre ami jean").unwrap().1,
-            PredicatAST::DeleteModifier(vec![Language::Tri(Twww("pierre".to_string(), "ami".to_string(), "jean".to_string()))]));
+            PredicatAST::DeleteModifier(vec![Twww("pierre".to_string(), "ami".to_string(), "jean".to_string())]));
 
     }
 

@@ -128,7 +128,7 @@ fn substitute_comp(comps: &[Comp], context: &SimpleContext) -> Vec<Vec<Comp>> {
                 v1.iter().zip(v2.iter()).map(|(x1, x2)| format_comp(x1, &op, x2)).collect()
         }
     }).collect();
-    transpose(vec)},
+    fullfill(transpose(vec), context)},
     false => (0..context.len()).into_iter().map(|x| vec![]).collect()
     }
 }
@@ -158,29 +158,23 @@ fn substitute_query(vars: &[Var], triplets: &[Triplet], comps: &[Comp], context:
    // The vars cant' be substituate (there are for extraction)
    // TODO check the validity of the Language type (get variable should appear in the and elements)
    // compute triplets and comps if triplets and comps have same size: zip and build
-   dbg!(triplets);
    let tripletss = substitute_triplet(triplets, context);
-   //let tripletss = substitute_triplet(triplets, context);
-   let compss = fullfill(substitute_comp(comps, context), context);
-   //dbg!(&tripletss);
-   //dbg!(&compss);
+   let compss = substitute_comp(comps, context);
    tripletss.iter().zip(compss.iter())
        .map(|(triplets, comps)| PredicatAST::Query((vars.to_vec(), triplets.clone(), comps.clone()))).collect()
 }
 
-fn substitute_add_modifier(langs: &[Language], context: &SimpleContext) -> Vec<PredicatAST> {
-    todo!();
-}
-
-fn substitute_delete_modifier(langs: &[Language], context: &SimpleContext) -> Vec<PredicatAST> {
-    todo!();
+fn substitute_triplet_to_predicat_ast<C>(triplets: &[Triplet], constructor: C, context: &SimpleContext) -> Vec<PredicatAST> 
+where C : Fn(Vec<Triplet>) -> PredicatAST {
+    substitute_triplet(triplets, context).iter()
+        .map(|x| constructor(x.clone())).collect()
 }
 
 pub fn substitute(ast: &PredicatAST, context: &SimpleContext) -> Vec<PredicatAST> {
     match ast {
         PredicatAST::Query((vars, triplets, comps)) => substitute_query(vars, triplets, comps, context),
-        PredicatAST::AddModifier(langs) => substitute_add_modifier(langs, context),
-        PredicatAST::DeleteModifier(langs) => substitute_delete_modifier(langs, context),
+        PredicatAST::AddModifier(tri) => substitute_triplet_to_predicat_ast(tri, PredicatAST::AddModifier, context),
+        PredicatAST::DeleteModifier(tri) => substitute_triplet_to_predicat_ast(tri, PredicatAST::DeleteModifier, context),
         PredicatAST::Empty => vec![PredicatAST::Empty],
         PredicatAST::Debug(s) => vec![PredicatAST::Debug(s.clone())]
     };
@@ -397,6 +391,31 @@ mod tests {
         assert_eq!(
             fullfill(vec![vec![7]], &context),
             vec![vec![7], vec![7]]
+                  );
+    }
+
+    // add A ami B and B ami C ; (C = pierre, marc)
+    // add A ami B and B ami pierre
+    // add A ami B and B ami marc
+    
+    #[test]
+    fn test_substitute_add_modifier() {
+       let mut context = SimpleContext::new();
+       context = context.add_column("C", vec!["pierre".to_string(), "marc".to_string()]);
+       let add_mod = vec![
+                                Triplet::Tvwv("A".to_string(), "ami".to_string(), "B".to_string()),
+                                Triplet::Tvwv("B".to_string(), "ami".to_string(), "C".to_string())];
+        assert_eq!(
+                substitute_triplet_to_predicat_ast(&add_mod, PredicatAST::AddModifier, &context),
+                vec![
+                PredicatAST::AddModifier(vec![
+                                Triplet::Tvwv("A".to_string(), "ami".to_string(), "B".to_string()),
+                                Triplet::Tvww("B".to_string(), "ami".to_string(), "pierre".to_string())]),
+                PredicatAST::AddModifier(vec![
+                                Triplet::Tvwv("A".to_string(), "ami".to_string(), "B".to_string()),
+                                Triplet::Tvww("B".to_string(), "ami".to_string(), "marc".to_string())]),
+
+                ]
                   );
     }
 

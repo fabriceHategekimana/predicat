@@ -20,8 +20,8 @@ pub enum PredicatAST {
         (Vec<Var>,
          Vec<Triplet>,
          Vec<Comp>)),
-    AddModifier(Vec<Language>),
-    DeleteModifier(Vec<Language>),
+    AddModifier(Vec<Triplet>),
+    DeleteModifier(Vec<Triplet>),
     Empty,
     Debug(String)
 }
@@ -79,6 +79,14 @@ impl Language {
             Language::Comp(s) => Some(Comp(s.to_string())),
             _ => None
         }
+    }
+}
+
+
+pub fn extract_triplet(tri: &Language) -> Option<Triplet> {
+    match tri {
+        Language::Tri(tri) => Some(tri.clone()),
+        _ => None
     }
 }
 

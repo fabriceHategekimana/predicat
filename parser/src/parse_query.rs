@@ -16,6 +16,7 @@ pub use super::base_parser::{
     Triplet::*,
     parse_variable,
     parse_triplet_and,
+    extract_triplet
 };
 
 use nom::Err;
@@ -107,12 +108,6 @@ fn parse_get(s: &str) -> IResult<&str,Language> {
     }
 }
 
-fn extract_triplet(tri: &Language) -> Option<Triplet> {
-    match tri {
-        Language::Tri(tri) => Some(tri.clone()),
-        _ => None
-    }
-}
 
 // get [vars] [connector] [triplets] [comparison]
 fn parse_query_var1(s: &str) -> IResult<&str, QueryAST> {
