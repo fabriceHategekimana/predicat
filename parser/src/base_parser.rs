@@ -32,6 +32,15 @@ pub enum Action {
     Command(String)
 }
 
+impl Action {
+    pub fn display(&self) -> String {
+        match self {
+            Action::Block => "block".to_string(),
+            Action::Command(c) => c.clone()
+        }
+    }
+}
+
 #[derive(PartialEq, Debug, Clone)]
 pub enum PredicatAST {
     Query(
@@ -151,6 +160,20 @@ impl Triplet {
             Tvwv(a,b,c) => (to_var(&a),b.to_string(),to_var(&c)),
             Twvv(a,b,c) => (a.to_string(),to_var(&b),to_var(&c)),
             Tvvv(a,b,c) => (to_var(&a),to_var(&b),to_var(&c)),
+            _ => todo!()
+        }
+    }
+
+    pub fn display(&self) -> String {
+        match self {
+            Twww(a,b,c) => format!("{},{},{}", a.to_string(),b.to_string(),c.to_string()),
+            Tvww(a,b,c) => format!("{},{},{}", to_var(&a),b.to_string(),c.to_string()),
+            Twvw(a,b,c) => format!("{},{},{}", a.to_string(),to_var(&b),c.to_string()),
+            Twwv(a,b,c) => format!("{},{},{}", a.to_string(),b.to_string(), to_var(&c)),
+            Tvvw(a,b,c) => format!("{},{},{}", to_var(&a),to_var(&b),c.to_string()),
+            Tvwv(a,b,c) => format!("{},{},{}", to_var(&a),b.to_string(),to_var(&c)),
+            Twvv(a,b,c) => format!("{},{},{}", a.to_string(),to_var(&b),to_var(&c)),
+            Tvvv(a,b,c) => format!("{},{},{}", to_var(&a),to_var(&b),to_var(&c)),
             _ => todo!()
         }
     }

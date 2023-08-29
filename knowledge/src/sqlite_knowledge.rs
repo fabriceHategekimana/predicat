@@ -15,7 +15,7 @@ use super::Knowledgeable;
 use parser::soft_predicat;
 
 use parser::base_parser::PredicatAST;
-use parser::base_parser::PredicatAST::{Query, AddModifier, DeleteModifier, Empty};
+use parser::base_parser::PredicatAST::{Query, AddModifier, DeleteModifier, Empty, Rule};
 
 use parser::base_parser::Var;
 use parser::base_parser::Language;
@@ -36,12 +36,12 @@ static CREATE_FACTS : &str = "CREATE TABLE IF NOT EXISTS facts(
                   PRIMARY KEY (subject,link,goal)
                 ); ";
 
-static CREATE_RULES : &str = "CREATE TABLE IF NOT EXISTS rules_default(
-                    'id' INTEGER,
-                    'source' TEXT,
-                    'type' TEXT, 
-                    'listener' TEXT, 
-                    'body' TEXT);
+static CREATE_RULES : &str = "CREATE TABLE IF NOT EXISTS rules(
+                    'id' INTEGER PRIMARY KEY AUTOINCREMENT,
+                    'name' TEXT,
+                    'event' TEXT, 
+                    'trigger' TEXT, 
+                    'command' TEXT);
                     ";
 
 static CREATE_HISTORICAL : &str = "CREATE TABLE historical(
@@ -96,6 +96,7 @@ impl Knowledgeable for SqliteKnowledge {
             connection: sqlite::open("data.db").unwrap()
         };
         let _ = knowledge.modify(CREATE_FACTS);
+        let _ = knowledge.modify(CREATE_RULES);
         knowledge
     }
 
@@ -134,6 +135,8 @@ impl Knowledgeable for SqliteKnowledge {
                 Ok(commands.iter()
                             .map(|x| triplet_to_insert(x))
                             .fold("".to_string(), string_concat)),
+            Rule(a, (b, c), d) =>
+                Ok(format!("%rule%%|%{:?}%|%{:?}%|%{}%|%{}", a, b, c.display(), d.display())),
             _ => Err("The AST is empty") 
         }
     }
@@ -143,10 +146,14 @@ impl Knowledgeable for SqliteKnowledge {
     }
 
     fn is_invalid(&self, cmd: &PredicatAST) -> bool {
-        todo!();
+        match cmd {
+            PredicatAST::Rule(a, (b, c), d) => false,
+            _ => false
+        }
     }
     fn get_commands_from(&self, cmd: &[PredicatAST]) -> Vec<String> {
-        todo!();
+        //TODO: do a proprer implementation later
+        vec![]
     }
 
 }
@@ -157,25 +164,11 @@ fn triplet_to_delete(tri: &Triplet) -> String {
             tup.0, tup.1, tup.2)
 }
 
-//fn delete_to_insert(l: &Language) -> String {
-    //match l {
-        //Language::Tri(tri) => triplet_to_delete(&tri),
-        //_ => String::from("")
-    //}
-//}
-
 fn triplet_to_insert(tri: &Triplet) -> String {
     let tup = tri.to_tuple_with_variable();
     format!("INSERT or IGNORE INTO facts (subject,link,goal) VALUES ('{}','{}','{}')",
             tup.0, tup.1, tup.2)
 }
-
-//fn add_to_insert_old(l: &Language) -> String {
-    //match l {
-        //Language::Tri(tri) => triplet_to_insert(&tri),
-        //_ => String::from("")
-    //}
-//}
 
 fn translate_one_ast<'a>(ast: &'a PredicatAST) -> Result<String, &'a str> {
     match ast {
@@ -200,9 +193,20 @@ impl SqliteKnowledge{
     fn execute_helper(&self, s: &str) -> SimpleContext {
         let res = match &s[0..6]  {
             "SELECT" => self.get(s),
+            "%rule%" => self.store_rule(s),
             _ => self.modify(s).unwrap()
         }.clone();
         res
+    }
+
+    fn store_rule(&self, s: &str) -> SimpleContext {
+        let values = s.split("%|%").collect::<Vec<_>>();
+        let cmd = format!("INSERT INTO rules (event, trigger, command) VALUES ('{}', '{},{}', '{}')",
+                    values[1], values[2], values[3], values[4]);
+        match self.connection.execute(cmd) {
+           Err(e) => {dbg!(e); SimpleContext::new()}
+           _ => SimpleContext::new(),
+        }
     }
 }
 
