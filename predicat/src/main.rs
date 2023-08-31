@@ -59,6 +59,15 @@ fn parse_and_execute(command: &str, knowledge: &impl Knowledgeable, context: Sim
     })
 }
 
+// activation of a rule
+// find an optimal query for a request
+// only concrete element
+// ex: add pierre ami beatrice
+// possible matchs:
+// subject = pierre or 
+// link = ami or
+// goal = beatrice
+
 fn main() {
     //let command = get_args_or("add Socrate est mortel");
     let command = get_args_or("rule before add $A ami $B : add $B ami $A");

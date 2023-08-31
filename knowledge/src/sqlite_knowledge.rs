@@ -40,7 +40,10 @@ static CREATE_RULES : &str = "CREATE TABLE IF NOT EXISTS rules(
                     'id' INTEGER PRIMARY KEY AUTOINCREMENT,
                     'name' TEXT,
                     'event' TEXT, 
-                    'trigger' TEXT, 
+                    'modifier' TEXT, 
+                    'subject' TEXT, 
+                    'link' TEXT, 
+                    'goal' TEXT, 
                     'command' TEXT);
                     ";
 
@@ -135,13 +138,16 @@ impl Knowledgeable for SqliteKnowledge {
                 Ok(commands.iter()
                             .map(|x| triplet_to_insert(x))
                             .fold("".to_string(), string_concat)),
-            Rule(a, (b, c), d) =>
-                Ok(format!("%rule%%|%{:?}%|%{:?}%|%{}%|%{}", a, b, c.display(), d.display())),
+                Rule(a, (b, c), d) => {
+                    let (t1, t2, t3) = c.to_tuple_with_variable();
+                    Ok(format!("%rule%%|%{:?}%|%{:?}%|%{}%|%{}%|%{}%|%{}", a, b, t1, t2, t3, d.display()))
+                            },
             _ => Err("The AST is empty") 
         }
     }
 
     fn execute(&self, cmd: &str) -> SimpleContext {
+        //Todo simplify
         self.execute_helper(cmd)
     }
 
@@ -201,8 +207,8 @@ impl SqliteKnowledge{
 
     fn store_rule(&self, s: &str) -> SimpleContext {
         let values = s.split("%|%").collect::<Vec<_>>();
-        let cmd = format!("INSERT INTO rules (event, trigger, command) VALUES ('{}', '{},{}', '{}')",
-                    values[1], values[2], values[3], values[4]);
+        let cmd = format!("INSERT INTO rules (event, modifier, subject, link, goal, command) VALUES ('{}', '{}', '{}', '{}', '{}', '{}')",
+                    values[1], values[2], values[3], values[4], values[5], values[6]);
         match self.connection.execute(cmd) {
            Err(e) => {dbg!(e); SimpleContext::new()}
            _ => SimpleContext::new(),
