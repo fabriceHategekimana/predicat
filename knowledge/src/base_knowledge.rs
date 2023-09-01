@@ -16,5 +16,5 @@ pub trait Knowledgeable {
     fn translate<'a>(&'a self, s: &PredicatAST) -> Result<String, &str>;
     fn execute(&self, s: &str) -> SimpleContext;
     fn is_invalid(&self, cmd: &PredicatAST) -> bool;
-    fn get_commands_from(&self, cmds: &[PredicatAST]) -> Vec<String>;
+    fn get_commands_from(&self, cmds: &PredicatAST) -> Vec<String>;
 } 

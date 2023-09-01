@@ -88,7 +88,14 @@ impl Context for SimpleContext {
             tab: vec.clone()
         }
     }
+    
+    fn is_empty(&self) -> bool {
+        self.len() > 0
+    }
 
+    fn is_not_empty(&self) -> bool {
+       !self.is_empty() 
+    }
 }
 
 #[cfg(test)]

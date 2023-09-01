@@ -138,26 +138,41 @@ impl Knowledgeable for SqliteKnowledge {
                 Ok(commands.iter()
                             .map(|x| triplet_to_insert(x))
                             .fold("".to_string(), string_concat)),
-                Rule(a, (b, c), d) => {
+                Rule(a, (b, c), cmd, ast) => {
                     let (t1, t2, t3) = c.to_tuple_with_variable();
-                    Ok(format!("%rule%%|%{:?}%|%{:?}%|%{}%|%{}%|%{}%|%{}", a, b, t1, t2, t3, d.display()))
+                    Ok(format!("%rule%%|%{:?}%|%{:?}%|%{}%|%{}%|%{}%|%{}%|%{}",
+                               a, b, t1, t2, t3, cmd, self.translate(&ast).unwrap()))
                             },
             _ => Err("The AST is empty") 
         }
     }
 
-    fn execute(&self, cmd: &str) -> SimpleContext {
-        //Todo simplify
-        self.execute_helper(cmd)
+    fn execute(&self, s: &str) -> SimpleContext {
+        let res = match &s[0..6]  {
+            "SELECT" => self.get(s),
+            "%rule%" => self.store_rule(s),
+            _ => self.modify(s).unwrap()
+        }.clone();
+        res
     }
 
     fn is_invalid(&self, cmd: &PredicatAST) -> bool {
         match cmd {
-            PredicatAST::Rule(a, (b, c), d) => false,
+            PredicatAST::Rule(a, (mo, tri), cmd, ast) => {
+                let (t1, t2, t3) = tri.to_tuple_with_variable();
+                let select = format!("SELECT * FROM Rules where modifier = {:?} subject = {:?} or link = {:?} or goal = {:?}",
+                        mo, t1, t2, t3);
+                match self.get(&select).get_values("sqlcommand") {
+                    None => false,
+                    Some(v) => v.iter()
+                        .any(|cmd| self.get(cmd).is_not_empty())
+                }
+            },
             _ => false
         }
     }
-    fn get_commands_from(&self, cmd: &[PredicatAST]) -> Vec<String> {
+
+    fn get_commands_from(&self, cmd: &PredicatAST) -> Vec<String> {
         //TODO: do a proprer implementation later
         vec![]
     }
@@ -196,19 +211,12 @@ fn string_concat(acc: String, x: String) -> String {
 }
 
 impl SqliteKnowledge{
-    fn execute_helper(&self, s: &str) -> SimpleContext {
-        let res = match &s[0..6]  {
-            "SELECT" => self.get(s),
-            "%rule%" => self.store_rule(s),
-            _ => self.modify(s).unwrap()
-        }.clone();
-        res
-    }
 
     fn store_rule(&self, s: &str) -> SimpleContext {
         let values = s.split("%|%").collect::<Vec<_>>();
-        let cmd = format!("INSERT INTO rules (event, modifier, subject, link, goal, command) VALUES ('{}', '{}', '{}', '{}', '{}', '{}')",
-                    values[1], values[2], values[3], values[4], values[5], values[6]);
+        let cmd = format!("INSERT INTO rules (event, modifier, subject, link, goal, command, sqlcommand) VALUES ('{}', '{}', '{}', '{}', '{}', '{}', '{}')",
+                    values[1], values[2], values[3], values[4], values[5], values[6], values[7]);
+        dbg!(&cmd);
         match self.connection.execute(cmd) {
            Err(e) => {dbg!(e); SimpleContext::new()}
            _ => SimpleContext::new(),

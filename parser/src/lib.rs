@@ -8,7 +8,6 @@ use regex::Regex;
 use itertools::Itertools;
 use base_parser::PredicatAST;
 use base_parser::Event;
-use base_parser::Action;
 use base_parser::ModifierType;
 
 use parse_query::{
@@ -72,14 +71,13 @@ fn parse_trigger(s: &str) -> IResult<&str, (ModifierType, Triplet)> {
     }
 }
 
-fn parse_action(s: &str) -> IResult<&str, Action> {
-    let res = alt((
-    recognize(parse_query_and_modifier),
-    tag("block"),
-        ))(s);
+fn parse_action(s: &str) -> IResult<&str, (PredicatAST, String)> {
+    let res = recognize(parse_query_and_modifier)(s);
     match res {
-        Ok((s, "block")) => Ok((s, Action::Block)),
-        Ok((s, cmd)) => Ok((s, Action::Command(cmd.to_string()))),
+        Ok((s, st)) => {
+            let ast = parse_query_and_modifier(st.clone()).unwrap().1;
+            Ok((s, (ast, st.to_string())))
+        },
         Err(r) => Err(r)
     }
 }
@@ -94,7 +92,7 @@ fn parse_rule(s: &str) -> IResult<&str, PredicatAST> {
             parse_action
           ))(s);
     match res {
-        Ok((s, (r, e, (ty, tri), _, a))) => Ok((s, PredicatAST::Rule(e, (ty, tri), a))),
+        Ok((s, (r, e, (ty, tri), _, (ast, st)))) => Ok((s, PredicatAST::Rule(e, (ty, tri), st, Box::new(ast)))),
         Err(r) => Err(r)
     }
 }
@@ -211,26 +209,6 @@ mod tests {
         assert_eq!(
             extract_variables("add $C ami julie"),
             vec!["C".to_string()]);
-    }
-
-    #[test]
-    fn test_parse_action() {
-        let a = "add $B ami $A";
-        assert_eq!(
-            parse_action(a).unwrap().1,
-            Action::Command("add $B ami $A".to_string())
-                  );
-    }
-
-    #[test]
-    fn test_parse_rule1() {
-        assert_eq!(
-            parse_rule("rule before add $A ami $B : add $B ami $A").unwrap().1,
-            PredicatAST::Rule(
-                Event::Before,
-                (ModifierType::Add, Triplet::Tvwv("A".to_string(), "ami".to_string(), "B".to_string())),
-                Action::Command("add $B ami $A".to_string()))       
-                  );
     }
 
 }

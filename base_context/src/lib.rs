@@ -8,5 +8,7 @@ pub trait Context: Debug {
     fn add_column(&mut self, name: &str, elements: Vec<String>) -> Self;
     fn is_in_context(&self, key: String) -> bool;
     fn len(&self) -> usize;
+    fn is_empty(&self) -> bool;
+    fn is_not_empty(&self) -> bool;
     fn join(&self, c2:Self::FellowContext) -> Self::FellowContext;
 }

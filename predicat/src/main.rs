@@ -31,32 +31,53 @@ fn join_contexts(ctx1: SimpleContext, ctx2: SimpleContext) -> SimpleContext {
     ctx1.join(ctx2)
 }
 
-fn execute((kcmd, cmd): (String, PredicatAST), knowledge: &impl Knowledgeable) -> Option<SimpleContext> {
+fn filter_invalid((kcmd, cmd): (String, PredicatAST), knowledge: &impl Knowledgeable) -> Option<(String, PredicatAST)> {
     match knowledge.is_invalid(&cmd){
-        true => None,
-        false => Some(knowledge.execute(&kcmd))
+        true => { println!("{:?} is invalid", cmd); None },
+        false => Some((kcmd, cmd))
     }
 }
 
-fn after_execution(cmds: &[PredicatAST], knowledge: &impl Knowledgeable) {
-        knowledge.get_commands_from(&cmds).iter()
+fn after_execution(cmds: &[PredicatAST], knowledge: &impl Knowledgeable) -> SimpleContext {
+        cmds.iter()
+        .flat_map(|x| knowledge.translate(x))
         .map(|cmd| parse_and_execute(&cmd, knowledge, SimpleContext::new()))
-        .fold(SimpleContext::new(), join_contexts);
+        .fold(SimpleContext::new(), join_contexts)
+}
+
+
+fn execute_command((octx, aftercmd): (Option<SimpleContext>, Vec<PredicatAST>), ast: &PredicatAST, kn: &impl Knowledgeable) -> (Option<SimpleContext>, Vec<PredicatAST>) {
+    let abort = (None, vec![]);
+
+    match octx {
+        None => abort,
+        Some(ctx) => {
+            let cmds = substitute(ast, &ctx);
+            match cmds.iter().any(|x| kn.is_invalid(x) == true) {
+                true => abort ,
+                false => (
+                    Some(cmds.iter().flat_map(|cmd| kn.translate(cmd))
+                        .map(|cmd| kn.execute(&cmd))
+                        .fold(SimpleContext::new(), join_contexts)),
+                    cmds.iter().flat_map(|cmd| kn.get_commands_from(cmd))
+                    .flat_map(|cmd| parse_command(&cmd))
+                    .chain(aftercmd.into_iter())
+                    .collect())
+            }
+        }
+    }
 }
 
 fn parse_and_execute(command: &str, knowledge: &impl Knowledgeable, context: SimpleContext) -> SimpleContext {
-    let translate_cmd = |x| (knowledge.translate(&x).unwrap_or("".to_string()), x);
-    let execute_cmd = |x| execute(x, knowledge);
 
-    parse_command(command).iter().fold(context, |ctx, ast| {
-       let cmds = substitute(ast, &ctx);
-       let final_context = cmds.clone().into_iter()
-               .map(translate_cmd)
-               .flat_map(execute_cmd)
-               .fold(SimpleContext::new(), join_contexts);
-       after_execution(&cmds, knowledge);
-       final_context
-    })
+    let res = parse_command(command).iter()
+        .fold((Some(context), vec![]), |entry, cmd| execute_command(entry, cmd, knowledge));
+
+    if let (Some(_), cmds) = res {
+        after_execution(&cmds, knowledge)
+    } else {
+        SimpleContext::new()
+    }
 }
 
 // activation of a rule

@@ -26,21 +26,6 @@ pub enum ModifierType {
     Delete
 }
 
-#[derive(PartialEq, Clone, Debug)]
-pub enum Action {
-    Block,
-    Command(String)
-}
-
-impl Action {
-    pub fn display(&self) -> String {
-        match self {
-            Action::Block => "block".to_string(),
-            Action::Command(c) => c.clone()
-        }
-    }
-}
-
 #[derive(PartialEq, Debug, Clone)]
 pub enum PredicatAST {
     Query(
@@ -50,7 +35,7 @@ pub enum PredicatAST {
     AddModifier(Vec<Triplet>),
     DeleteModifier(Vec<Triplet>),
     // rule [event] [trigger] [action] 
-    Rule(Event, (ModifierType, Triplet), Action),
+    Rule(Event, (ModifierType, Triplet), String, Box<PredicatAST>),
     Empty,
     Debug(String)
 }
