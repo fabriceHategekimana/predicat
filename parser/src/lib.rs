@@ -8,7 +8,8 @@ use regex::Regex;
 use itertools::Itertools;
 use base_parser::PredicatAST;
 use base_parser::Event;
-use base_parser::ModifierType;
+use base_parser::CommandType;
+use base_parser::Command;
 
 use parse_query::{
     parse_query,
@@ -54,30 +55,29 @@ fn parse_query_and_modifier_bar(s: &str) -> IResult<&str, PredicatAST> {
 fn parse_event(s: &str) -> IResult<&str, Event> {
     let res = alt((tag("before "), (tag("after "))))(s);
     match res {
-        Ok((s, "before ")) => Ok((s, Event::Before)),
-        Ok((s, "after ")) => Ok((s, Event::After)),
+        Ok((s, "before ")) => Ok((s, Event::Validate)),
+        Ok((s, "after ")) => Ok((s, Event::Infer)),
         Err(r) => Err(r),
         _ => todo!()
     }
 }
 
-fn parse_trigger(s: &str) -> IResult<&str, (ModifierType, Triplet)> {
+fn parse_trigger(s: &str) -> IResult<&str, (CommandType, Triplet)> {
     let res = parse_modifier(s);
     match res {
-        Ok((s, PredicatAST::AddModifier(v))) => Ok((s, (ModifierType::Add, v[0].clone()))),
-        Ok((s, PredicatAST::DeleteModifier(v))) => Ok((s, (ModifierType::Delete, v[0].clone()))),
+        Ok((s, PredicatAST::AddModifier(v))) => Ok((s, (CommandType::Add, v[0].clone()))),
+        Ok((s, PredicatAST::DeleteModifier(v))) => Ok((s, (CommandType::Delete, v[0].clone()))),
         Err(r) => Err(r),
         _ => todo!()
     }
 }
 
-fn parse_action(s: &str) -> IResult<&str, (PredicatAST, String)> {
+fn parse_action(s: &str) -> IResult<&str, (String, Box<PredicatAST>)> {
     let res = recognize(parse_query_and_modifier)(s);
     match res {
-        Ok((s, st)) => {
-            let ast = parse_query_and_modifier(st.clone()).unwrap().1;
-            Ok((s, (ast, st.to_string())))
-        },
+        Ok((s, st)) => Ok((s, (
+                    st.to_string(),
+                    Box::new(parse_query_and_modifier(st).unwrap().1)))),
         Err(r) => Err(r)
     }
 }
@@ -92,7 +92,7 @@ fn parse_rule(s: &str) -> IResult<&str, PredicatAST> {
             parse_action
           ))(s);
     match res {
-        Ok((s, (r, e, (ty, tri), _, (ast, st)))) => Ok((s, PredicatAST::Rule(e, (ty, tri), st, Box::new(ast)))),
+        Ok((s, (r, e, (ty, tri), _, (st, ast)))) => Ok((s, PredicatAST::Rule(e, (ty, tri), (st, ast)))),
         Err(r) => Err(r)
     }
 }
@@ -209,6 +209,14 @@ mod tests {
         assert_eq!(
             extract_variables("add $C ami julie"),
             vec!["C".to_string()]);
+    }
+
+    #[test]
+    fn test_parse_rule() {
+        assert_eq!(
+            parse_rule("rule before add $A ami $B : get $A $B where $A ami $B").unwrap().1,
+            PredicatAST::Rule(Event::Validate, (CommandType::Get, Triplet::Empty), Command::Predicat("".to_string(), Box::new(PredicatAST::Empty)))
+                  );
     }
 
 }

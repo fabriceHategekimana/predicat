@@ -16,14 +16,21 @@ pub use Triplet::*;
 
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub enum Event {
-    Before,
-    After
+    Validate,
+    Infer
 }
 
 #[derive(PartialEq, Debug, Clone, Copy)]
-pub enum ModifierType {
+pub enum CommandType {
     Add,
-    Delete
+    Delete,
+    Get
+}
+
+#[derive(PartialEq, Debug, Clone)]
+pub enum Command {
+    Str(String, String),
+    Predicat(String, Box<PredicatAST>)
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -35,7 +42,7 @@ pub enum PredicatAST {
     AddModifier(Vec<Triplet>),
     DeleteModifier(Vec<Triplet>),
     // rule [event] [trigger] [action] 
-    Rule(Event, (ModifierType, Triplet), String, Box<PredicatAST>),
+    Rule(Event, (CommandType, Triplet), (String, Box<PredicatAST>)),
     Empty,
     Debug(String)
 }

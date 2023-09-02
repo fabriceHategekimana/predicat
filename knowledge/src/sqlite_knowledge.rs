@@ -44,7 +44,8 @@ static CREATE_RULES : &str = "CREATE TABLE IF NOT EXISTS rules(
                     'subject' TEXT, 
                     'link' TEXT, 
                     'goal' TEXT, 
-                    'command' TEXT);
+                    'command' TEXT,
+                    'backed_command');
                     ";
 
 static CREATE_HISTORICAL : &str = "CREATE TABLE historical(
@@ -138,10 +139,13 @@ impl Knowledgeable for SqliteKnowledge {
                 Ok(commands.iter()
                             .map(|x| triplet_to_insert(x))
                             .fold("".to_string(), string_concat)),
-                Rule(a, (b, c), cmd, ast) => {
+                Rule(a, (b, c), (cmd, ast)) => {
+                    let scmd = match &cmd[0..3] { 
+                        "get" => self.translate(ast).unwrap().replace("'", "%single_quote%"),
+                        _ => cmd.clone()};
                     let (t1, t2, t3) = c.to_tuple_with_variable();
                     Ok(format!("%rule%%|%{:?}%|%{:?}%|%{}%|%{}%|%{}%|%{}%|%{}",
-                               a, b, t1, t2, t3, cmd, self.translate(&ast).unwrap()))
+                               a, b, t1, t2, t3, cmd, scmd))
                             },
             _ => Err("The AST is empty") 
         }
@@ -158,14 +162,15 @@ impl Knowledgeable for SqliteKnowledge {
 
     fn is_invalid(&self, cmd: &PredicatAST) -> bool {
         match cmd {
-            PredicatAST::Rule(a, (mo, tri), cmd, ast) => {
+            PredicatAST::Rule(a, (mo, tri), cmd) => {
                 let (t1, t2, t3) = tri.to_tuple_with_variable();
                 let select = format!("SELECT * FROM Rules where modifier = {:?} subject = {:?} or link = {:?} or goal = {:?}",
                         mo, t1, t2, t3);
-                match self.get(&select).get_values("sqlcommand") {
+                match self.get(&select).get_values("backed_command") {
                     None => false,
                     Some(v) => v.iter()
-                        .any(|cmd| self.get(cmd).is_not_empty())
+                        .map(|x| x.replace("%singlequote%", "'"))
+                        .any(|cmd| self.get(&cmd).is_not_empty())
                 }
             },
             _ => false
@@ -214,7 +219,7 @@ impl SqliteKnowledge{
 
     fn store_rule(&self, s: &str) -> SimpleContext {
         let values = s.split("%|%").collect::<Vec<_>>();
-        let cmd = format!("INSERT INTO rules (event, modifier, subject, link, goal, command, sqlcommand) VALUES ('{}', '{}', '{}', '{}', '{}', '{}', '{}')",
+        let cmd = format!("INSERT INTO rules (event, modifier, subject, link, goal, command, backed_command) VALUES (\'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\')",
                     values[1], values[2], values[3], values[4], values[5], values[6], values[7]);
         dbg!(&cmd);
         match self.connection.execute(cmd) {
