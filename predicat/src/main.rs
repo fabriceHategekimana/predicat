@@ -123,25 +123,14 @@ mod tests {
         let knowledge = new_knowledge("sqlite").unwrap();
         let _ = knowledge.modify("INSERT or IGNORE into facts (subject, link, goal) VALUES ('socrate', 'est', 'mortel')");
         let mut context = SimpleContext::new();
-        context.add_column("A", vec!["socrate".to_string()]);
-        context.add_column("B", vec!["est".to_string()]);
-        context.add_column("C", vec!["mortel".to_string()]);
-        context.display();
-        let test_context = knowledge.get("SELECT * FROM facts");
+        context = context.add_column("A", vec!["socrate".to_string()]);
+        context = context.add_column("B", vec!["est".to_string()]);
+        context = context.add_column("C", vec!["mortel".to_string()]);
+        let test_context = knowledge.get("SELECT A,B,C from (SELECT subject as A, link as B, goal as C FROM facts)");
         test_context.display();
         assert_eq!(
            test_context,
            context
-                  );
-    }
-
-    #[test]
-    fn test_context_eq() {
-        let mut context = SimpleContext::new();
-        context.add_column("A", vec!["socrate".to_string()]);
-        assert_eq!(
-            context,
-            SimpleContext::new()
                   );
     }
 

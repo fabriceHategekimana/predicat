@@ -415,4 +415,25 @@ mod tests {
             );
     }
 
+    #[test]
+    fn test_extract_column2() {
+        assert_eq!(
+            extract_columns("SELECT $A,$B,$C FROM (SELECT subject AS A,link AS B,goal AS C FROM facts);"),
+            vec!["$A", "$B", "$C"]
+            );
+    }
+
+    #[test]
+    fn test_to_context2() {
+        let mut hm: HashMap<String, Vec<String>> = HashMap::new();
+        hm.insert("A".to_owned(), vec!["socrate".to_owned()]);
+        hm.insert("B".to_owned(), vec!["est".to_owned()]);
+        hm.insert("C".to_owned(), vec!["mortel".to_owned()]);
+        let new_context = to_context(hm, vec!["A", "B", "C"]);
+        assert_eq!(
+            new_context.get_values("A"),
+            Some(vec!["socrate".to_string()])
+                  );
+    }
+
 }
