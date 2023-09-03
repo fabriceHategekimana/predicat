@@ -1,8 +1,8 @@
-use cli_table::{format::Justify, print_stdout, Cell, Style, Table};
+use cli_table::{Style, Table};
 use itertools::Itertools;
 use base_context::Context;
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(Eq, PartialEq, Debug, Clone)]
 pub struct SimpleContext {
     tab: Vec<(String, String)> 
 }
@@ -14,7 +14,9 @@ impl SimpleContext {
         }
     }
 
-    pub fn display(&self) {
+pub fn display(&self) {
+    match self.len() {
+        x if x > 0 => {
         let variables = self.get_variables();
         let body = self.get_variables().iter()
             .map(|x| self.get_values(x).unwrap())
@@ -26,7 +28,10 @@ impl SimpleContext {
             .display()
             .unwrap();
             println!("{}", table);
+        }
+        _ => println!("EMPTY")
     }
+}
 
     pub fn get_tab(&self) -> Vec<(String, String)> {
         self.tab.clone()

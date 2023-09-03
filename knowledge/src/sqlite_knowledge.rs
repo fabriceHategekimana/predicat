@@ -82,7 +82,7 @@ static INITIALYZE_STAGE : &str = "INSERT or IGNORE INTO stage (stage) VALUES (0)
 static INITIALYZE_CONTEXT : &str = "INSERT or IGNORE INTO context (name) VALUES ('default')";
 
 pub struct SqliteKnowledge {
-    connection: Connection
+    connection: Connection,
 }
 
 fn extract_columns(sql_select_query: &str) -> Vec<&str> {
@@ -97,7 +97,7 @@ fn extract_columns(sql_select_query: &str) -> Vec<&str> {
 impl Knowledgeable for SqliteKnowledge {
     fn new() -> SqliteKnowledge {
         let knowledge = SqliteKnowledge {
-            connection: sqlite::open("data.db").unwrap()
+            connection: sqlite::open("data.db").unwrap(),
         };
         let _ = knowledge.modify(CREATE_FACTS);
         let _ = knowledge.modify(CREATE_RULES);
@@ -221,7 +221,6 @@ impl SqliteKnowledge{
         let values = s.split("%|%").collect::<Vec<_>>();
         let cmd = format!("INSERT INTO rules (event, modifier, subject, link, goal, command, backed_command) VALUES (\'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\')",
                     values[1], values[2], values[3], values[4], values[5], values[6], values[7]);
-        dbg!(&cmd);
         match self.connection.execute(cmd) {
            Err(e) => {dbg!(e); SimpleContext::new()}
            _ => SimpleContext::new(),
@@ -251,7 +250,11 @@ fn to_hashmap<'a>(sqlite_couple: &[(&'a str, &'a str)]) -> HashMap<&'a str, Vec<
 fn to_context(hm: HashMap<String, Vec<String>>, columns: Vec<&str>) -> SimpleContext {
     match !hm.is_empty() {
         true => columns.iter().fold(SimpleContext::new(), 
-                          |mut acc, x| acc.add_column(x, hm.get(&x.to_string()).unwrap().to_vec())
+                          |mut acc, x| { 
+                              acc.add_column(
+                                  x,
+                                  hm.get(&x.to_string()).unwrap_or(&vec![]).to_vec()) 
+                          }
                     ),
         false => SimpleContext::new()
     }

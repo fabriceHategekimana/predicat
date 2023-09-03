@@ -16,7 +16,7 @@ pub use Triplet::*;
 
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub enum Event {
-    Validate,
+    Block,
     Infer
 }
 

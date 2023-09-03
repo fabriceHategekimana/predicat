@@ -55,7 +55,7 @@ fn parse_query_and_modifier_bar(s: &str) -> IResult<&str, PredicatAST> {
 fn parse_event(s: &str) -> IResult<&str, Event> {
     let res = alt((tag("before "), (tag("after "))))(s);
     match res {
-        Ok((s, "before ")) => Ok((s, Event::Validate)),
+        Ok((s, "before ")) => Ok((s, Event::Block)),
         Ok((s, "after ")) => Ok((s, Event::Infer)),
         Err(r) => Err(r),
         _ => todo!()
@@ -74,6 +74,7 @@ fn parse_trigger(s: &str) -> IResult<&str, (CommandType, Triplet)> {
 
 fn parse_action(s: &str) -> IResult<&str, (String, Box<PredicatAST>)> {
     let res = recognize(parse_query_and_modifier)(s);
+    dbg!(&res);
     match res {
         Ok((s, st)) => Ok((s, (
                     st.to_string(),
@@ -107,12 +108,12 @@ pub fn parse_command<'a>(s: &'a str) -> Vec<PredicatAST> {
         )(s);
     match res {
         Ok((s, v)) => v,
-        Err(e) => vec![]
+        Err(e) => { println!("{:?}", e); vec![] }
     }
 }
 
 fn is_a_query(s: &str) -> bool {
-    s.len() > 0 && &s[0..3] == "get"
+    s.len() > 3 && &s[0..3] == "get"
 }
 
 fn parse_query_and_modifier(s: &str) -> IResult<&str, PredicatAST> {
@@ -215,7 +216,7 @@ mod tests {
     fn test_parse_rule() {
         assert_eq!(
             parse_rule("rule before add $A ami $B : get $A $B where $A ami $B").unwrap().1,
-            PredicatAST::Rule(Event::Validate, (CommandType::Get, Triplet::Empty), Command::Predicat("".to_string(), Box::new(PredicatAST::Empty)))
+            PredicatAST::Rule(Event::Block, (CommandType::Add, Triplet::Tvwv("A".to_string(), "ami".to_string(), "B".to_string())), ("get $A $B where $A ami $B".to_string(), Box::new(PredicatAST::Query((vec![Var("A".to_string()), Var("B".to_string())], vec![Triplet::Tvwv("A".to_string(), "ami".to_string(), "B".to_string())], vec![]))))),
                   );
     }
 

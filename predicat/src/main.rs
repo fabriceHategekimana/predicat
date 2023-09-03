@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_variables, unused_imports, unreachable_code)]
 use parser;
 use importer;
 use knowledge;
@@ -86,11 +87,62 @@ fn parse_and_execute(command: &str, knowledge: &impl Knowledgeable, context: Sim
 }
 
 fn main() {
-    let command = get_args_or("add Socrate est mortel");
-    //let command = get_args_or("rule before add $A ami $B : add $B ami $A");
-    //let command = get_args_or("rule before add $A ami $B : get $A $B where $A ami $B");
+    let command = get_args_or("get Socrate est mortel");
+    //let command = get_args_or("rule block add $A ami $B : add $B ami $A");
+    //let command = get_args_or("rule infer add $A ami $B : get $A $B where $A ami $B");
     let Ok(knowledge) = new_knowledge("sqlite") else {panic!("Can't open the knowledge!")};
     let context = SimpleContext::new();
     let res = parse_and_execute(&command, &knowledge, context);
     res.display();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use parser::base_parser::Var;
+    use parser::Triplet;
+
+    //#[test]
+    //fn test(){
+        //assert_eq!(
+        //parse_and_execute("get $A where $A est mortel", &new_knowledge("sqlite").unwrap(), SimpleContext::new()),
+        //SimpleContext::new()
+        //);
+    //}
+
+    //#[test]
+    //fn test_parse_command() {
+        //assert_eq!(
+            //parse_command("get $A where $A est mortel"),
+            //vec![PredicatAST::Query((vec![Var("A".to_string())], vec![Triplet::Tvww("A".to_string(), "est".to_string(), "mortel".to_string())], vec![]))]
+                  //);
+    //}
+
+    #[test]
+    fn test_modify() {
+        let knowledge = new_knowledge("sqlite").unwrap();
+        let _ = knowledge.modify("INSERT or IGNORE into facts (subject, link, goal) VALUES ('socrate', 'est', 'mortel')");
+        let mut context = SimpleContext::new();
+        context.add_column("A", vec!["socrate".to_string()]);
+        context.add_column("B", vec!["est".to_string()]);
+        context.add_column("C", vec!["mortel".to_string()]);
+        context.display();
+        let test_context = knowledge.get("SELECT * FROM facts");
+        test_context.display();
+        assert_eq!(
+           test_context,
+           context
+                  );
+    }
+
+    #[test]
+    fn test_context_eq() {
+        let mut context = SimpleContext::new();
+        context.add_column("A", vec!["socrate".to_string()]);
+        assert_eq!(
+            context,
+            SimpleContext::new()
+                  );
+    }
+
 }
