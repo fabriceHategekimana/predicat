@@ -8,9 +8,9 @@ pub struct SimpleContext {
 }
 
 impl SimpleContext {
-    pub fn from(entry: Vec<(String, String)>) -> SimpleContext {
+    pub fn from(entry: &[(String, String)]) -> SimpleContext {
         SimpleContext{
-            tab: entry
+            tab: entry.to_vec()
         }
     }
 
@@ -69,7 +69,7 @@ impl Context for SimpleContext {
                           .map(|x| (name.to_string(), x.to_string()))
                           .collect::<Vec<(String, String)>>();
         let new_tab = self.tab.iter().chain(tab.iter()).map(|x| x.clone()).collect::<Vec<_>>();
-        SimpleContext::from(new_tab)
+        SimpleContext::from(&new_tab)
     }
 
     fn is_in_context(&self, key: String) -> bool {
@@ -165,20 +165,34 @@ mod tests {
     #[test]
     fn test_context_get_variable2(){
         let context = SimpleContext::from(
-                        vec![("A".to_string(), "emy".to_string()), ("B".to_string(), "ami".to_string()), ("C".to_string(), "alice".to_string())]);
+                        &vec![("A".to_string(), "emy".to_string()), ("B".to_string(), "ami".to_string()), ("C".to_string(), "alice".to_string())]);
         assert_eq!(context.get_variables(), vec!["A", "B", "C"]);
     }
 
     #[test]
     fn test_context_get_value2(){
         let context = SimpleContext::from(
-                        vec![("A".to_string(), "emy".to_string()), ("B".to_string(), "ami".to_string()), ("C".to_string(), "alice".to_string())]);
+                        &vec![("A".to_string(), "emy".to_string()), ("B".to_string(), "ami".to_string()), ("C".to_string(), "alice".to_string())]);
         assert_eq!(
             context.get_values("A"),
             Some(vec!["emy".to_string()]));
         assert_eq!(
             context.get_values("C"),
             Some(vec!["alice".to_string()]));
+    }
+
+    #[test]
+    fn test_join() {
+        let context1 = SimpleContext::from(&[("A".to_string(), "pierre".to_string())]);
+        let context2 = SimpleContext::from(&[("B".to_string(), "jean".to_string())]);
+        let joined_context = context1.join(context2);
+        let mut context = SimpleContext::new();
+        context = context.add_column("A", vec!["pierre".to_string()]);
+        context = context.add_column("B", vec!["jean".to_string()]);
+        assert_eq!(
+            joined_context,
+            context
+                  );
     }
 
 }

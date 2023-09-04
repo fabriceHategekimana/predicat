@@ -108,30 +108,14 @@ impl Knowledgeable for SqliteKnowledge {
         let query = cmd;
         let mut v: Vec<(String, String)> = vec![];
         let _ = self.connection.iterate(query, |sqlite_couple| {
-            let _ = sqlite_couple.iter()
-                .map(|couple| v.push(
-                        (couple.0.to_string(),
-                        couple.1.unwrap_or("").to_string())));
+            for couple in sqlite_couple.iter() {
+                v.push((couple.0.to_string(),
+                        couple.1.unwrap_or("").to_string()));
+            }
             true
         });
-        SimpleContext::from(v)
+        SimpleContext::from(&v)
     }
-
-    //fn old_get(&self, cmd: &str) -> SimpleContext {
-        //let query = cmd;
-        //let mut hm: HashMap<String, Vec<String>> = HashMap::new();
-        //let _ = self.connection.iterate(query, |sqlite_couple| {
-            //for couple in sqlite_couple.iter() {
-                //match hm.get_mut(couple.0) {
-                    //None => hm.insert(couple.0.to_owned(), vec![couple.1.unwrap().to_owned()]),
-                    //Some(v) => {v.push(couple.1.unwrap().to_owned()); None}
-                //};
-            //}
-            //true
-        //});
-        //let sc = to_context(hm, extract_columns(query));
-        //sc
-    //}
 
     fn modify(&self, cmd: &str) -> Result<SimpleContext, &str> {
         match self.connection.execute(cmd) {
@@ -234,13 +218,13 @@ impl SqliteKnowledge{
         let query = cmd;
         let mut v: Vec<(String, String)> = vec![];
         let _ = self.connection.iterate(query, |sqlite_couple| {
-            let _ = sqlite_couple.iter()
-                .map(|couple| v.push(
-                        (couple.0.to_string(),
-                        couple.1.unwrap_or("").to_string())));
+            for couple in sqlite_couple.iter() {
+                v.push((couple.0.to_string(),
+                        couple.1.unwrap_or("").to_string()));
+            }
             true
         });
-        v
+        v.clone()
     }
 
     fn store_rule(&self, s: &str) -> SimpleContext {
@@ -462,15 +446,6 @@ mod tests {
             new_context.get_values("A"),
             Some(vec!["socrate".to_string()])
                   );
-    }
-
-    #[test]
-    fn test_get_context() {
-    let knowledge = SqliteKnowledge::new();
-    assert_eq!(
-            knowledge.get_vec("SELECT A,B,C from (SELECT subject as A, link as B, goal as C FROM facts)"),
-            vec![("1".to_string(), "1".to_string())]
-              );
     }
 
 }

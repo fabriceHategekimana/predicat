@@ -53,10 +53,10 @@ fn parse_query_and_modifier_bar(s: &str) -> IResult<&str, PredicatAST> {
 }
 
 fn parse_event(s: &str) -> IResult<&str, Event> {
-    let res = alt((tag("before "), (tag("after "))))(s);
+    let res = alt((tag("block "), (tag("infer "))))(s);
     match res {
-        Ok((s, "before ")) => Ok((s, Event::Block)),
-        Ok((s, "after ")) => Ok((s, Event::Infer)),
+        Ok((s, "block ")) => Ok((s, Event::Block)),
+        Ok((s, "infer ")) => Ok((s, Event::Infer)),
         Err(r) => Err(r),
         _ => todo!()
     }
@@ -84,7 +84,7 @@ fn parse_action(s: &str) -> IResult<&str, (String, Box<PredicatAST>)> {
 }
 
 fn parse_rule(s: &str) -> IResult<&str, PredicatAST> {
-    // rule [event] [trigger] [action] 
+    // rule [event] [trigger] : [action] 
     let res = tuple((
             tag("rule "),
             parse_event,
