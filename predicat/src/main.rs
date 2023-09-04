@@ -127,7 +127,6 @@ mod tests {
         context = context.add_column("B", vec!["est".to_string()]);
         context = context.add_column("C", vec!["mortel".to_string()]);
         let test_context = knowledge.get("SELECT A,B,C from (SELECT subject as A, link as B, goal as C FROM facts)");
-        test_context.display();
         assert_eq!(
            test_context,
            context
