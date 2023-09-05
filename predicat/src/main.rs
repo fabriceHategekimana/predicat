@@ -20,6 +20,7 @@ fn get_user_passed_arguments() -> String {
 
 fn get_args_or(query: &str) -> String {
     let args = get_user_passed_arguments();
+
     if args == "".to_string() {
         String::from(query)
     }
