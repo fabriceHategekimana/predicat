@@ -263,7 +263,11 @@ fn to_context(hm: HashMap<String, Vec<String>>, columns: Vec<&str>) -> SimpleCon
                           |mut acc, x| { 
                               acc.add_column(
                                   x,
-                                  hm.get(&x.to_string()).unwrap_or(&vec![]).to_vec()) 
+                                  &hm.get(&x[..]).unwrap_or(&vec![])
+                                  .iter()
+                                  .map(|x| &x[..])
+                                  .collect::<Vec<_>>()
+                                  )
                           }
                     ),
         false => SimpleContext::new()
@@ -410,9 +414,9 @@ mod tests {
                                ("B".to_string(), vec!["ami".to_string()]),
         ]);
         let mut sc = SimpleContext::new();
-        sc =  sc.add_column("A", vec!["emy".to_string()]);
-        sc =  sc.add_column("B", vec!["ami".to_string()]);
-        sc =  sc.add_column("C", vec!["alice".to_string()]);
+        sc =  sc.add_column("A", &["emy"]);
+        sc =  sc.add_column("B", &["ami"]);
+        sc =  sc.add_column("C", &["alice"]);
 
         assert_eq!(
             to_context(hm, vec!["A", "B", "C"]),

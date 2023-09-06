@@ -198,7 +198,7 @@ mod tests {
        // pierre ami julie 
        // marc ami julie 
         let mut context = SimpleContext::new();
-        context = context.add_column("C", vec!["pierre".to_string(), "marc".to_string()]);
+        context = context.add_column("C", &["pierre", "marc"]);
         assert_eq!(
             substitute_1_var_triplet("C", ("ami", "julie"), Pos::First, &context),
             vec![
@@ -213,7 +213,7 @@ mod tests {
        // julie ami pierre 
        // julie ami marc 
         let mut context = SimpleContext::new();
-        context = context.add_column("C", vec!["pierre".to_string(), "marc".to_string()]);
+        context = context.add_column("C", &["pierre", "marc"]);
         assert_eq!(
             substitute_1_var_triplet("C", ("julie", "ami"), Pos::Third, &context),
             vec![
@@ -228,7 +228,7 @@ mod tests {
        // A ami pierre 
        // A ami marc 
         let mut context = SimpleContext::new();
-        context = context.add_column("C", vec!["pierre".to_string(), "marc".to_string()]);
+        context = context.add_column("C", &["pierre", "marc"]);
         assert_eq!(
             substitute_2_var_triplet("A", "C", "ami", DoublePos::FirstThird, &context),
             vec![
@@ -241,7 +241,7 @@ mod tests {
     fn test_substitute_triplet() {
         // A ami C, (C: pierre, marc)
         let mut context = SimpleContext::new();
-        context = context.add_column("C", vec!["pierre".to_string(), "marc".to_string()]);
+        context = context.add_column("C", &["pierre", "marc"]);
         assert_eq!(
                 substitute_triplet(&[Triplet::Tvwv("A".to_string(), "ami".to_string(), "C".to_string())], &context),
                 vec![
@@ -254,7 +254,7 @@ mod tests {
     fn test_substitute_triplet2() {
         // A ami C, (C: pierre, marc)
         let mut context = SimpleContext::new();
-        context = context.add_column("C", vec!["pierre".to_string(), "marc".to_string()]);
+        context = context.add_column("C", &["pierre", "marc"]);
         assert_eq!(
                 substitute_triplet(
                             &[Triplet::Tvwv( "A".to_string(), "age".to_string(), "B".to_string(),), Triplet::Tvwv( "A".to_string(), "ami".to_string(), "C".to_string(),)],
@@ -277,8 +277,8 @@ mod tests {
        // eva ami pierre 
        // sophie ami marc 
         let mut context = SimpleContext::new();
-        context = context.add_column("C", vec!["pierre".to_string(), "marc".to_string()]);
-        context = context.add_column("A", vec!["eva".to_string(), "sophie".to_string()]);
+        context = context.add_column("C", &["pierre", "marc"]);
+        context = context.add_column("A", &["eva", "sophie"]);
         assert_eq!(
             substitute_2_var_triplet("A", "C", "ami", DoublePos::FirstThird, &context),
             vec![
@@ -293,8 +293,8 @@ mod tests {
        // eva B pierre 
        // sophie B marc 
         let mut context = SimpleContext::new();
-        context = context.add_column("C", vec!["pierre".to_string(), "marc".to_string()]);
-        context = context.add_column("A", vec!["eva".to_string(), "sophie".to_string()]);
+        context = context.add_column("C", &["pierre", "marc"]);
+        context = context.add_column("A", &["eva", "sophie"]);
         assert_eq!(
             substitute_3_var_triplet("A", "B", "C", &context),
             vec![
@@ -309,9 +309,9 @@ mod tests {
        // eva B pierre 
        // sophie B marc 
         let mut context = SimpleContext::new();
-        context = context.add_column("C", vec!["pierre".to_string(), "marc".to_string()]);
-        context = context.add_column("A", vec!["eva".to_string(), "sophie".to_string()]);
-        context = context.add_column("B", vec!["ami".to_string(), "collegue".to_string()]);
+        context = context.add_column("C", &["pierre", "marc"]);
+        context = context.add_column("A", &["eva", "sophie"]);
+        context = context.add_column("B", &["ami", "collegue"]);
         assert_eq!(
             substitute_3_var_triplet("A", "B", "C", &context),
             vec![
@@ -327,9 +327,9 @@ mod tests {
        // sophie == marc 
        let comps = [Comp("A == C".to_string())];
        let mut context = SimpleContext::new();
-       context = context.add_column("C", vec!["pierre".to_string(), "marc".to_string()]);
-       context = context.add_column("A", vec!["eva".to_string(), "sophie".to_string()]);
-       context = context.add_column("B", vec!["ami".to_string(), "collegue".to_string()]);
+       context = context.add_column("C", &["pierre", "marc"]);
+       context = context.add_column("A", &["eva", "sophie"]);
+       context = context.add_column("B", &["ami", "collegue"]);
        assert_eq!(
            substitute_comp(&comps, &context),
            vec![vec![Comp("eva == pierre".to_string())], vec![Comp("sophie == marc".to_string())]]
@@ -347,7 +347,7 @@ mod tests {
                          Triplet::Tvwv("A".to_string(), "ami".to_string(), "C".to_string())],
                     vec![Comp("B < 18".to_string())]));
        let mut context = SimpleContext::new();
-       context = context.add_column("C", vec!["pierre".to_string(), "marc".to_string()]);
+       context = context.add_column("C", &["pierre", "marc"]);
        assert_eq!(
             substitute_query_helper(&query, &context),
             vec![
@@ -375,7 +375,7 @@ mod tests {
                     vec![Triplet::Tvwv("A".to_string(), "ami".to_string(), "C".to_string())],
                     vec![]));
        let mut context = SimpleContext::new();
-       context = context.add_column("C", vec!["pierre".to_string(), "marc".to_string()]);
+       context = context.add_column("C", &["pierre", "marc"]);
        assert_eq!(
             substitute_query_helper(&query, &context),
             vec![
@@ -401,7 +401,7 @@ mod tests {
                     vec![Triplet::Tvvv("A".to_string(), "B".to_string(), "C".to_string())],
                     vec![]));
        let mut context = SimpleContext::new();
-       context = context.add_column("C", vec!["pierre".to_string(), "marc".to_string()]);
+       context = context.add_column("C", &["pierre", "marc"]);
        assert_eq!(
             substitute_query_helper(&query, &context),
             vec![
@@ -440,7 +440,7 @@ mod tests {
     #[test]
     fn test_fullfill() {
        let mut context = SimpleContext::new();
-       context = context.add_column("C", vec!["pierre".to_string(), "marc".to_string()]);
+       context = context.add_column("C", &["pierre", "marc"]);
         assert_eq!(
             fullfill(vec![vec![7]], &context),
             vec![vec![7], vec![7]]
@@ -454,7 +454,7 @@ mod tests {
     #[test]
     fn test_substitute_add_modifier() {
        let mut context = SimpleContext::new();
-       context = context.add_column("C", vec!["pierre".to_string(), "marc".to_string()]);
+       context = context.add_column("C", &["pierre", "marc"]);
        let add_mod = vec![
                                 Triplet::Tvwv("A".to_string(), "ami".to_string(), "B".to_string()),
                                 Triplet::Tvwv("B".to_string(), "ami".to_string(), "C".to_string())];
@@ -482,7 +482,7 @@ mod tests {
                          Triplet::Tvwv("A".to_string(), "ami".to_string(), "C".to_string())],
                     vec![Comp("B < 18".to_string())]));
        let mut context = SimpleContext::new();
-       context = context.add_column("C", vec!["pierre".to_string(), "marc".to_string()]);
+       context = context.add_column("C", &["pierre", "marc"]);
        assert_eq!(
             substitute(&query, &context),
             vec![
@@ -503,7 +503,7 @@ mod tests {
     #[test]
     fn test_substitute2() {
        let mut context = SimpleContext::new();
-       context = context.add_column("C", vec!["pierre".to_string(), "marc".to_string()]);
+       context = context.add_column("C", &["pierre", "marc"]);
        let add_mod = PredicatAST::AddModifier(vec![
                                 Triplet::Tvwv("A".to_string(), "ami".to_string(), "B".to_string()),
                                 Triplet::Tvwv("B".to_string(), "ami".to_string(), "C".to_string())]);

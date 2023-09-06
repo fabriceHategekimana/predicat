@@ -150,7 +150,7 @@ mod tests {
     #[test]
     fn test_duplicate_commande() {
         let mut context = SimpleContext::new();
-        context = context.add_column("$A", vec!["pierre".to_string(), "anne".to_string(), "murielle".to_string()]);
+        context = context.add_column("$A", &["pierre", "anne", "murielle"]);
         assert_eq!(
             context.len(),
             3);
