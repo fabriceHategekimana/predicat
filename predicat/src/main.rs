@@ -13,6 +13,8 @@ use base_context::Context;
 use simple_context::SimpleContext;
 use crate::parser::base_parser::PredicatAST;
 
+use serial_test::serial;
+
 fn execute_simple_entry(knowledge: &impl Knowledgeable, cmd: &str) -> () {
     let _: Vec<_> = parse_command(cmd).iter()
         .map(|x| knowledge.translate(&x).unwrap_or("".to_string()))
@@ -111,41 +113,44 @@ mod tests {
     use parser::base_parser::Var;
     use parser::Triplet;
 
-    //#[test]
-    //fn test_get() {
-        //let knowledge = new_knowledge("sqlite").unwrap();
-        //knowledge.clear();
-        //execute_simple_entry(&knowledge, "add socrate est mortel");
-        //let mut context = SimpleContext::new();
-        //context = context.add_column("A", &["socrate"]);
-        //context = context.add_column("B", &["est"]);
-        //context = context.add_column("C", &["mortel"]);
-        //let test_context = knowledge.get_all();
-        //assert_eq!(test_context, context);
-    //}
-
     #[test]
-    fn test_execute_simple_entry_add_rule() {
+    #[serial]
+    fn test_get() {
         let knowledge = new_knowledge("sqlite").unwrap();
         knowledge.clear();
-
-        execute_simple_entry(&knowledge, "rule infer add $A ami $B : add $B ami $A");
-        parse_and_execute("add pierre ami emy", &knowledge, SimpleContext::new());
-
+        execute_simple_entry(&knowledge, "add socrate est mortel");
         let mut context = SimpleContext::new();
-        context = context.add_column("A", &["pierre", "emy"]);
-        context = context.add_column("B", &["ami", "ami"]);
-        context = context.add_column("C", &["emy", "pierre"]);
-
+        context = context.add_column("A", &["socrate"]);
+        context = context.add_column("B", &["est"]);
+        context = context.add_column("C", &["mortel"]);
         let test_context = knowledge.get_all();
         assert_eq!(test_context, context);
     }
 
-    //#[test]
-    //fn test_simple_rule() {
-        //let knowledge = new_knowledge("sqlite").unwrap();
-        //knowledge.clear();
-        //assert_eq!(test_context, context);
-    //}
+    #[test]
+    #[serial]
+    fn test_execute_simple_entry_add_rule() {
+        let knowledge = new_knowledge("sqlite").unwrap();
+        knowledge.clear();
+        execute_simple_entry(&knowledge, "rule infer add $A ami $B : add $B ami $A");
+        parse_and_execute("add pierre ami emy", &knowledge, SimpleContext::new());
+        let mut context = SimpleContext::new();
+        context = context.add_column("A", &["pierre", "emy"]);
+        context = context.add_column("B", &["ami", "ami"]);
+        context = context.add_column("C", &["emy", "pierre"]);
+        let test_context = knowledge.get_all();
+        assert_eq!(test_context, context);
+    }
+
+    #[test]
+    #[serial]
+    fn test_get_command_from_triplet() {
+       let knowledge = new_knowledge("sqlite").unwrap();
+       knowledge.clear();
+       execute_simple_entry(&knowledge, "rule infer add $A ami $B : add $B ami $A");
+       let res = knowledge.get_command_from_triplet("add", &Triplet::Tvvv("pierre".to_string(), "ami".to_string(), "emy".to_string()));
+        assert_eq!(res,
+                   vec!["add $B ami $A".to_string()]);
+    }
 
 }

@@ -185,8 +185,8 @@ impl Knowledgeable for SqliteKnowledge {
 
     fn get_command_from_triplet(&self, modifier: &str, tri: &Triplet) -> Vec<String> {
         let (sub, lin, goa) = tri.to_tuple();
-        let select = format!("SELECT command FROM rules where modifier='{}' AND event='infer' AND subject='{}' OR link='{}' OR goal='{}'", modifier, sub, lin, goa);
-        self.get(&select).get_values("commands").unwrap_or(vec![])
+        let select = format!("SELECT command FROM rules where modifier='{}' AND event='infer' OR subject='{}' OR link='{}' OR goal='{}'", modifier, sub, lin, goa);
+        self.get(&select).get_values("command").unwrap_or(vec![]) 
     }
 
     fn get_commands_from(&self, cmd: &PredicatAST) -> Vec<String> {
@@ -476,15 +476,5 @@ mod tests {
                   );
     }
 
-    #[test]
-    fn test_get_command_from_triplet() {
-        let knowledge = SqliteKnowledge::new();
-        knowledge.clear();
-       let rule = format!("%rule%%|%infer%|%add%|%$A%|%ami%|%$B%|%add $B ami $A%|%a");
-       knowledge.execute(&rule);
-       let res = knowledge.get_command_from_triplet("add", &Triplet::Tvvv("pierre".to_string(), "ami".to_string(), "emy".to_string()));
-        assert_eq!(res,
-                   vec!["".to_string()]);
-    }
 
 }
