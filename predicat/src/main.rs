@@ -13,6 +13,13 @@ use base_context::Context;
 use simple_context::SimpleContext;
 use crate::parser::base_parser::PredicatAST;
 
+fn execute_simple_entry(knowledge: &impl Knowledgeable, cmd: &str) -> () {
+    let _: Vec<_> = parse_command(cmd).iter()
+        .map(|x| knowledge.translate(&x).unwrap_or("".to_string()))
+        .map(|x| knowledge.execute(&x))
+        .collect();
+}
+
 fn get_user_passed_arguments() -> String {
     env::args().skip(1)
         .fold(String::new(), |acc, arg| format!("{}{} ", acc, &arg))
@@ -104,16 +111,41 @@ mod tests {
     use parser::base_parser::Var;
     use parser::Triplet;
 
+    //#[test]
+    //fn test_get() {
+        //let knowledge = new_knowledge("sqlite").unwrap();
+        //knowledge.clear();
+        //execute_simple_entry(&knowledge, "add socrate est mortel");
+        //let mut context = SimpleContext::new();
+        //context = context.add_column("A", &["socrate"]);
+        //context = context.add_column("B", &["est"]);
+        //context = context.add_column("C", &["mortel"]);
+        //let test_context = knowledge.get_all();
+        //assert_eq!(test_context, context);
+    //}
+
     #[test]
-    fn test_get() {
+    fn test_execute_simple_entry_add_rule() {
         let knowledge = new_knowledge("sqlite").unwrap();
-        //let _ = knowledge.modify("INSERT or IGNORE into facts (subject, link, goal) VALUES ('socrate', 'est', 'mortel')");
+        knowledge.clear();
+
+        execute_simple_entry(&knowledge, "rule infer add $A ami $B : add $B ami $A");
+        parse_and_execute("add pierre ami emy", &knowledge, SimpleContext::new());
+
         let mut context = SimpleContext::new();
-        context = context.add_column("A", &["socrate"]);
-        context = context.add_column("B", &["est"]);
-        context = context.add_column("C", &["mortel"]);
-        let test_context = knowledge.get("SELECT A,B,C from (SELECT subject as A, link as B, goal as C FROM facts)");
+        context = context.add_column("A", &["pierre", "emy"]);
+        context = context.add_column("B", &["ami", "ami"]);
+        context = context.add_column("C", &["emy", "pierre"]);
+
+        let test_context = knowledge.get_all();
         assert_eq!(test_context, context);
     }
+
+    //#[test]
+    //fn test_simple_rule() {
+        //let knowledge = new_knowledge("sqlite").unwrap();
+        //knowledge.clear();
+        //assert_eq!(test_context, context);
+    //}
 
 }

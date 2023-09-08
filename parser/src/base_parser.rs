@@ -129,7 +129,7 @@ fn format_tuple_of_three(t: (&String, &String, &String)) -> (String, String, Str
 }
 
 impl Triplet {
-    fn to_tuple(&self) -> (String, String, String) {
+    pub fn to_tuple(&self) -> (String, String, String) {
         match self {
             Twww(a,b,c) => format_tuple_of_three((a,b,c)),
             Tvww(a,b,c) => format_tuple_of_three((a,b,c)),

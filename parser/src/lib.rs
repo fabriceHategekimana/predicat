@@ -74,7 +74,6 @@ fn parse_trigger(s: &str) -> IResult<&str, (CommandType, Triplet)> {
 
 fn parse_action(s: &str) -> IResult<&str, (String, Box<PredicatAST>)> {
     let res = recognize(parse_query_and_modifier)(s);
-    dbg!(&res);
     match res {
         Ok((s, st)) => Ok((s, (
                     st.to_string(),
@@ -131,19 +130,6 @@ mod tests {
     use base_context::Context;
     use simple_context::SimpleContext;
     use crate::base_parser::PredicatAST;
-
-    //use super::parse_command;
-    //use super::extract_variables;
-    //use super::parse_query_and_modifier;
-    //use super::parse_query_and_modifier_bar;
-
-    //use super::{
-        //parse_query,
-        //Language,
-        //Var,
-        //Triplet,
-        //duplicate_command,
-    //};
 
     use super::*;
 
@@ -215,7 +201,7 @@ mod tests {
     #[test]
     fn test_parse_rule() {
         assert_eq!(
-            parse_rule("rule before add $A ami $B : get $A $B where $A ami $B").unwrap().1,
+            parse_rule("rule block add $A ami $B : get $A $B where $A ami $B").unwrap().1,
             PredicatAST::Rule(Event::Block, (CommandType::Add, Triplet::Tvwv("A".to_string(), "ami".to_string(), "B".to_string())), ("get $A $B where $A ami $B".to_string(), Box::new(PredicatAST::Query((vec![Var("A".to_string()), Var("B".to_string())], vec![Triplet::Tvwv("A".to_string(), "ami".to_string(), "B".to_string())], vec![]))))),
                   );
     }

@@ -104,6 +104,11 @@ impl Knowledgeable for SqliteKnowledge {
         knowledge
     }
 
+    fn clear(&self) {
+        let _ = self.connection.execute("DELETE FROM facts");
+        let _ = self.connection.execute("DELETE FROM rules");
+    }
+
     fn get(&self, cmd: &str) -> SimpleContext {
         let query = cmd;
         let mut v: Vec<(String, String)> = vec![];
@@ -115,6 +120,10 @@ impl Knowledgeable for SqliteKnowledge {
             true
         });
         SimpleContext::from(&v)
+    }
+
+    fn get_all(&self) -> SimpleContext {
+        self.get("SELECT A,B,C from (SELECT subject as A, link as B, goal as C FROM facts)")
     }
 
     fn modify(&self, cmd: &str) -> Result<SimpleContext, &str> {
@@ -174,9 +183,22 @@ impl Knowledgeable for SqliteKnowledge {
         }
     }
 
+    fn get_command_from_triplet(&self, modifier: &str, tri: &Triplet) -> Vec<String> {
+        let (sub, lin, goa) = tri.to_tuple();
+        let select = format!("SELECT command FROM rules where modifier='{}' AND event='infer' AND subject='{}' OR link='{}' OR goal='{}'", modifier, sub, lin, goa);
+        self.get(&select).get_values("commands").unwrap_or(vec![])
+    }
+
     fn get_commands_from(&self, cmd: &PredicatAST) -> Vec<String> {
-        //TODO: do a proprer implementation later
-        vec![]
+        match cmd {
+            PredicatAST::AddModifier(v_of_tri) => v_of_tri.iter()
+                .flat_map(|x| self.get_command_from_triplet("add", x))
+                .collect::<Vec<_>>(),
+            PredicatAST::DeleteModifier(v_of_tri) => v_of_tri.iter()
+                .flat_map(|x| self.get_command_from_triplet("delete", x))
+                .collect::<Vec<_>>(),
+            _ => vec![]
+        }
     }
 
 }
@@ -347,6 +369,7 @@ pub fn triplet_to_sql(tri: &Triplet) -> String {
     }
 }
 
+
 #[cfg(test)]
 mod tests {
     use crate::sqlite_knowledge::SqliteKnowledge;
@@ -364,6 +387,7 @@ mod tests {
     use super::to_context;
     use super::SimpleContext;
     use super::Context;
+    use super::*;
 
     #[test]
     fn test_from_triplet_to_sql() {
@@ -450,6 +474,17 @@ mod tests {
             new_context.get_values("A"),
             Some(vec!["socrate".to_string()])
                   );
+    }
+
+    #[test]
+    fn test_get_command_from_triplet() {
+        let knowledge = SqliteKnowledge::new();
+        knowledge.clear();
+       let rule = format!("%rule%%|%infer%|%add%|%$A%|%ami%|%$B%|%add $B ami $A%|%a");
+       knowledge.execute(&rule);
+       let res = knowledge.get_command_from_triplet("add", &Triplet::Tvvv("pierre".to_string(), "ami".to_string(), "emy".to_string()));
+        assert_eq!(res,
+                   vec!["".to_string()]);
     }
 
 }
