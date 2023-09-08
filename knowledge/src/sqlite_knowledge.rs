@@ -476,5 +476,16 @@ mod tests {
                   );
     }
 
+    #[test]
+    fn test_substitute_command_string() {
+        assert_eq!(
+            substitute_command_string(
+                Triplet::Tvvv("pierre".to_string(), "ami".to_string(), "emy".to_string()), 
+                ["$A", "ami", "$B"],
+                "add $B ami $A"),
+                "add emy ami pierre" 
+                );
+    }
+
 
 }
