@@ -68,32 +68,26 @@ fn valid_commands_or_none(cmds: Vec<PredicatAST>, kn: &impl Knowledgeable) -> Op
     cmds.iter().all(|x| !kn.is_invalid(x)).then_some(cmds)
 }
 
+type ExecutionState = Option<(SimpleContext, Vec<String>)>;
 
-fn execute_command_helper(cmds: Vec<PredicatAST>, kn: &impl Knowledgeable, aftercmd: Vec<String>) -> (Option<SimpleContext>, Vec<String>) {
-    (Some(execute_subcommands(&cmds, kn)),
-        concat_sub_commands(cmds, kn, aftercmd))
+fn execute_command_helper(cmds: Vec<PredicatAST>, kn: &impl Knowledgeable, aftercmd: Vec<String>) -> ExecutionState {
+    Some((execute_subcommands(&cmds, kn),
+        concat_sub_commands(cmds, kn, aftercmd)))
 }
 
-fn execute_command((option_context, aftercmd): (Option<SimpleContext>, Vec<String>), ast: &PredicatAST, kn: &impl Knowledgeable) -> (Option<SimpleContext>, Vec<String>) {
-    let abort = (None, vec![]);
-
-    option_context
-        .map(|ctxt| substitute(ast, &ctxt)).unwrap_or(None)
-        .map(|cmds| valid_commands_or_none(cmds, kn)).unwrap_or(None)
-        .map(|cmds| execute_command_helper(cmds, kn, aftercmd))
-        .unwrap_or(abort)
-
+fn execute_command(context_aftercmds: ExecutionState, ast: &PredicatAST, kn: &impl Knowledgeable) -> ExecutionState {
+    context_aftercmds.map(|(context, aftercmds)| {
+        substitute(ast, &context).map(|cmds| 
+        valid_commands_or_none(cmds, kn)).unwrap_or(None).map(|cmds| 
+        execute_command_helper(cmds, kn, aftercmds)).unwrap_or(None)}).unwrap_or(None)
 }
 
 
 fn parse_and_execute(command: &str, knowledge: &impl Knowledgeable, context: SimpleContext) -> SimpleContext {
-    let res = parse_command(command).iter()
-            .fold((Some(context), vec![]), |entry, cmd|
-            execute_command(entry, cmd, knowledge));
-
-    if let (Some(_), cmds) = res { after_execution(&cmds, knowledge) }
-    
-    res.0.unwrap_or(SimpleContext::new())
+    parse_command(command).iter().fold(Some((context, vec![])), |entry, cmd|
+        execute_command(entry, cmd, knowledge))
+        .map(|(context, aftercmds)| { after_execution(&aftercmds, knowledge); context })
+        .unwrap_or_default()
 }
 
 fn main() {
