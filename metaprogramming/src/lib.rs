@@ -175,16 +175,17 @@ where C : Fn(Vec<Triplet>) -> PredicatAST {
         .map(|x| constructor(x.clone())).collect()
 }
 
-pub fn substitute(ast: &PredicatAST, context: &SimpleContext) -> Vec<PredicatAST> {
+pub fn substitute(ast: &PredicatAST, context: &SimpleContext) -> Option<Vec<PredicatAST>> {
     if context.len() == 0 {
-        vec![ast.clone()]
+        Some(vec![ast.clone()])
     } else {
-        match ast {
+        let res = match ast {
             PredicatAST::Query((vars, triplets, comps)) => substitute_query(vars, triplets, comps, context),
             PredicatAST::AddModifier(tri) => substitute_triplet_to_predicat_ast(tri, PredicatAST::AddModifier, context),
             PredicatAST::DeleteModifier(tri) => substitute_triplet_to_predicat_ast(tri, PredicatAST::DeleteModifier, context),
             x => vec![x.clone()]
-        }
+        };
+        Some(res)
     }
 }
 

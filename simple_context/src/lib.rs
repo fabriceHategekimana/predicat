@@ -2,7 +2,7 @@ use cli_table::{Style, Table};
 use itertools::Itertools;
 use base_context::Context;
 
-#[derive(Eq, PartialEq, Debug, Clone)]
+#[derive(Eq, PartialEq, Debug, Clone, Default)]
 pub struct SimpleContext {
     tab: Vec<(String, String)> 
 }

@@ -41,11 +41,10 @@ fn join_contexts(ctx1: SimpleContext, ctx2: SimpleContext) -> SimpleContext {
     ctx1.join(ctx2)
 }
 
-fn after_execution(cmds: &[PredicatAST], knowledge: &impl Knowledgeable) -> SimpleContext {
-        cmds.iter()
-        .flat_map(|x| knowledge.translate(x))
+fn after_execution(cmds: &[String], knowledge: &impl Knowledgeable) {
+        let _ = cmds.iter()
         .map(|cmd| parse_and_execute(&cmd, knowledge, SimpleContext::new()))
-        .fold(SimpleContext::new(), join_contexts)
+        .fold(SimpleContext::new(), join_contexts);
 }
 
 fn has_invalid_commands(cmds: &[PredicatAST], kn: &impl Knowledgeable) -> bool {
@@ -58,41 +57,42 @@ fn execute_subcommands(cmds: &[PredicatAST], kn: &impl Knowledgeable) -> SimpleC
                         .fold(SimpleContext::new(), join_contexts)
 }
 
-fn concat_sub_commands(cmds: Vec<PredicatAST>, kn: &impl Knowledgeable, aftercmd: Vec<PredicatAST>) -> Vec<PredicatAST> {
+fn concat_sub_commands(cmds: Vec<PredicatAST>, kn: &impl Knowledgeable, aftercmd: Vec<String>) -> Vec<String> {
     cmds.iter().flat_map(|cmd| kn.get_commands_from(cmd))
-    .flat_map(|cmd| parse_command(&cmd))
+    //.flat_map(|cmd| parse_command(&cmd))
     .chain(aftercmd.into_iter())
     .collect()
 }
 
-fn execute_command((option_context, aftercmd): (Option<SimpleContext>, Vec<PredicatAST>), ast: &PredicatAST, kn: &impl Knowledgeable) -> (Option<SimpleContext>, Vec<PredicatAST>) {
+fn valid_commands_or_none(cmds: Vec<PredicatAST>, kn: &impl Knowledgeable) -> Option<Vec<PredicatAST>> {
+    cmds.iter().all(|x| !kn.is_invalid(x)).then_some(cmds)
+}
+
+
+fn execute_command_helper(cmds: Vec<PredicatAST>, kn: &impl Knowledgeable, aftercmd: Vec<String>) -> (Option<SimpleContext>, Vec<String>) {
+    (Some(execute_subcommands(&cmds, kn)),
+        concat_sub_commands(cmds, kn, aftercmd))
+}
+
+fn execute_command((option_context, aftercmd): (Option<SimpleContext>, Vec<String>), ast: &PredicatAST, kn: &impl Knowledgeable) -> (Option<SimpleContext>, Vec<String>) {
     let abort = (None, vec![]);
 
-    match option_context {
-        None => abort,
-        Some(context) => {
-            let cmds = substitute(ast, &context);
-            match has_invalid_commands(&cmds, kn) {
-                true => { println!("invalid command: {:?}", cmds); abort},
-                false => (
-                        Some(execute_subcommands(&cmds, kn)),
-                        concat_sub_commands(cmds, kn, aftercmd))
-            }
-        }
-    }
+    option_context
+        .map(|ctxt| substitute(ast, &ctxt)).unwrap_or(None)
+        .map(|cmds| valid_commands_or_none(cmds, kn)).unwrap_or(None)
+        .map(|cmds| execute_command_helper(cmds, kn, aftercmd))
+        .unwrap_or(abort)
+
 }
+
 
 fn parse_and_execute(command: &str, knowledge: &impl Knowledgeable, context: SimpleContext) -> SimpleContext {
     let res = parse_command(command).iter()
-        .fold(
-            (Some(context), vec![]),
-            |entry, cmd| execute_command(entry, cmd, knowledge));
+            .fold((Some(context), vec![]), |entry, cmd|
+            execute_command(entry, cmd, knowledge));
 
-    if let (Some(_), cmds) = res {
-        after_execution(&cmds, knowledge);
-    } else {
-        SimpleContext::new();
-    }
+    if let (Some(_), cmds) = res { after_execution(&cmds, knowledge) }
+    
     res.0.unwrap_or(SimpleContext::new())
 }
 
