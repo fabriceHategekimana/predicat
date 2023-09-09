@@ -104,6 +104,10 @@ impl Knowledgeable for SqliteKnowledge {
         knowledge
     }
 
+    fn store_modifier(&self, modifier: &PredicatAST) {
+        todo!();
+    }
+
     fn clear(&self) {
         let _ = self.connection.execute("DELETE FROM facts");
         let _ = self.connection.execute("DELETE FROM rules");

@@ -19,5 +19,6 @@ pub trait Knowledgeable {
     fn is_invalid(&self, cmd: &PredicatAST) -> bool;
     fn get_commands_from(&self, cmds: &PredicatAST) -> Vec<String>;
     fn get_command_from_triplet(&self, modifier: &str, tri: &Triplet) -> Vec<String>;
+    fn store_modifier(&self, modifier: &PredicatAST);
     fn clear(&self);
 } 

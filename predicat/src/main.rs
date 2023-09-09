@@ -52,9 +52,11 @@ fn has_invalid_commands(cmds: &[PredicatAST], kn: &impl Knowledgeable) -> bool {
 }
 
 fn execute_subcommands(cmds: &[PredicatAST], kn: &impl Knowledgeable) -> SimpleContext {
-    cmds.iter().flat_map(|cmd| kn.translate(cmd))
-                        .map(|cmd| kn.execute(&cmd))
-                        .fold(SimpleContext::new(), join_contexts)
+    cmds.iter()
+        .map(|cmd| {kn.store_modifier(cmd); cmd})
+        .flat_map(|cmd| kn.translate(cmd))
+        .map(|cmd| kn.execute(&cmd))
+        .fold(SimpleContext::new(), join_contexts)
 }
 
 fn concat_sub_commands(cmds: Vec<PredicatAST>, kn: &impl Knowledgeable, aftercmd: Vec<String>) -> Vec<String> {
