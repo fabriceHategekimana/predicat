@@ -369,6 +369,28 @@ pub fn triplet_to_sql(tri: &Triplet) -> String {
     }
 }
 
+fn is_variable(s: &str) -> bool {
+    &s[0..1] == "$"
+}
+
+fn extract_substitution_list(triplet: Triplet, tri_param: &[&str]) -> Vec<(String, String)> {
+    match triplet {
+        Triplet::Tvvv(s, l, g) => [s, l, g].into_iter()
+            .zip(tri_param.iter())
+            .filter(|(val, ele)| is_variable(ele))
+            .map(|(val, ele)| (val.to_string(), ele.to_string()))
+            .collect::<Vec<_>>(),
+        _ =>vec![]
+    }
+}
+
+
+fn substitute_command_string(triplet: Triplet, tri_param: &[&str], cmd: &str) -> String {
+    extract_substitution_list(triplet, tri_param).iter()
+        .fold(cmd.to_string(), |command, (val, ele)| command.to_string().replace(ele, val)).to_string()
+}
+
+
 
 #[cfg(test)]
 mod tests {
@@ -481,7 +503,7 @@ mod tests {
         assert_eq!(
             substitute_command_string(
                 Triplet::Tvvv("pierre".to_string(), "ami".to_string(), "emy".to_string()), 
-                ["$A", "ami", "$B"],
+                &["$A", "ami", "$B"],
                 "add $B ami $A"),
                 "add emy ami pierre" 
                 );
