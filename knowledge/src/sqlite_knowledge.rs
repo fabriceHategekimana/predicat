@@ -48,6 +48,10 @@ static CREATE_RULES : &str = "CREATE TABLE IF NOT EXISTS rules(
                     'backed_command');
                     ";
 
+static CREATE_CACHE : &str = "CREATE TABLE IF NOT EXISTS cache(
+                            'command' TEXT); 
+                    ";
+
 static CREATE_HISTORICAL : &str = "CREATE TABLE historical(
                             'stage' TEXT, 
                             'event' TEXT,
@@ -94,6 +98,7 @@ fn extract_columns(sql_select_query: &str) -> Vec<&str> {
                    .collect()
 }
 
+
 impl Knowledgeable for SqliteKnowledge {
     fn new() -> SqliteKnowledge {
         let knowledge = SqliteKnowledge {
@@ -101,16 +106,52 @@ impl Knowledgeable for SqliteKnowledge {
         };
         let _ = knowledge.modify(CREATE_FACTS);
         let _ = knowledge.modify(CREATE_RULES);
+        let _ = knowledge.modify(CREATE_CACHE);
         knowledge
     }
 
-    fn store_modifier(&self, modifier: &PredicatAST) {
-        todo!();
+    fn save_triplet(&self, modifier: &str, subject: &str, link: &str, goal: &str) {
+        let query = format!("INSERT INTO cache (command) VALUES ('{} {} {} {}')",
+            modifier, subject, link, goal);
+        let res = &self.connection.execute(query);
+    }
+
+    fn clear_cache(&self) {
+        let _ = self.connection.execute("DELETE FROM cache");
+    }
+
+    fn in_cache(&self, cmd: &str) -> bool {
+        let mut res: bool = false;
+        let query = format!("SELECT * FROM cache WHERE command = '{}'", cmd);
+        let _ = self.connection.iterate(query, |sqlite_couple| {
+            if sqlite_couple.iter().len() > 0 {
+                res = true;
+            }
+            true
+        });
+        res
+    }
+
+    fn store_to_cache(&self, modifier: &PredicatAST) {
+        match modifier {
+            PredicatAST::AddModifier(vec) => {
+                if let Triplet::Twww(subject, link, goal) = vec[0].clone() {
+                    self.save_triplet("add", &subject, &link, &goal);
+                }
+            },
+            PredicatAST::DeleteModifier(vec) => {
+                if let Triplet::Twww(subject, link, goal) = vec[0].clone() {
+                    self.save_triplet("delete", &subject, &link, &goal);
+                }
+            },
+            _ => ()
+        }
     }
 
     fn clear(&self) {
         let _ = self.connection.execute("DELETE FROM facts");
         let _ = self.connection.execute("DELETE FROM rules");
+        let _ = self.connection.execute("DELETE FROM cache");
     }
 
     fn get(&self, cmd: &str) -> SimpleContext {
@@ -190,7 +231,10 @@ impl Knowledgeable for SqliteKnowledge {
     fn get_command_from_triplet(&self, modifier: &str, tri: &Triplet) -> Vec<String> {
         let (sub, lin, goa) = tri.to_tuple();
         let select = format!("SELECT command FROM rules where modifier='{}' AND event='infer' OR subject='{}' OR link='{}' OR goal='{}'", modifier, sub, lin, goa);
-        self.get(&select).get_values("command").unwrap_or(vec![]) 
+        self.get(&select).get_values("command")
+            .unwrap_or(vec![]) .iter()
+            .map(|cmd| change_variables(&cmd, &sub, &lin, &goa))
+            .collect()
     }
 
     fn get_commands_from(&self, cmd: &PredicatAST) -> Vec<String> {
@@ -205,6 +249,17 @@ impl Knowledgeable for SqliteKnowledge {
         }
     }
 
+
+}
+
+fn change_variables(cmd: &str,  subject: &str, link: &str, goal: &str) -> String {
+    // TODO: make variable permutation with the variables
+    let v = cmd.split(" ").collect::<Vec<_>>();
+    let modif = v[0];
+    let sub = if &v[1][0..1]  == "$" { subject } else { v[1] };
+    let lin = if &v[2][0..1]  == "$" { link } else { v[2] };
+    let goa = if &v[3][0..1]  == "$" { goal } else { v[3] };
+    format!("{} {} {} {}", modif, sub, lin, goa)
 }
 
 fn triplet_to_delete(tri: &Triplet) -> String {
@@ -512,6 +567,5 @@ mod tests {
                 "add emy ami pierre" 
                 );
     }
-
 
 }

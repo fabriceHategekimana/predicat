@@ -486,7 +486,7 @@ mod tests {
        context = context.add_column("C", &["pierre", "marc"]);
        assert_eq!(
             substitute(&query, &context),
-            vec![
+            Some(vec![
             PredicatAST::Query((
                     vec![Var("A".to_string()), Var("B".to_string())],
                     vec![Triplet::Tvwv("A".to_string(), "age".to_string(), "B".to_string()),
@@ -497,7 +497,7 @@ mod tests {
                     vec![Triplet::Tvwv("A".to_string(), "age".to_string(), "B".to_string()),
                          Triplet::Tvww("A".to_string(), "ami".to_string(), "marc".to_string())],
                     vec![Comp("B < 18".to_string())]))
-            ]
+            ])
                   );
     }
 
@@ -510,7 +510,7 @@ mod tests {
                                 Triplet::Tvwv("B".to_string(), "ami".to_string(), "C".to_string())]);
         assert_eq!(
                 substitute(&add_mod, &context),
-                vec![
+                Some(vec![
                 PredicatAST::AddModifier(vec![
                                 Triplet::Tvwv("A".to_string(), "ami".to_string(), "B".to_string()),
                                 Triplet::Tvww("B".to_string(), "ami".to_string(), "pierre".to_string())]),
@@ -518,7 +518,7 @@ mod tests {
                                 Triplet::Tvwv("A".to_string(), "ami".to_string(), "B".to_string()),
                                 Triplet::Tvww("B".to_string(), "ami".to_string(), "marc".to_string())]),
 
-                ]
+                ])
                   );
     }
 

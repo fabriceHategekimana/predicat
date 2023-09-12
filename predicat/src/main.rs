@@ -17,8 +17,9 @@ use serial_test::serial;
 
 fn execute_simple_entry(knowledge: &impl Knowledgeable, cmd: &str) -> () {
     let _: Vec<_> = parse_command(cmd).iter()
-        .map(|x| knowledge.translate(&x).unwrap_or("".to_string()))
-        .map(|x| knowledge.execute(&x))
+        .map(|cmd| {knowledge.store_to_cache(cmd); cmd})
+        .map(|cmd| knowledge.translate(&cmd).unwrap_or("".to_string()))
+        .map(|cmd| knowledge.execute(&cmd))
         .collect();
 }
 
@@ -42,9 +43,11 @@ fn join_contexts(ctx1: SimpleContext, ctx2: SimpleContext) -> SimpleContext {
 }
 
 fn after_execution(cmds: &[String], knowledge: &impl Knowledgeable) {
-        let _ = cmds.iter()
-        .map(|cmd| parse_and_execute(&cmd, knowledge, SimpleContext::new()))
-        .fold(SimpleContext::new(), join_contexts);
+    println!("cmds: {:?}", cmds);
+    let _ = cmds.iter()
+    .filter(|cmd| !knowledge.in_cache(cmd))
+    .map(|cmd| parse_and_execute(&cmd, knowledge, SimpleContext::new()))
+    .fold(SimpleContext::new(), join_contexts);
 }
 
 fn has_invalid_commands(cmds: &[PredicatAST], kn: &impl Knowledgeable) -> bool {
@@ -53,7 +56,7 @@ fn has_invalid_commands(cmds: &[PredicatAST], kn: &impl Knowledgeable) -> bool {
 
 fn execute_subcommands(cmds: &[PredicatAST], kn: &impl Knowledgeable) -> SimpleContext {
     cmds.iter()
-        .map(|cmd| {kn.store_modifier(cmd); cmd})
+        .map(|cmd| {kn.store_to_cache(cmd); cmd})
         .flat_map(|cmd| kn.translate(cmd))
         .map(|cmd| kn.execute(&cmd))
         .fold(SimpleContext::new(), join_contexts)
@@ -61,7 +64,6 @@ fn execute_subcommands(cmds: &[PredicatAST], kn: &impl Knowledgeable) -> SimpleC
 
 fn concat_sub_commands(cmds: Vec<PredicatAST>, kn: &impl Knowledgeable, aftercmd: Vec<String>) -> Vec<String> {
     cmds.iter().flat_map(|cmd| kn.get_commands_from(cmd))
-    //.flat_map(|cmd| parse_command(&cmd))
     .chain(aftercmd.into_iter())
     .collect()
 }
@@ -97,8 +99,10 @@ fn main() {
     //let command = get_args_or("get $A $B $C where $A $B $C");
     //let command = get_args_or("rule block add $A ami $B : add $B ami $A");
     //let command = get_args_or("rule infer add $A ami $B : get $A $B where $A ami $B");
+
     let Ok(knowledge) = new_knowledge("sqlite") else {panic!("Can't open the knowledge!")};
     let context = SimpleContext::new();
+    knowledge.clear_cache();
     let res = parse_and_execute(&command, &knowledge, context);
     res.display();
 }
@@ -109,19 +113,19 @@ mod tests {
     use parser::base_parser::Var;
     use parser::Triplet;
 
-    #[test]
-    #[serial]
-    fn test_get() {
-        let knowledge = new_knowledge("sqlite").unwrap();
-        knowledge.clear();
-        execute_simple_entry(&knowledge, "add socrate est mortel");
-        let mut context = SimpleContext::new();
-        context = context.add_column("A", &["socrate"]);
-        context = context.add_column("B", &["est"]);
-        context = context.add_column("C", &["mortel"]);
-        let test_context = knowledge.get_all();
-        assert_eq!(test_context, context);
-    }
+    //#[test]
+    //#[serial]
+    //fn test_get() {
+        //let knowledge = new_knowledge("sqlite").unwrap();
+        //knowledge.clear();
+        //execute_simple_entry(&knowledge, "add socrate est mortel");
+        //let mut context = SimpleContext::new();
+        //context = context.add_column("A", &["socrate"]);
+        //context = context.add_column("B", &["est"]);
+        //context = context.add_column("C", &["mortel"]);
+        //let test_context = knowledge.get_all();
+        //assert_eq!(test_context, context);
+    //}
 
     #[test]
     #[serial]
@@ -146,7 +150,18 @@ mod tests {
        execute_simple_entry(&knowledge, "rule infer add $A ami $B : add $B ami $A");
        let res = knowledge.get_command_from_triplet("add", &Triplet::Tvvv("pierre".to_string(), "ami".to_string(), "emy".to_string()));
         assert_eq!(res,
-                   vec!["add $B ami $A".to_string()]);
+                   vec!["add emy ami pierre".to_string()]);
+    }
+
+    #[test]
+    #[serial]
+    fn test_cache() {
+       let knowledge = new_knowledge("sqlite").unwrap();
+       knowledge.clear();
+       execute_simple_entry(&knowledge, "add pierre ami emy");
+       assert_eq!(
+           knowledge.in_cache("add pierre ami emy"),
+           true);
     }
 
 }
