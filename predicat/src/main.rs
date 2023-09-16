@@ -43,7 +43,6 @@ fn join_contexts(ctx1: SimpleContext, ctx2: SimpleContext) -> SimpleContext {
 }
 
 fn after_execution(cmds: &[String], knowledge: &impl Knowledgeable) {
-    println!("cmds: {:?}", cmds);
     let _ = cmds.iter()
     .filter(|cmd| !knowledge.in_cache(cmd))
     .map(|cmd| parse_and_execute(&cmd, knowledge, SimpleContext::new()))
@@ -96,9 +95,6 @@ fn parse_and_execute(command: &str, knowledge: &impl Knowledgeable, context: Sim
 
 fn main() {
     let command = get_args_or("add socrate est mortel");
-    //let command = get_args_or("get $A $B $C where $A $B $C");
-    //let command = get_args_or("rule block add $A ami $B : add $B ami $A");
-    //let command = get_args_or("rule infer add $A ami $B : get $A $B where $A ami $B");
 
     let Ok(knowledge) = new_knowledge("sqlite") else {panic!("Can't open the knowledge!")};
     let context = SimpleContext::new();
@@ -113,20 +109,6 @@ mod tests {
     use parser::base_parser::Var;
     use parser::Triplet;
 
-    //#[test]
-    //#[serial]
-    //fn test_get() {
-        //let knowledge = new_knowledge("sqlite").unwrap();
-        //knowledge.clear();
-        //execute_simple_entry(&knowledge, "add socrate est mortel");
-        //let mut context = SimpleContext::new();
-        //context = context.add_column("A", &["socrate"]);
-        //context = context.add_column("B", &["est"]);
-        //context = context.add_column("C", &["mortel"]);
-        //let test_context = knowledge.get_all();
-        //assert_eq!(test_context, context);
-    //}
-
     #[test]
     #[serial]
     fn test_execute_simple_entry_add_rule() {
@@ -139,7 +121,13 @@ mod tests {
         context = context.add_column("B", &["ami", "ami"]);
         context = context.add_column("C", &["emy", "pierre"]);
         let test_context = knowledge.get_all();
-        assert_eq!(test_context, context);
+        let mut sorted_test_context = test_context.get_tab();
+        let mut sorted_context = context.get_tab();
+        sorted_test_context.sort();
+        sorted_context.sort();
+        assert_eq!(
+            sorted_test_context,
+            sorted_context);
     }
 
     #[test]
@@ -162,6 +150,19 @@ mod tests {
        assert_eq!(
            knowledge.in_cache("add pierre ami emy"),
            true);
+    }
+
+    #[test]
+    #[serial]
+    fn test_delete_command() {
+       let knowledge = new_knowledge("sqlite").unwrap();
+       knowledge.clear();
+       execute_simple_entry(&knowledge, "add pierre ami emy");
+       execute_simple_entry(&knowledge, "delete pierre ami emy");
+       let res = knowledge.get_all();
+        assert_eq!(
+            res,
+            SimpleContext::new());
     }
 
 }

@@ -106,7 +106,9 @@ pub fn parse_command<'a>(s: &'a str) -> Vec<PredicatAST> {
             ))
         )(s);
     match res {
-        Ok((s, v)) => v,
+        Ok((s, v)) => { 
+            //println!("{:?}", &v);
+            v},
         Err(e) => { println!("{:?}", e); vec![] }
     }
 }

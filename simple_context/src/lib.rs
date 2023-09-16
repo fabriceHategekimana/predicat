@@ -4,7 +4,7 @@ use base_context::Context;
 
 #[derive(Eq, PartialEq, Debug, Clone, Default)]
 pub struct SimpleContext {
-    tab: Vec<(String, String)> 
+    pub tab: Vec<(String, String)> 
 }
 
 impl SimpleContext {

@@ -27,6 +27,16 @@ pub enum CommandType {
     Get
 }
 
+impl CommandType {
+    pub fn get_string(&self) -> String {
+        match self {
+            CommandType::Add => "add".to_string(),
+            CommandType::Delete => "delete".to_string(),
+            CommandType::Get => "get".to_string(),
+        }
+    }
+}
+
 #[derive(PartialEq, Debug, Clone)]
 pub enum Command {
     Str(String, String),

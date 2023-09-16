@@ -24,6 +24,8 @@ use parser::base_parser::Language::Tri;
 use parser::base_parser::Comp;
 use parser::base_parser::Triplet::*;
 use parser::base_parser::Triplet;
+use itertools::izip;
+use serial_test::serial;
 
 static SUBJECT: &str = ":subject";
 static LINK: &str = ":link";
@@ -188,15 +190,15 @@ impl Knowledgeable for SqliteKnowledge {
                             .fold("".to_string(), string_concat)),
             DeleteModifier(commands) => 
                 Ok(commands.iter()
-                            .map(|x| triplet_to_insert(x))
+                            .map(|x| triplet_to_delete(x))
                             .fold("".to_string(), string_concat)),
                 Rule(a, (b, c), (cmd, ast)) => {
                     let scmd = match &cmd[0..3] { 
                         "get" => self.translate(ast).unwrap().replace("'", "%single_quote%"),
                         _ => cmd.clone()};
                     let (t1, t2, t3) = c.to_tuple_with_variable();
-                    Ok(format!("%rule%%|%{:?}%|%{:?}%|%{}%|%{}%|%{}%|%{}%|%{}",
-                               a, b, t1, t2, t3, cmd, scmd))
+                    Ok(format!("%rule%%|%{:?}%|%{}%|%{}%|%{}%|%{}%|%{}%|%{}",
+                               a, b.get_string(), t1, t2, t3, cmd, scmd))
                             },
             _ => Err("The AST is empty") 
         }
@@ -230,10 +232,19 @@ impl Knowledgeable for SqliteKnowledge {
 
     fn get_command_from_triplet(&self, modifier: &str, tri: &Triplet) -> Vec<String> {
         let (sub, lin, goa) = tri.to_tuple();
-        let select = format!("SELECT command FROM rules where modifier='{}' AND event='infer' OR subject='{}' OR link='{}' OR goal='{}'", modifier, sub, lin, goa);
-        self.get(&select).get_values("command")
-            .unwrap_or(vec![]) .iter()
-            .map(|cmd| change_variables(&cmd, &sub, &lin, &goa))
+        let select = format!("SELECT * FROM rules where modifier='{}' AND event='Infer' AND (subject='{}' OR link='{}' OR goal='{}')", modifier, sub, lin, goa);
+        let rules = self.get(&select);
+        let context = izip!(
+                rules.get_values("modifier").unwrap_or(vec![]),
+                rules.get_values("subject").unwrap_or(vec![]),
+                rules.get_values("link").unwrap_or(vec![]),
+                rules.get_values("goal").unwrap_or(vec![]))
+            .map(|(modi, subj, link, goal)| match_triplet((&sub, &lin, &goa), (&subj, &link, &goal)))
+            .reduce(|context1, context2| context1.join(context2))
+            .unwrap_or(SimpleContext::new());
+
+        rules.get_values("command").unwrap_or(vec![]).iter()
+            .map(|cmd| change_variables(cmd, &context))
             .collect()
     }
 
@@ -252,14 +263,30 @@ impl Knowledgeable for SqliteKnowledge {
 
 }
 
-fn change_variables(cmd: &str,  subject: &str, link: &str, goal: &str) -> String {
-    // TODO: make variable permutation with the variables
-    let v = cmd.split(" ").collect::<Vec<_>>();
-    let modif = v[0];
-    let sub = if &v[1][0..1]  == "$" { subject } else { v[1] };
-    let lin = if &v[2][0..1]  == "$" { link } else { v[2] };
-    let goa = if &v[3][0..1]  == "$" { goal } else { v[3] };
-    format!("{} {} {} {}", modif, sub, lin, goa)
+fn match_triplet((sub1, lin1, goa1): (&str, &str, &str), (sub2, lin2, goa2): (&str, &str, &str)) -> SimpleContext {
+    let res = [(sub1, sub2), (lin1, lin2), (goa1, goa2)]
+        .iter()
+        .flat_map(|(el1, el2)| match is_variable(el2) { true => Some((el2.to_string(), el1.to_string())), false => None })
+        .collect::<Vec<_>>();
+        SimpleContext {
+            tab: res
+        }
+}
+
+fn substitute_variable(var: &str, val:&str, cmd: &str) -> String {
+    cmd.replace(var, val).to_string()
+}
+
+fn change_variables(cmd: &str, context: &SimpleContext) -> String {
+    let cmds = (0..(context.len()))
+        .map(|_| cmd.to_string()).collect::<Vec<_>>();
+
+    context.get_variables().iter()
+        .fold(cmds, |commands, var| 
+             context.get_values(var)
+             .unwrap_or(vec![]).iter().zip(commands.iter())
+             .map(|(val, cmd)| substitute_variable(var, val, cmd))
+             .collect()).get(0).unwrap_or(&"".to_string()).clone()
 }
 
 fn triplet_to_delete(tri: &Triplet) -> String {
@@ -567,5 +594,35 @@ mod tests {
                 "add emy ami pierre" 
                 );
     }
+
+    #[test]
+    fn test_match_triplet() {
+        let mut context = SimpleContext::new();
+        context = context.add_column("$A", &["pierre"]);
+        context = context.add_column("$B", &["emi"]);
+
+        assert_eq!(
+            match_triplet(("pierre", "ami", "emi"), ("$A", "ami", "$B")),
+            context   
+        );
+    }
+
+    #[test]
+    fn test_substitute_variable() {
+        assert_eq!(
+            substitute_variable("$A", "pierre", "add $A ami $B"),
+            "add pierre ami $B".to_string());
+    }
+
+    #[test]
+    fn test_change_variable() {
+        let mut context = SimpleContext::new();
+        context = context.add_column("$A", &["pierre"]);
+        context = context.add_column("$B", &["emy"]);
+        assert_eq!(
+            change_variables("add $B ami $A", &context),
+            "add emy ami pierre");
+    }
+
 
 }
