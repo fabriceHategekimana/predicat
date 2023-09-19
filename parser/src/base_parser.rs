@@ -52,7 +52,7 @@ pub enum PredicatAST {
     AddModifier(Vec<Triplet>),
     DeleteModifier(Vec<Triplet>),
     // rule [event] [trigger] [action] 
-    Rule(Event, (CommandType, Triplet), (String, Box<PredicatAST>)),
+    Rule(Event, (CommandType, Vec<Triplet>), (String, Box<PredicatAST>)),
     Empty,
     Debug(String)
 }

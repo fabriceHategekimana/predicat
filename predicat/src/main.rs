@@ -18,7 +18,7 @@ use serial_test::serial;
 fn execute_simple_entry(knowledge: &impl Knowledgeable, cmd: &str) -> () {
     let _: Vec<_> = parse_command(cmd).iter()
         .map(|cmd| {knowledge.store_to_cache(cmd); cmd})
-        .map(|cmd| knowledge.translate(&cmd).unwrap_or("".to_string()))
+        .flat_map(|cmd| knowledge.translate(&cmd).unwrap_or(vec!["".to_string()]))
         .map(|cmd| knowledge.execute(&cmd))
         .collect();
 }
@@ -56,7 +56,7 @@ fn has_invalid_commands(cmds: &[PredicatAST], kn: &impl Knowledgeable) -> bool {
 fn execute_subcommands(cmds: &[PredicatAST], kn: &impl Knowledgeable) -> SimpleContext {
     cmds.iter()
         .map(|cmd| {kn.store_to_cache(cmd); cmd})
-        .flat_map(|cmd| kn.translate(cmd))
+        .flat_map(|cmd| kn.translate(cmd)).flatten()
         .map(|cmd| kn.execute(&cmd))
         .fold(SimpleContext::new(), join_contexts)
 }
@@ -177,7 +177,7 @@ mod tests {
         let mut context = SimpleContext::new();
         context = context.add_column("A", &["pierre", "emy", "pierre"]);
         context = context.add_column("B", &["ami", "ami", "ami"]);
-        context = context.add_column("B", &["emy", "julie", "julie"]);
+        context = context.add_column("C", &["emy", "julie", "julie"]);
         assert_eq!(res, context);
     }
 

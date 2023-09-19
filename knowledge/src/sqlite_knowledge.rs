@@ -181,24 +181,27 @@ impl Knowledgeable for SqliteKnowledge {
     }
 
 
-    fn translate<'a>(&'a self, ast: &PredicatAST) -> Result<String, &str> {
+    fn translate<'a>(&'a self, ast: &PredicatAST) -> Result<Vec<String>, &str> {
         match ast {
-            Query((get, link, filter)) => Ok(query_to_sql(get, link, filter)),
+            Query((get, link, filter)) => Ok(vec![query_to_sql(get, link, filter)]),
             AddModifier(commands) => 
-                Ok(commands.iter()
+                Ok(vec![commands.iter()
                             .map(|x| triplet_to_insert(x))
-                            .fold("".to_string(), string_concat)),
+                            .fold("".to_string(), string_concat)]),
             DeleteModifier(commands) => 
-                Ok(commands.iter()
+                Ok(vec![commands.iter()
                             .map(|x| triplet_to_delete(x))
-                            .fold("".to_string(), string_concat)),
+                            .fold("".to_string(), string_concat)]),
                 Rule(a, (b, c), (cmd, ast)) => {
                     let scmd = match &cmd[0..3] { 
-                        "get" => self.translate(ast).unwrap().replace("'", "%single_quote%"),
+                        "get" => self.translate(ast).unwrap().iter().map(|x| x.replace("'", "%single_quote%")).collect(),
                         _ => cmd.clone()};
-                    let (t1, t2, t3) = c.to_tuple_with_variable();
-                    Ok(format!("%rule%%|%{:?}%|%{}%|%{}%|%{}%|%{}%|%{}%|%{}",
-                               a, b.get_string(), t1, t2, t3, cmd, scmd))
+                    let res = c.iter().map(|x| x.to_tuple_with_variable())
+                        .map(|(t1, t2, t3)| {
+                            format!("%rule%%|%{:?}%|%{}%|%{}%|%{}%|%{}%|%{}%|%{}",
+                                       a, b.get_string(), t1, t2, t3, cmd, scmd)
+                        }).collect::<Vec<_>>();
+                        Ok(res)
                             },
             _ => Err("The AST is empty") 
         }
@@ -216,15 +219,17 @@ impl Knowledgeable for SqliteKnowledge {
     fn is_invalid(&self, cmd: &PredicatAST) -> bool {
         match cmd {
             PredicatAST::Rule(a, (mo, tri), cmd) => {
-                let (t1, t2, t3) = tri.to_tuple_with_variable();
-                let select = format!("SELECT * FROM Rules where modifier = {:?} subject = {:?} or link = {:?} or goal = {:?}",
+                tri.iter().map(|x| x.to_tuple_with_variable())
+                    .map(|(t1, t2, t3)| {
+                        let select = format!("SELECT * FROM Rules where modifier = {:?} subject = {:?} or link = {:?} or goal = {:?}",
                         mo, t1, t2, t3);
-                match self.get(&select).get_values("backed_command") {
-                    None => false,
-                    Some(v) => v.iter()
-                        .map(|x| x.replace("%singlequote%", "'"))
-                        .any(|cmd| self.get(&cmd).is_not_empty())
-                }
+                    match self.get(&select).get_values("backed_command") {
+                        None => false,
+                        Some(v) => v.iter()
+                            .map(|x| x.replace("%singlequote%", "'"))
+                            .any(|cmd| self.get(&cmd).is_not_empty())
+                        }
+                    }).any(|x| x)
             },
             _ => false
         }

@@ -62,11 +62,11 @@ fn parse_event(s: &str) -> IResult<&str, Event> {
     }
 }
 
-fn parse_trigger(s: &str) -> IResult<&str, (CommandType, Triplet)> {
+fn parse_trigger(s: &str) -> IResult<&str, (CommandType, Vec<Triplet>)> {
     let res = parse_modifier(s);
     match res {
-        Ok((s, PredicatAST::AddModifier(v))) => Ok((s, (CommandType::Add, v[0].clone()))),
-        Ok((s, PredicatAST::DeleteModifier(v))) => Ok((s, (CommandType::Delete, v[0].clone()))),
+        Ok((s, PredicatAST::AddModifier(v))) => Ok((s, (CommandType::Add, v.clone()))),
+        Ok((s, PredicatAST::DeleteModifier(v))) => Ok((s, (CommandType::Delete, v.clone()))),
         Err(r) => Err(r),
         _ => todo!()
     }
@@ -204,7 +204,8 @@ mod tests {
     fn test_parse_rule() {
         assert_eq!(
             parse_rule("rule block add $A ami $B : get $A $B where $A ami $B").unwrap().1,
-            PredicatAST::Rule(Event::Block, (CommandType::Add, Triplet::Tvwv("A".to_string(), "ami".to_string(), "B".to_string())), ("get $A $B where $A ami $B".to_string(), Box::new(PredicatAST::Query((vec![Var("A".to_string()), Var("B".to_string())], vec![Triplet::Tvwv("A".to_string(), "ami".to_string(), "B".to_string())], vec![]))))),
+            PredicatAST::Rule(Event::Block, 
+                              (CommandType::Add, vec![Triplet::Tvwv("A".to_string(), "ami".to_string(), "B".to_string())]), ("get $A $B where $A ami $B".to_string(), Box::new(PredicatAST::Query((vec![Var("A".to_string()), Var("B".to_string())], vec![Triplet::Tvwv("A".to_string(), "ami".to_string(), "B".to_string())], vec![]))))),
                   );
     }
 
