@@ -64,6 +64,8 @@ pub fn parse_modifier(s: &str) -> IResult<&str, PredicatAST> {
 
 #[cfg(test)]
 mod tests {
+    use crate::parse_modifier;
+
     use super::{
         parse_add_modifier,
         parse_delete_modifier,
@@ -95,6 +97,16 @@ mod tests {
             parse_delete_modifier("delete pierre ami jean").unwrap().1,
             PredicatAST::DeleteModifier(vec![Twww("pierre".to_string(), "ami".to_string(), "jean".to_string())]));
 
+    }
+
+    #[test]
+    fn test_parse_modifier() {
+        assert_eq!(
+            parse_modifier("add pierre ami julie and julie ami pierre").unwrap_or(("", PredicatAST::Empty)).1,
+            PredicatAST::AddModifier(vec![
+                Twww("pierre".to_string(), "ami".to_string(), "julie".to_string()),
+                Twww("julie".to_string(), "ami".to_string(), "pierre".to_string())
+            ]));
     }
 
 }

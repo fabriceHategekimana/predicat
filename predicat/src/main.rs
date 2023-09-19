@@ -165,4 +165,20 @@ mod tests {
             SimpleContext::new());
     }
 
+    #[test]
+    #[serial]
+    fn test_associative_rule() {
+        let knowledge = new_knowledge("sqlite").unwrap();
+        knowledge.clear();
+        execute_simple_entry(&knowledge, "rule infer add $A ami $B and $B ami $C : add $A ami $C");
+        execute_simple_entry(&knowledge, "add pierre ami emy");
+        execute_simple_entry(&knowledge, "add emy ami julie");
+        let res = knowledge.get_all();
+        let mut context = SimpleContext::new();
+        context = context.add_column("A", &["pierre", "emy", "pierre"]);
+        context = context.add_column("B", &["ami", "ami", "ami"]);
+        context = context.add_column("B", &["emy", "julie", "julie"]);
+        assert_eq!(res, context);
+    }
+
 }
