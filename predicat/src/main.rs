@@ -53,6 +53,7 @@ fn has_invalid_commands(cmds: &[PredicatAST], kn: &impl Knowledgeable) -> bool {
     cmds.iter().any(|x| kn.is_invalid(x) == true)
 }
 
+// execute function
 fn execute_subcommands(cmds: &[PredicatAST], kn: &impl Knowledgeable) -> SimpleContext {
     cmds.iter()
         .map(|cmd| {kn.store_to_cache(cmd); cmd})
@@ -87,8 +88,8 @@ fn execute_command(context_aftercmds: ExecutionState, ast: &PredicatAST, kn: &im
 
 
 fn parse_and_execute(command: &str, knowledge: &impl Knowledgeable, context: SimpleContext) -> SimpleContext {
-    parse_command(command).iter().fold(Some((context, vec![])), |entry, cmd|
-        execute_command(entry, cmd, knowledge))
+    parse_command(command).iter()
+        .fold(Some((context, vec![])), |entry, cmd| execute_command(entry, cmd, knowledge))
         .map(|(context, aftercmds)| { after_execution(&aftercmds, knowledge); context })
         .unwrap_or_default()
 }
