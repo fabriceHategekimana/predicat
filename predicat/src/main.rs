@@ -75,6 +75,14 @@ fn valid_commands_or_none(cmds: Vec<PredicatAST>, kn: &impl Knowledgeable) -> Op
 
 type ExecutionState = Option<(SimpleContext, Vec<String>)>;
 
+trait ExecutionStateTrait {
+    fn default_value(context: SimpleContext) -> ExecutionState {
+        Some((context, vec![]))
+    }
+}
+
+impl ExecutionStateTrait for ExecutionState { }
+
 fn execute_command_helper(cmds: Vec<PredicatAST>, kn: &impl Knowledgeable, aftercmd: Vec<String>) -> ExecutionState {
     Some((execute_subcommands(&cmds, kn),
         concat_sub_commands(cmds, kn, aftercmd)))
@@ -87,11 +95,19 @@ fn execute_command(context_aftercmds: ExecutionState, ast: &PredicatAST, kn: &im
         execute_command_helper(cmds, kn, aftercmds)).unwrap_or(None)}).unwrap_or(None)
 }
 
+fn execute_command_f(knowledge: &impl Knowledgeable) -> impl Fn(ExecutionState, &PredicatAST) -> ExecutionState + '_ {
+    move |entry: ExecutionState, cmd: &PredicatAST| execute_command(entry, cmd, knowledge)
+}
+
+fn after_execution_m(knowledge: &impl Knowledgeable) -> impl Fn((SimpleContext, Vec<String>)) -> SimpleContext + '_ {
+    move |(context, aftercmd)| after_execution(&aftercmd, knowledge, context)
+}
 
 fn parse_and_execute(command: &str, knowledge: &impl Knowledgeable, context: SimpleContext) -> SimpleContext {
     parse_command(command).iter()
-        .fold(Some((context, vec![])), |entry, cmd| execute_command(entry, cmd, knowledge))
-        .map(|(context, aftercmds)| after_execution(&aftercmds, knowledge, context))
+        .fold(ExecutionState::default_value(context),
+              execute_command_f(knowledge))
+        .map(after_execution_m(knowledge))
         .unwrap_or_default()
 }
 
