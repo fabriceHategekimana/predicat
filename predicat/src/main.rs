@@ -42,14 +42,6 @@ fn join_contexts(ctx1: SimpleContext, ctx2: SimpleContext) -> SimpleContext {
     ctx1.join(ctx2)
 }
 
-fn after_execution(cmds: &[String], knowledge: &impl Knowledgeable, context: SimpleContext) -> SimpleContext {
-    let _ = cmds.iter()
-    .filter(|cmd| !knowledge.in_cache(cmd))
-    .map(|cmd| parse_and_execute(&cmd, knowledge, SimpleContext::new()))
-    .fold(SimpleContext::new(), join_contexts);
-    context
-}
-
 fn has_invalid_commands(cmds: &[PredicatAST], kn: &impl Knowledgeable) -> bool {
     cmds.iter().any(|x| kn.is_invalid(x) == true)
 }
@@ -73,6 +65,10 @@ fn valid_commands_or_none(cmds: Vec<PredicatAST>, kn: &impl Knowledgeable) -> Op
     cmds.iter().all(|x| !kn.is_invalid(x)).then_some(cmds)
 }
 
+fn valid_commands_or_none_m(kn: &impl Knowledgeable) -> impl Fn(Vec<PredicatAST>) -> Option<Vec<PredicatAST>> + '_ {
+    move |cmds: Vec<PredicatAST>| valid_commands_or_none(cmds, kn)
+}
+
 type ExecutionState = Option<(SimpleContext, Vec<String>)>;
 
 trait ExecutionStateTrait {
@@ -88,26 +84,37 @@ fn execute_command_helper(cmds: Vec<PredicatAST>, kn: &impl Knowledgeable, after
         concat_sub_commands(cmds, kn, aftercmd)))
 }
 
-fn execute_command(context_aftercmds: ExecutionState, ast: &PredicatAST, kn: &impl Knowledgeable) -> ExecutionState {
-    context_aftercmds.map(|(context, aftercmds)| {
-        substitute(ast, &context).map(|cmds| 
-        valid_commands_or_none(cmds, kn)).unwrap_or(None).map(|cmds| 
-        execute_command_helper(cmds, kn, aftercmds)).unwrap_or(None)}).unwrap_or(None)
+fn execute_command_helper_m(kn: &impl Knowledgeable, aftercmd: Vec<String>) -> impl Fn(Vec<PredicatAST>) -> ExecutionState + '_ {
+    move |cmds: Vec<PredicatAST>| execute_command_helper(cmds, kn, aftercmd.clone())
 }
 
-fn execute_command_f(knowledge: &impl Knowledgeable) -> impl Fn(ExecutionState, &PredicatAST) -> ExecutionState + '_ {
-    move |entry: ExecutionState, cmd: &PredicatAST| execute_command(entry, cmd, knowledge)
+
+fn execute_command(kn: &impl Knowledgeable) -> impl Fn(ExecutionState, &PredicatAST) -> ExecutionState + '_ {
+    move |state: ExecutionState, ast: &PredicatAST| {
+        state.map(|(context, aftercmds)| {
+            substitute(ast, &context)
+            .map(valid_commands_or_none_m(kn))
+            .unwrap_or(None)
+            .map(execute_command_helper_m(kn, aftercmds))
+            .unwrap_or(None)}).unwrap_or(None)
+    }
 }
 
-fn after_execution_m(knowledge: &impl Knowledgeable) -> impl Fn((SimpleContext, Vec<String>)) -> SimpleContext + '_ {
-    move |(context, aftercmd)| after_execution(&aftercmd, knowledge, context)
+fn after_execution(knowledge: &impl Knowledgeable) -> impl Fn((SimpleContext, Vec<String>)) -> SimpleContext + '_ {
+    move |(context, cmds)| {
+        let _ = cmds.iter()
+        .filter(|cmd| !knowledge.in_cache(cmd))
+        .map(|cmd| parse_and_execute(&cmd, knowledge, SimpleContext::new()))
+        .fold(SimpleContext::new(), join_contexts);
+        context
+    }
 }
 
 fn parse_and_execute(command: &str, knowledge: &impl Knowledgeable, context: SimpleContext) -> SimpleContext {
     parse_command(command).iter()
         .fold(ExecutionState::default_value(context),
-              execute_command_f(knowledge))
-        .map(after_execution_m(knowledge))
+              execute_command(knowledge))
+        .map(after_execution(knowledge))
         .unwrap_or_default()
 }
 
