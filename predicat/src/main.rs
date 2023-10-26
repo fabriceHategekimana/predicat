@@ -61,12 +61,10 @@ fn concat_sub_commands(cmds: Vec<PredicatAST>, kn: &impl Knowledgeable, aftercmd
     .collect()
 }
 
-fn valid_commands_or_none(cmds: Vec<PredicatAST>, kn: &impl Knowledgeable) -> Option<Vec<PredicatAST>> {
-    cmds.iter().all(|x| !kn.is_invalid(x)).then_some(cmds)
-}
-
-fn valid_commands_or_none_m(kn: &impl Knowledgeable) -> impl Fn(Vec<PredicatAST>) -> Option<Vec<PredicatAST>> + '_ {
-    move |cmds: Vec<PredicatAST>| valid_commands_or_none(cmds, kn)
+fn valid_commands_or_none(kn: &impl Knowledgeable) -> impl Fn(Vec<PredicatAST>) -> Option<Vec<PredicatAST>> + '_ {
+    move |cmds: Vec<PredicatAST>|{ 
+        cmds.iter().all(|x| !kn.is_invalid(x)).then_some(cmds)
+    }
 }
 
 type ExecutionState = Option<(SimpleContext, Vec<String>)>;
@@ -79,24 +77,20 @@ trait ExecutionStateTrait {
 
 impl ExecutionStateTrait for ExecutionState { }
 
-fn execute_command_helper(cmds: Vec<PredicatAST>, kn: &impl Knowledgeable, aftercmd: Vec<String>) -> ExecutionState {
-    Some((execute_subcommands(&cmds, kn),
-        concat_sub_commands(cmds, kn, aftercmd)))
-}
-
 fn execute_command_helper_m(kn: &impl Knowledgeable, aftercmd: Vec<String>) -> impl Fn(Vec<PredicatAST>) -> ExecutionState + '_ {
-    move |cmds: Vec<PredicatAST>| execute_command_helper(cmds, kn, aftercmd.clone())
+    move |cmds: Vec<PredicatAST>| {
+        Some((execute_subcommands(&cmds, kn),
+            concat_sub_commands(cmds, kn, aftercmd.clone())))
+    }
 }
 
 
 fn execute_command(kn: &impl Knowledgeable) -> impl Fn(ExecutionState, &PredicatAST) -> ExecutionState + '_ {
     move |state: ExecutionState, ast: &PredicatAST| {
-        state.map(|(context, aftercmds)| {
-            substitute(ast, &context)
-            .map(valid_commands_or_none_m(kn))
-            .unwrap_or(None)
-            .map(execute_command_helper_m(kn, aftercmds))
-            .unwrap_or(None)}).unwrap_or(None)
+        let (context, aftercmds) = state.unwrap_or_default();
+        substitute(ast, &context)
+        .map(valid_commands_or_none(kn))?
+        .map(execute_command_helper_m(kn, aftercmds))?
     }
 }
 
