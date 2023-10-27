@@ -175,7 +175,7 @@ where C : Fn(Vec<Triplet>) -> PredicatAST {
         .map(|x| constructor(x.clone())).collect()
 }
 
-pub fn substitute(ast: &PredicatAST, context: &SimpleContext) -> Option<Vec<PredicatAST>> {
+pub fn substitute_variables(ast: &PredicatAST, context: &SimpleContext) -> Option<Vec<PredicatAST>> {
     if context.len() == 0 {
         Some(vec![ast.clone()])
     } else {
@@ -485,7 +485,7 @@ mod tests {
        let mut context = SimpleContext::new();
        context = context.add_column("C", &["pierre", "marc"]);
        assert_eq!(
-            substitute(&query, &context),
+            substitute_variables(&query, &context),
             Some(vec![
             PredicatAST::Query((
                     vec![Var("A".to_string()), Var("B".to_string())],
@@ -509,7 +509,7 @@ mod tests {
                                 Triplet::Tvwv("A".to_string(), "ami".to_string(), "B".to_string()),
                                 Triplet::Tvwv("B".to_string(), "ami".to_string(), "C".to_string())]);
         assert_eq!(
-                substitute(&add_mod, &context),
+                substitute_variables(&add_mod, &context),
                 Some(vec![
                 PredicatAST::AddModifier(vec![
                                 Triplet::Tvwv("A".to_string(), "ami".to_string(), "B".to_string()),
