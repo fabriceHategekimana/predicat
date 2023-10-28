@@ -85,12 +85,13 @@ fn execute_commands_and_get_after_commands_m(kn: &impl Knowledgeable, aftercmd: 
 }
 
 
-fn execute_command(kn: &impl Knowledgeable) -> impl Fn(ExecutionState, &PredicatAST) -> ExecutionState + '_ {
-    move |state: ExecutionState, ast: &PredicatAST| {
-        let (context, aftercmds) = state.unwrap_or_default();
+fn execute_command<'a>(kn: &'a impl Knowledgeable, state: &'a mut ExecutionState) -> impl FnMut(&PredicatAST) -> ExecutionState + 'a {
+    move |ast: &PredicatAST| {
+        let mut binding = (SimpleContext{ tab: vec![] }, vec![]);
+        let (context, aftercmds) = state.as_mut().unwrap_or(&mut binding);
         substitute_variables(ast, &context)
         .map(valid_commands_or_none(kn))?
-        .map(execute_commands_and_get_after_commands_m(kn, aftercmds))?
+        .map(execute_commands_and_get_after_commands_m(kn, aftercmds.to_vec()))?
     }
 }
 
@@ -105,10 +106,10 @@ fn after_execution(knowledge: &impl Knowledgeable) -> impl Fn((SimpleContext, Ve
 }
 
 fn parse_and_execute(command: &str, knowledge: &impl Knowledgeable, context: SimpleContext) -> SimpleContext {
-    parse_command(command).iter()
-        .fold(ExecutionState::default_value(context),
-              execute_command(knowledge))
-        .map(after_execution(knowledge))
+    let mut state = ExecutionState::default();
+    let _ = parse_command(command).iter()
+        .map(execute_command(knowledge, &mut state));
+        state.map(after_execution(knowledge))
         .unwrap_or_default()
 }
 
