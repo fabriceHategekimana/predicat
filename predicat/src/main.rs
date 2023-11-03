@@ -46,7 +46,6 @@ fn has_invalid_commands(cmds: &[PredicatAST], kn: &impl Knowledgeable) -> bool {
     cmds.iter().any(|x| kn.is_invalid(x) == true)
 }
 
-// execute function
 fn execute_subcommands(cmds: &[PredicatAST], kn: &impl Knowledgeable) -> SimpleContext {
     cmds.iter()
         .map(|cmd| {kn.store_to_cache(cmd); cmd})
@@ -89,9 +88,10 @@ fn execute_command<'a>(kn: &'a impl Knowledgeable, state: &'a mut ExecutionState
     move |ast: &PredicatAST| {
         let mut binding = (SimpleContext{ tab: vec![] }, vec![]);
         let (context, aftercmds) = state.as_mut().unwrap_or(&mut binding);
-        substitute_variables(ast, &context)
+        *state = substitute_variables(ast, &context)
         .map(valid_commands_or_none(kn))?
-        .map(execute_commands_and_get_after_commands_m(kn, aftercmds.to_vec()))?
+        .map(execute_commands_and_get_after_commands_m(kn, aftercmds.to_vec()))?;
+        state.clone()
     }
 }
 
