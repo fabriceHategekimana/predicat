@@ -83,7 +83,7 @@ fn execute_commands_and_get_after_commands_m(kn: &impl Knowledgeable, aftercmd: 
     }
 }
 
-
+// TODO: bring up the substitution to one level
 fn execute_command<'a>(kn: &'a impl Knowledgeable, state: &'a mut ExecutionState) -> impl FnMut(&PredicatAST) -> ExecutionState + 'a {
     move |ast: &PredicatAST| {
         let mut binding = (SimpleContext{ tab: vec![] }, vec![]);
@@ -113,9 +113,27 @@ fn parse_and_execute(command: &str, knowledge: &impl Knowledgeable, context: Sim
         .unwrap_or_default()
 }
 
+fn parse_and_execute2(command: &str, knowledge: &impl Knowledgeable, context: SimpleContext) -> Option<SimpleContext> {
+    let state = ExecutionState::default();
+    let (mut c, mut aftercmds) = state.unwrap();
+    let _ = parse_command(command).iter()
+        //.map(execute_command(knowledge, &mut state))
+        .flat_map(|x| substitute_variables(x, &context))
+        .map(valid_commands_or_none(knowledge))
+        .map(execute_commands_and_get_after_commands_m(knowledge, aftercmds.to_vec()))?;
+        state.map(after_execution(knowledge))
+        .unwrap_or_default();
+        //let mut binding = (SimpleContext{ tab: vec![] }, vec![]);
+        //let (context, aftercmds) = state.as_mut().unwrap_or(&mut binding);
+        //*state = substitute_variables(ast, &context)
+        //.map(valid_commands_or_none(kn))?
+        //.map(execute_commands_and_get_after_commands_m(kn, aftercmds.to_vec()))?;
+        //state.clone()
+        todo!();
+}
+
 fn main() {
     let command = get_args_or("add socrate est mortel");
-
     let Ok(knowledge) = new_knowledge("sqlite") else {panic!("Can't open the knowledge!")};
     let context = SimpleContext::new();
     knowledge.clear_cache();
