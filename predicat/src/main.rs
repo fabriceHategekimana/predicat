@@ -54,6 +54,16 @@ fn execute_subcommands(cmds: &[PredicatAST], kn: &impl Knowledgeable) -> SimpleC
         .fold(SimpleContext::new(), join_contexts)
 }
 
+fn execute_subcommand(kn: &impl Knowledgeable) -> impl FnMut(&PredicatAST) -> SimpleContext + '_ {
+    move |subcmd: &PredicatAST| {
+    Some(subcmd)
+        .map(|cmd| {kn.store_to_cache(&cmd); cmd})
+        .map(|cmd| kn.translate(&cmd).unwrap_or(vec!["".to_string()]))
+        .unwrap().iter()
+        .map(|cmd| kn.execute(&cmd))
+        .fold(SimpleContext::new(), join_contexts)}
+}
+
 fn concat_sub_commands(cmds: Vec<PredicatAST>, kn: &impl Knowledgeable, aftercmd: Vec<String>) -> Vec<String> {
     cmds.iter().flat_map(|cmd| kn.get_commands_from(cmd))
     .chain(aftercmd.into_iter())
@@ -75,6 +85,13 @@ trait ExecutionStateTrait {
 }
 
 impl ExecutionStateTrait for ExecutionState { }
+
+fn execute_commands_and_get_after_commands_m(kn: &impl Knowledgeable, aftercmd: Vec<String>) -> impl Fn(Vec<PredicatAST>) -> ExecutionState + '_ {
+    move |cmds: Vec<PredicatAST>| {
+        Some((execute_subcommands(&cmds, kn),
+            concat_sub_commands(cmds, kn, aftercmd.clone())))
+    }
+}
 
 fn execute_commands_and_get_after_commands_m(kn: &impl Knowledgeable, aftercmd: Vec<String>) -> impl Fn(Vec<PredicatAST>) -> ExecutionState + '_ {
     move |cmds: Vec<PredicatAST>| {
@@ -105,6 +122,14 @@ fn after_execution(knowledge: &impl Knowledgeable) -> impl Fn((SimpleContext, Ve
     }
 }
 
+fn after_execution2(knowledge: &impl Knowledgeable) -> impl Fn(&String) -> () + '_ {
+    move |command| {
+        if !knowledge.in_cache(command) {
+             parse_and_execute(&command, knowledge, SimpleContext::new());
+        }
+    }
+}
+
 fn parse_and_execute(command: &str, knowledge: &impl Knowledgeable, context: SimpleContext) -> SimpleContext {
     let mut state = ExecutionState::default();
     let _ = parse_command(command).iter()
@@ -114,22 +139,16 @@ fn parse_and_execute(command: &str, knowledge: &impl Knowledgeable, context: Sim
 }
 
 fn parse_and_execute2(command: &str, knowledge: &impl Knowledgeable, context: SimpleContext) -> Option<SimpleContext> {
+    // TODO : vérifier la partie after cmd
     let state = ExecutionState::default();
     let (mut c, mut aftercmds) = state.unwrap();
-    let _ = parse_command(command).iter()
-        //.map(execute_command(knowledge, &mut state))
+    let cmds = parse_command(command).iter()
         .flat_map(|x| substitute_variables(x, &context))
-        .map(valid_commands_or_none(knowledge))
-        .map(execute_commands_and_get_after_commands_m(knowledge, aftercmds.to_vec()))?;
-        state.map(after_execution(knowledge))
-        .unwrap_or_default();
-        //let mut binding = (SimpleContext{ tab: vec![] }, vec![]);
-        //let (context, aftercmds) = state.as_mut().unwrap_or(&mut binding);
-        //*state = substitute_variables(ast, &context)
-        //.map(valid_commands_or_none(kn))?
-        //.map(execute_commands_and_get_after_commands_m(kn, aftercmds.to_vec()))?;
-        //state.clone()
-        todo!();
+        .flatten().collect();
+    valid_commands_or_none(knowledge)(cmds)?.iter()
+    .map(execute_subcommand(knowledge));
+    aftercmds.iter().for_each(after_execution2(knowledge));
+    Some(context)
 }
 
 fn main() {
