@@ -141,11 +141,11 @@ fn parse_and_execute(command: &str, knowledge: &impl Knowledgeable, context: Sim
 fn parse_and_execute2(command: &str, knowledge: &impl Knowledgeable, context: SimpleContext) -> Option<SimpleContext> {
     // TODO : vérifier la partie after cmd
     let state = ExecutionState::default();
-    let (mut c, mut aftercmds) = state.unwrap();
+    let (mut c, mut acmds) = state.unwrap();
     let cmds = parse_command(command).iter()
         .flat_map(|x| substitute_variables(x, &context))
         .flatten().collect();
-    valid_commands_or_none(knowledge)(cmds)?.iter()
+    let aftercmds = valid_commands_or_none(knowledge)(cmds)?.iter()
     .map(execute_subcommand(knowledge));
     aftercmds.iter().for_each(after_execution2(knowledge));
     Some(context)
