@@ -11,4 +11,5 @@ pub trait Context: Debug {
     fn is_empty(&self) -> bool;
     fn is_not_empty(&self) -> bool;
     fn join(&self, c2:Self::FellowContext) -> Self::FellowContext;
+    fn get_aftercmds(&self) -> Vec<String>;
 }

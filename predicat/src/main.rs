@@ -76,7 +76,7 @@ fn valid_commands_or_none(kn: &impl Knowledgeable) -> impl Fn(Vec<PredicatAST>) 
     }
 }
 
-type ExecutionState = Option<(SimpleContext, Vec<String>)>;
+type ExecutionState = Option<SimpleContext>;
 
 trait ExecutionStateTrait {
     fn default_value(context: SimpleContext) -> ExecutionState {
@@ -130,25 +130,23 @@ fn after_execution2(knowledge: &impl Knowledgeable) -> impl Fn(&String) -> () + 
     }
 }
 
-fn parse_and_execute(command: &str, knowledge: &impl Knowledgeable, context: SimpleContext) -> SimpleContext {
-    let mut state = ExecutionState::default();
-    let _ = parse_command(command).iter()
-        .map(execute_command(knowledge, &mut state));
-        state.map(after_execution(knowledge))
-        .unwrap_or_default()
-}
+//fn parse_and_execute_old(command: &str, knowledge: &impl Knowledgeable, context: SimpleContext) -> SimpleContext {
+    //let mut state = ExecutionState::default();
+    //let _ = parse_command(command).iter()
+        //.map(execute_command(knowledge, &mut state));
+        //state.map(after_execution(knowledge))
+        //.unwrap_or_default()
+//}
 
-fn parse_and_execute2(command: &str, knowledge: &impl Knowledgeable, context: SimpleContext) -> Option<SimpleContext> {
+fn parse_and_execute(command: &str, knowledge: &impl Knowledgeable, context: SimpleContext) -> Option<SimpleContext> {
     // TODO : vérifier la partie after cmd
-    let state = ExecutionState::default();
-    let (mut c, mut acmds) = state.unwrap();
     let cmds = parse_command(command).iter()
-        .flat_map(|x| substitute_variables(x, &context))
-        .flatten().collect();
-    let aftercmds = valid_commands_or_none(knowledge)(cmds)?.iter()
-    .map(execute_subcommand(knowledge));
-    aftercmds.iter().for_each(after_execution2(knowledge));
-    Some(context)
+            .flat_map(|x| substitute_variables(x, &context))
+            .flatten().collect();
+    let new_context = valid_commands_or_none(knowledge)(cmds)?.iter()
+        .map(execute_subcommand(knowledge));
+    new_context.get_aftercmd().for_each(after_execution2(knowledge));
+    Some(new_context)
 }
 
 fn main() {

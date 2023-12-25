@@ -4,13 +4,15 @@ use base_context::Context;
 
 #[derive(Eq, PartialEq, Debug, Clone, Default)]
 pub struct SimpleContext {
-    pub tab: Vec<(String, String)> 
+    pub tab: Vec<(String, String)>,
+    pub cmds: Vec<String>
 }
 
 impl SimpleContext {
     pub fn from(entry: &[(String, String)]) -> SimpleContext {
         SimpleContext{
-            tab: entry.to_vec()
+            tab: entry.to_vec(),
+            cmds: vec![]
         }
     }
 
@@ -49,7 +51,8 @@ impl Context for SimpleContext {
 
     fn new() -> SimpleContext {
         SimpleContext{
-            tab: vec![]
+            tab: vec![],
+            cmds: vec![]
         }
     }
 
@@ -90,7 +93,8 @@ impl Context for SimpleContext {
                     .map(|x| x.clone())
                     .collect::<Vec<_>>();
         SimpleContext {
-            tab: vec.clone()
+            tab: vec.clone(),
+            ..c2
         }
     }
     
@@ -100,6 +104,10 @@ impl Context for SimpleContext {
 
     fn is_not_empty(&self) -> bool {
        !self.is_empty() 
+    }
+
+    fn get_aftercmds(&self) -> Vec<String> {
+        self.cmds.clone()
     }
 }
 
