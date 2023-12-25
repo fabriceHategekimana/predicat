@@ -274,7 +274,8 @@ fn match_triplet((sub1, lin1, goa1): (&str, &str, &str), (sub2, lin2, goa2): (&s
         .flat_map(|(el1, el2)| match is_variable(el2) { true => Some((el2.to_string(), el1.to_string())), false => None })
         .collect::<Vec<_>>();
         SimpleContext {
-            tab: res
+            tab: res,
+            cmds: vec![]
         }
 }
 

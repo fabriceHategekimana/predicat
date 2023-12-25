@@ -109,6 +109,10 @@ impl Context for SimpleContext {
     fn get_aftercmds(&self) -> Vec<String> {
         self.cmds.clone()
     }
+
+    fn get_table(&self) -> Vec<(String, String)> {
+        self.tab.clone()
+    }
 }
 
 #[cfg(test)]

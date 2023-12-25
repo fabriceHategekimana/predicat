@@ -80,49 +80,43 @@ type ExecutionState = Option<SimpleContext>;
 
 trait ExecutionStateTrait {
     fn default_value(context: SimpleContext) -> ExecutionState {
-        Some((context, vec![]))
+        Some(context)
     }
 }
 
 impl ExecutionStateTrait for ExecutionState { }
 
-fn execute_commands_and_get_after_commands_m(kn: &impl Knowledgeable, aftercmd: Vec<String>) -> impl Fn(Vec<PredicatAST>) -> ExecutionState + '_ {
+fn execute_commands_and_get_after_commands_m(kn: &impl Knowledgeable, aftercmd: Vec<String>) -> impl Fn(Vec<PredicatAST>) -> SimpleContext + '_ {
     move |cmds: Vec<PredicatAST>| {
-        Some((execute_subcommands(&cmds, kn),
-            concat_sub_commands(cmds, kn, aftercmd.clone())))
+        SimpleContext{
+            tab: execute_subcommands(&cmds, kn).get_tab(),
+            cmds: concat_sub_commands(cmds, kn, aftercmd.clone())
+        }
     }
 }
 
-fn execute_commands_and_get_after_commands_m(kn: &impl Knowledgeable, aftercmd: Vec<String>) -> impl Fn(Vec<PredicatAST>) -> ExecutionState + '_ {
-    move |cmds: Vec<PredicatAST>| {
-        Some((execute_subcommands(&cmds, kn),
-            concat_sub_commands(cmds, kn, aftercmd.clone())))
-    }
-}
+//// TODO: bring up the substitution to one level
+//fn execute_command<'a>(kn: &'a impl Knowledgeable, state: &'a mut ExecutionState) -> impl FnMut(&PredicatAST) -> ExecutionState + 'a {
+    //move |ast: &PredicatAST| {
+        //let context = SimpleContext{ tab: vec![], cmds: vec![] };
+        //*state = substitute_variables(ast, &context)
+        //.map(valid_commands_or_none(kn));
+        ////.map(execute_commands_and_get_after_commands_m(kn, context.get_aftercmds()))?;
+        //state.clone()
+    //}
+//}
 
-// TODO: bring up the substitution to one level
-fn execute_command<'a>(kn: &'a impl Knowledgeable, state: &'a mut ExecutionState) -> impl FnMut(&PredicatAST) -> ExecutionState + 'a {
-    move |ast: &PredicatAST| {
-        let mut binding = (SimpleContext{ tab: vec![] }, vec![]);
-        let (context, aftercmds) = state.as_mut().unwrap_or(&mut binding);
-        *state = substitute_variables(ast, &context)
-        .map(valid_commands_or_none(kn))?
-        .map(execute_commands_and_get_after_commands_m(kn, aftercmds.to_vec()))?;
-        state.clone()
-    }
-}
+//fn after_execution(knowledge: &impl Knowledgeable) -> impl Fn((SimpleContext, Vec<String>)) -> SimpleContext + '_ {
+    //move |(context, cmds)| {
+        //let _ = cmds.iter()
+        //.filter(|cmd| !knowledge.in_cache(cmd))
+        //.map(|cmd| parse_and_execute(&cmd, knowledge, SimpleContext::new()))
+        //.fold(SimpleContext::new(), join_contexts);
+        //context
+    //}
+//}
 
-fn after_execution(knowledge: &impl Knowledgeable) -> impl Fn((SimpleContext, Vec<String>)) -> SimpleContext + '_ {
-    move |(context, cmds)| {
-        let _ = cmds.iter()
-        .filter(|cmd| !knowledge.in_cache(cmd))
-        .map(|cmd| parse_and_execute(&cmd, knowledge, SimpleContext::new()))
-        .fold(SimpleContext::new(), join_contexts);
-        context
-    }
-}
-
-fn after_execution2(knowledge: &impl Knowledgeable) -> impl Fn(&String) -> () + '_ {
+fn after_execution(knowledge: &impl Knowledgeable) -> impl Fn(&String) -> () + '_ {
     move |command| {
         if !knowledge.in_cache(command) {
              parse_and_execute(&command, knowledge, SimpleContext::new());
@@ -143,10 +137,11 @@ fn parse_and_execute(command: &str, knowledge: &impl Knowledgeable, context: Sim
     let cmds = parse_command(command).iter()
             .flat_map(|x| substitute_variables(x, &context))
             .flatten().collect();
-    let new_context = valid_commands_or_none(knowledge)(cmds)?.iter()
-        .map(execute_subcommand(knowledge));
-    new_context.get_aftercmd().for_each(after_execution2(knowledge));
-    Some(new_context)
+    let new_contexts = valid_commands_or_none(knowledge)(cmds)?.iter()
+        .map(execute_subcommand(knowledge))
+        .collect::<Vec<_>>();
+    new_contexts[0].get_aftercmds().iter().for_each(after_execution(knowledge));
+    Some(new_contexts[0].clone())
 }
 
 fn main() {
@@ -155,7 +150,7 @@ fn main() {
     let context = SimpleContext::new();
     knowledge.clear_cache();
     let res = parse_and_execute(&command, &knowledge, context);
-    res.display();
+    res.unwrap().display();
 }
 
 #[cfg(test)]
