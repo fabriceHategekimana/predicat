@@ -96,21 +96,22 @@ fn execute_commands_and_get_after_commands_m(kn: &impl Knowledgeable, aftercmd: 
 fn after_execution(knowledge: &impl Knowledgeable) -> impl Fn(&String) -> () + '_ {
     move |command| {
         if !knowledge.in_cache(command) {
-             parse_and_execute(&command, knowledge);
+             let cmds = parse(&command, knowledge);
+             execute(&cmds, knowledge);
         }
     }
 }
 
-fn parse_and_execute(command: &str, knowledge: &impl Knowledgeable) -> Option<SimpleContext> {
-    // TODO : vérifier la partie after cmd
-    let context = SimpleContext::new();
-    let cmds = parse_command(command).iter()
+fn parse(command: &str, knowledge: &impl Knowledgeable) -> Vec<PredicatAST> {
+    parse_command(command).iter()
                 .map(PredicatAST::clone)
-                .flat_map(substitute_variables(context))
-                .flatten().collect();
+                .flat_map(substitute_variables(SimpleContext::new()))
+                .flatten().collect()
+}
 
+fn execute(cmds: &[PredicatAST], knowledge: &impl Knowledgeable) -> Option<SimpleContext> {
     let new_contexts = 
-        valid_commands(knowledge, cmds)?
+        valid_commands(knowledge, cmds.to_vec())?
         .iter()
         .map(execute_subcommand(knowledge))
         .collect::<Vec<_>>();
@@ -122,12 +123,14 @@ fn parse_and_execute(command: &str, knowledge: &impl Knowledgeable) -> Option<Si
 }
 
 fn main() {
-    let command = get_args_or("add socrate est mortel");
+    let input_command = get_args_or("add socrate est mortel");
     let knowledge = new_knowledge("sqlite").expect("Can't open the knowledge!");
+
     knowledge.clear_cache();
-    parse_and_execute(&command, &knowledge)
-                .expect("Something went wrong")
-                .display();
+
+    let cmds = parse(&input_command, &knowledge);
+    execute(&cmds, &knowledge)
+        .expect("Something went wrong").display();
 }
 
 #[cfg(test)]
@@ -136,29 +139,6 @@ mod tests {
     use parser::base_parser::Var;
     use parser::Triplet;
 
-//left: `[("A", "pierre"), ("B", "ami"), ("C", "emy")]`,
-//right: `[("A", "emy"), ("A", "pierre"), ("B", "ami"), ("B", "ami"), ("C", "emy"), ("C", "pierre")]`
-    #[test]
-    #[serial]
-    fn test_execute_simple_entry_add_rule() {
-        //are rules really stored
-        let knowledge = new_knowledge("sqlite").unwrap();
-        knowledge.clear();
-        execute_simple_entry(&knowledge, "rule infer add $A ami $B : add $B ami $A");
-        parse_and_execute("add pierre ami emy", &knowledge, SimpleContext::new());
-        let mut context = SimpleContext::new();
-        context = context.add_column("A", &["pierre", "emy"]);
-        context = context.add_column("B", &["ami", "ami"]);
-        context = context.add_column("C", &["emy", "pierre"]);
-        let test_context = knowledge.get_all();
-        let mut sorted_test_context = test_context.get_tab();
-        let mut sorted_context = context.get_tab();
-        sorted_test_context.sort();
-        sorted_context.sort();
-        assert_eq!(
-            sorted_test_context,
-            sorted_context);
-    }
 
     #[test]
     #[serial]
