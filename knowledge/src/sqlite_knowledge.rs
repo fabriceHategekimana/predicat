@@ -11,6 +11,7 @@ use base_context::Context;
 
 use std::collections::HashMap;
 use super::Knowledgeable;
+use crate::base_knowledge::{Command, FactManager, Cache, RuleManager};
 
 use parser::soft_predicat;
 
@@ -100,62 +101,7 @@ fn extract_columns(sql_select_query: &str) -> Vec<&str> {
                    .collect()
 }
 
-
-impl Knowledgeable for SqliteKnowledge {
-    fn new() -> SqliteKnowledge {
-        let knowledge = SqliteKnowledge {
-            connection: sqlite::open("data.db").unwrap(),
-        };
-        let _ = knowledge.modify(CREATE_FACTS);
-        let _ = knowledge.modify(CREATE_RULES);
-        let _ = knowledge.modify(CREATE_CACHE);
-        knowledge
-    }
-
-    fn save_triplet(&self, modifier: &str, subject: &str, link: &str, goal: &str) {
-        let query = format!("INSERT INTO cache (command) VALUES ('{} {} {} {}')",
-            modifier, subject, link, goal);
-        let res = &self.connection.execute(query);
-    }
-
-    fn clear_cache(&self) {
-        let _ = self.connection.execute("DELETE FROM cache");
-    }
-
-    fn in_cache(&self, cmd: &str) -> bool {
-        let mut res: bool = false;
-        let query = format!("SELECT * FROM cache WHERE command = '{}'", cmd);
-        let _ = self.connection.iterate(query, |sqlite_couple| {
-            if sqlite_couple.iter().len() > 0 {
-                res = true;
-            }
-            true
-        });
-        res
-    }
-
-    fn store_to_cache(&self, modifier: &PredicatAST) {
-        match modifier {
-            PredicatAST::AddModifier(vec) => {
-                if let Triplet::Twww(subject, link, goal) = vec[0].clone() {
-                    self.save_triplet("add", &subject, &link, &goal);
-                }
-            },
-            PredicatAST::DeleteModifier(vec) => {
-                if let Triplet::Twww(subject, link, goal) = vec[0].clone() {
-                    self.save_triplet("delete", &subject, &link, &goal);
-                }
-            },
-            _ => ()
-        }
-    }
-
-    fn clear(&self) {
-        let _ = self.connection.execute("DELETE FROM facts");
-        let _ = self.connection.execute("DELETE FROM rules");
-        let _ = self.connection.execute("DELETE FROM cache");
-    }
-
+impl Command for SqliteKnowledge {
     fn get(&self, cmd: &str) -> SimpleContext {
         let query = cmd;
         let mut v: Vec<(String, String)> = vec![];
@@ -265,6 +211,62 @@ impl Knowledgeable for SqliteKnowledge {
         }
     }
 
+}
+
+
+impl FactManager for SqliteKnowledge {
+    fn save_facts(&self, modifier: &str, subject: &str, link: &str, goal: &str) {
+        let query = format!("INSERT INTO cache (command) VALUES ('{} {} {} {}')",
+            modifier, subject, link, goal);
+        let res = &self.connection.execute(query);
+    }
+
+    fn clear_facts(&self) {
+        let _ = self.connection.execute("DELETE FROM facts");
+    }
+
+}
+
+impl Cache for SqliteKnowledge {
+    fn clear_cache(&self) {
+        let _ = self.connection.execute("DELETE FROM cache");
+    }
+
+    fn in_cache(&self, cmd: &str) -> bool {
+        let mut res: bool = false;
+        let query = format!("SELECT * FROM cache WHERE command = '{}'", cmd);
+        let _ = self.connection.iterate(query, |sqlite_couple| {
+            if sqlite_couple.iter().len() > 0 {
+                res = true;
+            }
+            true
+        });
+        res
+    }
+
+    fn store_to_cache(&self, modifier: &PredicatAST) {
+        match modifier {
+            PredicatAST::AddModifier(vec) => {
+                if let Triplet::Twww(subject, link, goal) = vec[0].clone() {
+                    self.save_facts("add", &subject, &link, &goal);
+                }
+            },
+            PredicatAST::DeleteModifier(vec) => {
+                if let Triplet::Twww(subject, link, goal) = vec[0].clone() {
+                    self.save_facts("delete", &subject, &link, &goal);
+                }
+            },
+            _ => ()
+        }
+    }
+
+}
+
+impl RuleManager for SqliteKnowledge {
+    fn clear_rules(&self) {
+        let _ = self.connection.execute("DELETE FROM rules");
+    }
+
     fn store_rule(&self, s: &str) -> SimpleContext {
         let values = s.split("%|%").collect::<Vec<_>>();
         let cmd = format!("INSERT INTO rules (event, modifier, subject, link, goal, command, backed_command) VALUES (\'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\')",
@@ -286,6 +288,21 @@ impl Knowledgeable for SqliteKnowledge {
         });
         v
     }
+}
+
+
+impl Knowledgeable for SqliteKnowledge {
+    fn new() -> SqliteKnowledge {
+        let knowledge = SqliteKnowledge {
+            connection: sqlite::open("data.db").unwrap(),
+        };
+        let _ = knowledge.modify(CREATE_FACTS);
+        let _ = knowledge.modify(CREATE_RULES);
+        let _ = knowledge.modify(CREATE_CACHE);
+        knowledge
+    }
+
+
 
 }
 

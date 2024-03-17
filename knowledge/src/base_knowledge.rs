@@ -9,8 +9,23 @@ pub fn new_knowledge(kind: &str) -> Result<impl Knowledgeable, String> {
     }
 }
 
-pub trait Knowledgeable {
+pub trait Knowledgeable: Command + FactManager + RuleManager + Cache {
     fn new() -> SqliteKnowledge;
+
+    fn clear_all(&self) {
+        self.clear_facts();
+        self.clear_rules();
+        self.clear_cache();
+    }
+}
+
+pub trait Cache {
+    fn in_cache(&self, cmd: &str) -> bool;
+    fn store_to_cache(&self, modifier: &PredicatAST);
+    fn clear_cache(&self);
+}
+
+pub trait Command {
     fn get(&self, cmds: &str) -> SimpleContext;
     fn get_all(&self) -> SimpleContext; // get a table of the datas included
     fn modify(&self, cmds: &str) -> Result<SimpleContext, &str>;
@@ -19,11 +34,15 @@ pub trait Knowledgeable {
     fn is_invalid(&self, cmd: &PredicatAST) -> bool;
     fn get_commands_from(&self, cmds: &PredicatAST) -> Vec<String>;
     fn get_command_from_triplet(&self, modifier: &str, tri: &Triplet) -> Vec<String>;
-    fn store_to_cache(&self, modifier: &PredicatAST);
-    fn clear(&self);
-    fn save_triplet(&self, modifier: &str, subject: &str, link: &str, goal: &str);
-    fn in_cache(&self, cmd: &str) -> bool;
-    fn clear_cache(&self);
+}
+
+pub trait FactManager {
+    fn clear_facts(&self);
+    fn save_facts(&self, modifier: &str, subject: &str, link: &str, goal: &str);
+}
+
+pub trait RuleManager {
     fn store_rule(&self, s: &str) -> SimpleContext; 
     fn get_rules(&self) -> Vec<String>;
+    fn clear_rules(&self);
 }
