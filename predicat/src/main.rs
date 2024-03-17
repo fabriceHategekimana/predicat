@@ -1,4 +1,5 @@
 #![allow(dead_code, unused_variables, unused_imports, unreachable_code)]
+
 use parser;
 use importer;
 use knowledge;
@@ -12,8 +13,10 @@ use crate::knowledge::new_knowledge;
 use base_context::Context;
 use simple_context::SimpleContext;
 use crate::parser::base_parser::PredicatAST;
+use knowledge::Cache;
 
 use serial_test::serial;
+
 
 fn execute_simple_entry(knowledge: &impl Knowledgeable, cmd: &str) -> () {
     let _: Vec<_> = parse_command(cmd).iter()
@@ -70,9 +73,6 @@ fn concat_sub_commands(cmds: Vec<PredicatAST>, kn: &impl Knowledgeable, aftercmd
     .collect()
 }
 
-fn valid_commands(kn: &impl Knowledgeable, cmds: Vec<PredicatAST>) -> Option<Vec<PredicatAST>> {
-        cmds.iter().all(|x| !kn.is_invalid(x)).then_some(cmds)
-}
 
 type ExecutionState = Option<SimpleContext>;
 
@@ -111,7 +111,8 @@ fn parse(command: &str, knowledge: &impl Knowledgeable) -> Vec<PredicatAST> {
 
 fn execute(cmds: &[PredicatAST], knowledge: &impl Knowledgeable) -> Option<SimpleContext> {
     let new_contexts = 
-        valid_commands(knowledge, cmds.to_vec())?
+        knowledge
+        .valid_commands(cmds.to_vec())?
         .iter()
         .map(execute_subcommand(knowledge))
         .collect::<Vec<_>>();
@@ -144,7 +145,7 @@ mod tests {
     #[serial]
     fn test_get_command_from_triplet() {
        let knowledge = new_knowledge("sqlite").unwrap();
-       knowledge.clear();
+       knowledge.clear_cache_cache();
        execute_simple_entry(&knowledge, "rule infer add $A ami $B : add $B ami $A");
        let res = knowledge.get_command_from_triplet("add", &Triplet::Tvvv("pierre".to_string(), "ami".to_string(), "emy".to_string()));
         assert_eq!(res,
@@ -155,7 +156,7 @@ mod tests {
     #[serial]
     fn test_cache() {
        let knowledge = new_knowledge("sqlite").unwrap();
-       knowledge.clear();
+       knowledge.clear_cache_cache();
        execute_simple_entry(&knowledge, "add pierre ami emy");
        assert_eq!(
            knowledge.in_cache("add pierre ami emy"),
@@ -166,7 +167,7 @@ mod tests {
     #[serial]
     fn test_delete_command() {
        let knowledge = new_knowledge("sqlite").unwrap();
-       knowledge.clear();
+       knowledge.clear_cache_cache();
        execute_simple_entry(&knowledge, "add pierre ami emy");
        execute_simple_entry(&knowledge, "delete pierre ami emy");
        let res = knowledge.get_all();

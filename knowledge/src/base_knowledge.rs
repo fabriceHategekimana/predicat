@@ -34,6 +34,10 @@ pub trait Command {
     fn is_invalid(&self, cmd: &PredicatAST) -> bool;
     fn get_commands_from(&self, cmds: &PredicatAST) -> Vec<String>;
     fn get_command_from_triplet(&self, modifier: &str, tri: &Triplet) -> Vec<String>;
+
+    fn valid_commands(&self, cmds: Vec<PredicatAST>) -> Option<Vec<PredicatAST>> {
+            cmds.iter().all(|x| !self.is_invalid(x)).then_some(cmds)
+    }
 }
 
 pub trait FactManager {
