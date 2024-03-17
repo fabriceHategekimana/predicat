@@ -1,7 +1,4 @@
-#![allow(dead_code, unused_variables, unused_imports, unreachable_code)]
-
 use parser;
-use importer;
 use knowledge;
 use std::env;
 use metaprogramming::substitute_variables;
@@ -15,16 +12,6 @@ use simple_context::SimpleContext;
 use crate::parser::base_parser::PredicatAST;
 use knowledge::Cache;
 
-use serial_test::serial;
-
-
-fn execute_simple_entry(knowledge: &impl Knowledgeable, cmd: &str) -> () {
-    let _: Vec<_> = parse_command(cmd).iter()
-        .map(|cmd| {knowledge.store_to_cache(cmd); cmd})
-        .flat_map(|cmd| knowledge.translate(&cmd).unwrap_or(vec!["".to_string()]))
-        .map(|cmd| knowledge.execute(&cmd))
-        .collect();
-}
 
 fn get_user_passed_arguments() -> String {
     env::args().skip(1)
@@ -42,54 +29,18 @@ fn get_args_or(query: &str) -> String {
 }
 
 
-fn has_invalid_commands(cmds: &[PredicatAST], kn: &impl Knowledgeable) -> bool {
-    cmds.iter().any(|x| kn.is_invalid(x) == true)
-}
 
-fn execute_subcommands(cmds: &[PredicatAST], kn: &impl Knowledgeable) -> SimpleContext {
-    cmds.iter()
-        .map(|cmd| {kn.store_to_cache(cmd); cmd})
-        .flat_map(|cmd| kn.translate(cmd)).flatten()
-        .map(|cmd| kn.execute(&cmd))
-        .fold(SimpleContext::new(), SimpleContext::join_contexts)
-}
-
-fn concat_sub_commands(cmds: Vec<PredicatAST>, kn: &impl Knowledgeable, aftercmd: Vec<String>) -> Vec<String> {
-    cmds.iter().flat_map(|cmd| kn.get_commands_from(cmd))
-    .chain(aftercmd.into_iter())
-    .collect()
-}
-
-
-type ExecutionState = Option<SimpleContext>;
-
-trait ExecutionStateTrait {
-    fn default_value(context: SimpleContext) -> ExecutionState {
-        Some(context)
-    }
-}
-
-impl ExecutionStateTrait for ExecutionState { }
-
-fn execute_commands_and_get_after_commands_m(kn: &impl Knowledgeable, aftercmd: Vec<String>) -> impl Fn(Vec<PredicatAST>) -> SimpleContext + '_ {
-    move |cmds: Vec<PredicatAST>| {
-        SimpleContext{
-            tab: execute_subcommands(&cmds, kn).get_tab(),
-            cmds: concat_sub_commands(cmds, kn, aftercmd.clone())
-        }
-    }
-}
 
 fn after_execution(knowledge: &impl Knowledgeable) -> impl Fn(&String) -> () + '_ {
     move |command| {
         if !knowledge.in_cache(command) {
-             let cmds = parse(&command, knowledge);
+             let cmds = parse(&command);
              execute(&cmds, knowledge);
         }
     }
 }
 
-fn parse(command: &str, knowledge: &impl Knowledgeable) -> Vec<PredicatAST> {
+fn parse(command: &str) -> Vec<PredicatAST> {
     parse_command(command).iter()
                 .map(PredicatAST::clone)
                 .flat_map(substitute_variables(SimpleContext::new()))
@@ -115,51 +66,7 @@ fn main() {
 
     knowledge.clear_cache();
 
-    let cmds = parse(&input_command, &knowledge);
+    let cmds = parse(&input_command);
     execute(&cmds, &knowledge)
         .expect("Something went wrong").display();
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use parser::base_parser::Var;
-    use parser::Triplet;
-
-
-    #[test]
-    #[serial]
-    fn test_get_command_from_triplet() {
-       let knowledge = new_knowledge("sqlite").unwrap();
-       knowledge.clear_cache_cache();
-       execute_simple_entry(&knowledge, "rule infer add $A ami $B : add $B ami $A");
-       let res = knowledge.get_command_from_triplet("add", &Triplet::Tvvv("pierre".to_string(), "ami".to_string(), "emy".to_string()));
-        assert_eq!(res,
-                   vec!["add emy ami pierre".to_string()]);
-    }
-
-    #[test]
-    #[serial]
-    fn test_cache() {
-       let knowledge = new_knowledge("sqlite").unwrap();
-       knowledge.clear_cache_cache();
-       execute_simple_entry(&knowledge, "add pierre ami emy");
-       assert_eq!(
-           knowledge.in_cache("add pierre ami emy"),
-           true);
-    }
-
-    #[test]
-    #[serial]
-    fn test_delete_command() {
-       let knowledge = new_knowledge("sqlite").unwrap();
-       knowledge.clear_cache_cache();
-       execute_simple_entry(&knowledge, "add pierre ami emy");
-       execute_simple_entry(&knowledge, "delete pierre ami emy");
-       let res = knowledge.get_all();
-        assert_eq!(
-            res,
-            SimpleContext::new());
-    }
-
 }
