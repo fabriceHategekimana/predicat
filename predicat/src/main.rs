@@ -70,10 +70,8 @@ fn concat_sub_commands(cmds: Vec<PredicatAST>, kn: &impl Knowledgeable, aftercmd
     .collect()
 }
 
-fn valid_commands_or_none(kn: &impl Knowledgeable) -> impl Fn(Vec<PredicatAST>) -> Option<Vec<PredicatAST>> + '_ {
-    move |cmds: Vec<PredicatAST>|{ 
+fn valid_commands(kn: &impl Knowledgeable, cmds: Vec<PredicatAST>) -> Option<Vec<PredicatAST>> {
         cmds.iter().all(|x| !kn.is_invalid(x)).then_some(cmds)
-    }
 }
 
 type ExecutionState = Option<SimpleContext>;
@@ -95,62 +93,41 @@ fn execute_commands_and_get_after_commands_m(kn: &impl Knowledgeable, aftercmd: 
     }
 }
 
-//// TODO: bring up the substitution to one level
-//fn execute_command<'a>(kn: &'a impl Knowledgeable, state: &'a mut ExecutionState) -> impl FnMut(&PredicatAST) -> ExecutionState + 'a {
-    //move |ast: &PredicatAST| {
-        //let context = SimpleContext{ tab: vec![], cmds: vec![] };
-        //*state = substitute_variables(ast, &context)
-        //.map(valid_commands_or_none(kn));
-        ////.map(execute_commands_and_get_after_commands_m(kn, context.get_aftercmds()))?;
-        //state.clone()
-    //}
-//}
-
-//fn after_execution(knowledge: &impl Knowledgeable) -> impl Fn((SimpleContext, Vec<String>)) -> SimpleContext + '_ {
-    //move |(context, cmds)| {
-        //let _ = cmds.iter()
-        //.filter(|cmd| !knowledge.in_cache(cmd))
-        //.map(|cmd| parse_and_execute(&cmd, knowledge, SimpleContext::new()))
-        //.fold(SimpleContext::new(), join_contexts);
-        //context
-    //}
-//}
-
 fn after_execution(knowledge: &impl Knowledgeable) -> impl Fn(&String) -> () + '_ {
     move |command| {
         if !knowledge.in_cache(command) {
-             parse_and_execute(&command, knowledge, SimpleContext::new());
+             parse_and_execute(&command, knowledge);
         }
     }
 }
 
-//fn parse_and_execute_old(command: &str, knowledge: &impl Knowledgeable, context: SimpleContext) -> SimpleContext {
-    //let mut state = ExecutionState::default();
-    //let _ = parse_command(command).iter()
-        //.map(execute_command(knowledge, &mut state));
-        //state.map(after_execution(knowledge))
-        //.unwrap_or_default()
-//}
-
-fn parse_and_execute(command: &str, knowledge: &impl Knowledgeable, context: SimpleContext) -> Option<SimpleContext> {
+fn parse_and_execute(command: &str, knowledge: &impl Knowledgeable) -> Option<SimpleContext> {
     // TODO : vérifier la partie after cmd
+    let context = SimpleContext::new();
     let cmds = parse_command(command).iter()
-            .flat_map(|x| substitute_variables(x, &context))
-            .flatten().collect();
-    let new_contexts = valid_commands_or_none(knowledge)(cmds)?.iter()
+                .map(PredicatAST::clone)
+                .flat_map(substitute_variables(context))
+                .flatten().collect();
+
+    let new_contexts = 
+        valid_commands(knowledge, cmds)?
+        .iter()
         .map(execute_subcommand(knowledge))
         .collect::<Vec<_>>();
-    new_contexts[0].get_aftercmds().iter().for_each(after_execution(knowledge));
+
+    new_contexts[0].get_aftercmds().iter()
+                   .for_each(after_execution(knowledge));
+
     Some(new_contexts[0].clone())
 }
 
 fn main() {
     let command = get_args_or("add socrate est mortel");
-    let Ok(knowledge) = new_knowledge("sqlite") else {panic!("Can't open the knowledge!")};
-    let context = SimpleContext::new();
+    let knowledge = new_knowledge("sqlite").expect("Can't open the knowledge!");
     knowledge.clear_cache();
-    let res = parse_and_execute(&command, &knowledge, context);
-    res.unwrap().display();
+    parse_and_execute(&command, &knowledge)
+                .expect("Something went wrong")
+                .display();
 }
 
 #[cfg(test)]
@@ -159,26 +136,29 @@ mod tests {
     use parser::base_parser::Var;
     use parser::Triplet;
 
-    //#[test]
-    //#[serial]
-    //fn test_execute_simple_entry_add_rule() {
-        //let knowledge = new_knowledge("sqlite").unwrap();
-        //knowledge.clear();
-        //execute_simple_entry(&knowledge, "rule infer add $A ami $B : add $B ami $A");
-        //parse_and_execute("add pierre ami emy", &knowledge, SimpleContext::new());
-        //let mut context = SimpleContext::new();
-        //context = context.add_column("A", &["pierre", "emy"]);
-        //context = context.add_column("B", &["ami", "ami"]);
-        //context = context.add_column("C", &["emy", "pierre"]);
-        //let test_context = knowledge.get_all();
-        //let mut sorted_test_context = test_context.get_tab();
-        //let mut sorted_context = context.get_tab();
-        //sorted_test_context.sort();
-        //sorted_context.sort();
-        //assert_eq!(
-            //sorted_test_context,
-            //sorted_context);
-    //}
+//left: `[("A", "pierre"), ("B", "ami"), ("C", "emy")]`,
+//right: `[("A", "emy"), ("A", "pierre"), ("B", "ami"), ("B", "ami"), ("C", "emy"), ("C", "pierre")]`
+    #[test]
+    #[serial]
+    fn test_execute_simple_entry_add_rule() {
+        //are rules really stored
+        let knowledge = new_knowledge("sqlite").unwrap();
+        knowledge.clear();
+        execute_simple_entry(&knowledge, "rule infer add $A ami $B : add $B ami $A");
+        parse_and_execute("add pierre ami emy", &knowledge, SimpleContext::new());
+        let mut context = SimpleContext::new();
+        context = context.add_column("A", &["pierre", "emy"]);
+        context = context.add_column("B", &["ami", "ami"]);
+        context = context.add_column("C", &["emy", "pierre"]);
+        let test_context = knowledge.get_all();
+        let mut sorted_test_context = test_context.get_tab();
+        let mut sorted_context = context.get_tab();
+        sorted_test_context.sort();
+        sorted_context.sort();
+        assert_eq!(
+            sorted_test_context,
+            sorted_context);
+    }
 
     #[test]
     #[serial]
@@ -214,21 +194,5 @@ mod tests {
             res,
             SimpleContext::new());
     }
-
-    //#[test]
-    //#[serial]
-    //fn test_associative_rule() {
-        //let knowledge = new_knowledge("sqlite").unwrap();
-        //knowledge.clear();
-        //execute_simple_entry(&knowledge, "rule infer add $A ami $B and $B ami $C : add $A ami $C");
-        //execute_simple_entry(&knowledge, "add pierre ami emy");
-        //execute_simple_entry(&knowledge, "add emy ami julie");
-        //let res = knowledge.get_all();
-        //let mut context = SimpleContext::new();
-        //context = context.add_column("A", &["pierre", "emy", "pierre"]);
-        //context = context.add_column("B", &["ami", "ami", "ami"]);
-        //context = context.add_column("C", &["emy", "julie", "julie"]);
-        //assert_eq!(res, context);
-    //}
 
 }

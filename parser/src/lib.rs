@@ -7,7 +7,7 @@ pub mod base_parser;
 use regex::Regex;
 use itertools::Itertools;
 use base_parser::PredicatAST;
-use base_parser::Event;
+use base_parser::Action;
 use base_parser::CommandType;
 use base_parser::Command;
 
@@ -52,11 +52,11 @@ fn parse_query_and_modifier_bar(s: &str) -> IResult<&str, PredicatAST> {
     terminated(parse_query_and_modifier, parse_bar)(s)
 }
 
-fn parse_event(s: &str) -> IResult<&str, Event> {
+fn parse_action(s: &str) -> IResult<&str, Action> {
     let res = alt((tag("block "), (tag("infer "))))(s);
     match res {
-        Ok((s, "block ")) => Ok((s, Event::Block)),
-        Ok((s, "infer ")) => Ok((s, Event::Infer)),
+        Ok((s, "block ")) => Ok((s, Action::Block)),
+        Ok((s, "infer ")) => Ok((s, Action::Infer)),
         Err(r) => Err(r),
         _ => todo!()
     }
@@ -72,7 +72,7 @@ fn parse_trigger(s: &str) -> IResult<&str, (CommandType, Vec<Triplet>)> {
     }
 }
 
-fn parse_action(s: &str) -> IResult<&str, (String, Box<PredicatAST>)> {
+fn parse_cmd(s: &str) -> IResult<&str, (String, Box<PredicatAST>)> {
     let res = recognize(parse_query_and_modifier)(s);
     match res {
         Ok((s, st)) => Ok((s, (
@@ -83,13 +83,12 @@ fn parse_action(s: &str) -> IResult<&str, (String, Box<PredicatAST>)> {
 }
 
 fn parse_rule(s: &str) -> IResult<&str, PredicatAST> {
-    // rule [event] [trigger] : [action] 
     let res = tuple((
             tag("rule "),
-            parse_event,
+            parse_action,
             parse_trigger,
             tag(" : "),
-            parse_action
+            parse_cmd
           ))(s);
     match res {
         Ok((s, (r, e, (ty, tri), _, (st, ast)))) => Ok((s, PredicatAST::Rule(e, (ty, tri), (st, ast)))),
@@ -204,7 +203,7 @@ mod tests {
     fn test_parse_rule() {
         assert_eq!(
             parse_rule("rule block add $A ami $B : get $A $B where $A ami $B").unwrap().1,
-            PredicatAST::Rule(Event::Block, 
+            PredicatAST::Rule(Action::Block, 
                               (CommandType::Add, vec![Triplet::Tvwv("A".to_string(), "ami".to_string(), "B".to_string())]), ("get $A $B where $A ami $B".to_string(), Box::new(PredicatAST::Query((vec![Var("A".to_string()), Var("B".to_string())], vec![Triplet::Tvwv("A".to_string(), "ami".to_string(), "B".to_string())], vec![]))))),
                   );
     }

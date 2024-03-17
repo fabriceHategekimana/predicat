@@ -15,7 +15,7 @@ use simple_context::SimpleContext;
 pub use Triplet::*;
 
 #[derive(PartialEq, Debug, Clone, Copy)]
-pub enum Event {
+pub enum Action {
     Block,
     Infer
 }
@@ -51,8 +51,7 @@ pub enum PredicatAST {
          Vec<Comp>)),
     AddModifier(Vec<Triplet>),
     DeleteModifier(Vec<Triplet>),
-    // rule [event] [trigger] [action] 
-    Rule(Event, (CommandType, Vec<Triplet>), (String, Box<PredicatAST>)),
+    Rule(Action, (CommandType, Vec<Triplet>), (String, Box<PredicatAST>)),
     Empty,
     Debug(String)
 }

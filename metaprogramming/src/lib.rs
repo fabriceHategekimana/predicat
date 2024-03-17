@@ -175,17 +175,19 @@ where C : Fn(Vec<Triplet>) -> PredicatAST {
         .map(|x| constructor(x.clone())).collect()
 }
 
-pub fn substitute_variables(ast: &PredicatAST, context: &SimpleContext) -> Option<Vec<PredicatAST>> {
-    if context.len() == 0 {
-        Some(vec![ast.clone()])
-    } else {
-        let res = match ast {
-            PredicatAST::Query((vars, triplets, comps)) => substitute_query(vars, triplets, comps, context),
-            PredicatAST::AddModifier(tri) => substitute_triplet_to_predicat_ast(tri, PredicatAST::AddModifier, context),
-            PredicatAST::DeleteModifier(tri) => substitute_triplet_to_predicat_ast(tri, PredicatAST::DeleteModifier, context),
-            x => vec![x.clone()]
-        };
-        Some(res)
+pub fn substitute_variables(context: SimpleContext) -> impl Fn(PredicatAST) -> Option<Vec<PredicatAST>> {
+    move |ast: PredicatAST| -> Option<Vec<PredicatAST>> {
+        if context.len() == 0 {
+            Some(vec![ast.clone()])
+        } else {
+            let res = match ast {
+                PredicatAST::Query((vars, triplets, comps)) => substitute_query(&vars, &triplets, &comps, &context),
+                PredicatAST::AddModifier(tri) => substitute_triplet_to_predicat_ast(&tri, PredicatAST::AddModifier, &context),
+                PredicatAST::DeleteModifier(tri) => substitute_triplet_to_predicat_ast(&tri, PredicatAST::DeleteModifier, &context),
+                x => vec![x.clone()]
+            };
+            Some(res)
+        }
     }
 }
 

@@ -265,6 +265,27 @@ impl Knowledgeable for SqliteKnowledge {
         }
     }
 
+    fn store_rule(&self, s: &str) -> SimpleContext {
+        let values = s.split("%|%").collect::<Vec<_>>();
+        let cmd = format!("INSERT INTO rules (event, modifier, subject, link, goal, command, backed_command) VALUES (\'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\')",
+                    values[1], values[2], values[3], values[4], values[5], values[6], values[7]);
+        match self.connection.execute(cmd) {
+           Err(e) => {dbg!(e); SimpleContext::new()}
+           _ => SimpleContext::new(),
+        }
+    }
+
+    fn get_rules(&self) -> Vec<String> {
+        let query = "SELECT event, modifier, subject, link, goal, command, backed_command FROM rules;".to_string();
+        let mut v: Vec<String> = vec![];
+        let _ = self.connection.iterate(query, |sqlite_couple| {
+            for couple in sqlite_couple.iter() {
+                v.push(couple.1.unwrap_or("").to_string());
+            }
+            true
+        });
+        v
+    }
 
 }
 
@@ -339,16 +360,6 @@ impl SqliteKnowledge{
             true
         });
         v.clone()
-    }
-
-    fn store_rule(&self, s: &str) -> SimpleContext {
-        let values = s.split("%|%").collect::<Vec<_>>();
-        let cmd = format!("INSERT INTO rules (event, modifier, subject, link, goal, command, backed_command) VALUES (\'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\')",
-                    values[1], values[2], values[3], values[4], values[5], values[6], values[7]);
-        match self.connection.execute(cmd) {
-           Err(e) => {dbg!(e); SimpleContext::new()}
-           _ => SimpleContext::new(),
-        }
     }
 }
 

@@ -12,7 +12,7 @@ pub fn new_knowledge(kind: &str) -> Result<impl Knowledgeable, String> {
 pub trait Knowledgeable {
     fn new() -> SqliteKnowledge;
     fn get(&self, cmds: &str) -> SimpleContext;
-    fn get_all(&self) -> SimpleContext;
+    fn get_all(&self) -> SimpleContext; // get a table of the datas included
     fn modify(&self, cmds: &str) -> Result<SimpleContext, &str>;
     fn translate<'a>(&'a self, s: &PredicatAST) -> Result<Vec<String>, &str>;
     fn execute(&self, s: &str) -> SimpleContext;
@@ -24,4 +24,6 @@ pub trait Knowledgeable {
     fn save_triplet(&self, modifier: &str, subject: &str, link: &str, goal: &str);
     fn in_cache(&self, cmd: &str) -> bool;
     fn clear_cache(&self);
-} 
+    fn store_rule(&self, s: &str) -> SimpleContext; 
+    fn get_rules(&self) -> Vec<String>;
+}
