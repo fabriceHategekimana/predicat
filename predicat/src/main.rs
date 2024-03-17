@@ -41,9 +41,6 @@ fn get_args_or(query: &str) -> String {
     }
 }
 
-fn join_contexts(ctx1: SimpleContext, ctx2: SimpleContext) -> SimpleContext {
-    ctx1.join(ctx2)
-}
 
 fn has_invalid_commands(cmds: &[PredicatAST], kn: &impl Knowledgeable) -> bool {
     cmds.iter().any(|x| kn.is_invalid(x) == true)
@@ -54,17 +51,7 @@ fn execute_subcommands(cmds: &[PredicatAST], kn: &impl Knowledgeable) -> SimpleC
         .map(|cmd| {kn.store_to_cache(cmd); cmd})
         .flat_map(|cmd| kn.translate(cmd)).flatten()
         .map(|cmd| kn.execute(&cmd))
-        .fold(SimpleContext::new(), join_contexts)
-}
-
-fn execute_subcommand(kn: &impl Knowledgeable) -> impl FnMut(&PredicatAST) -> SimpleContext + '_ {
-    move |subcmd: &PredicatAST| {
-    Some(subcmd)
-        .map(|cmd| {kn.store_to_cache(&cmd); cmd})
-        .map(|cmd| kn.translate(&cmd).unwrap_or(vec!["".to_string()]))
-        .unwrap().iter()
-        .map(|cmd| kn.execute(&cmd))
-        .fold(SimpleContext::new(), join_contexts)}
+        .fold(SimpleContext::new(), SimpleContext::join_contexts)
 }
 
 fn concat_sub_commands(cmds: Vec<PredicatAST>, kn: &impl Knowledgeable, aftercmd: Vec<String>) -> Vec<String> {
@@ -110,17 +97,16 @@ fn parse(command: &str, knowledge: &impl Knowledgeable) -> Vec<PredicatAST> {
 }
 
 fn execute(cmds: &[PredicatAST], knowledge: &impl Knowledgeable) -> Option<SimpleContext> {
-    let new_contexts = 
-        knowledge
-        .valid_commands(cmds.to_vec())?
-        .iter()
-        .map(execute_subcommand(knowledge))
-        .collect::<Vec<_>>();
+    let context = knowledge
+            .valid_commands(cmds.to_vec())?
+            .iter()
+            .map(|x| knowledge.execute_subcommand(x))
+            .reduce(SimpleContext::join_contexts)?;
 
-    new_contexts[0].get_aftercmds().iter()
+    context.get_aftercmds().iter()
                    .for_each(after_execution(knowledge));
 
-    Some(new_contexts[0].clone())
+    Some(context.clone())
 }
 
 fn main() {

@@ -1,6 +1,7 @@
 use super::sqlite_knowledge::SqliteKnowledge;
 use parser::base_parser::{PredicatAST, Triplet};
 use simple_context::SimpleContext;
+use base_context::Context;
 
 pub fn new_knowledge(kind: &str) -> Result<impl Knowledgeable, String> {
     match kind {
@@ -25,7 +26,7 @@ pub trait Cache {
     fn clear_cache(&self);
 }
 
-pub trait Command {
+pub trait Command: Cache {
     fn get(&self, cmds: &str) -> SimpleContext;
     fn get_all(&self) -> SimpleContext; // get a table of the datas included
     fn modify(&self, cmds: &str) -> Result<SimpleContext, &str>;
@@ -37,6 +38,15 @@ pub trait Command {
 
     fn valid_commands(&self, cmds: Vec<PredicatAST>) -> Option<Vec<PredicatAST>> {
             cmds.iter().all(|x| !self.is_invalid(x)).then_some(cmds)
+    }
+
+    fn execute_subcommand(&self, subcmd: &PredicatAST) -> SimpleContext {
+        Some(subcmd)
+            .map(|cmd| {self.store_to_cache(&cmd); cmd})
+            .map(|cmd| self.translate(&cmd).unwrap_or(vec!["".to_string()]))
+            .unwrap().iter()
+            .map(|cmd| self.execute(&cmd))
+            .fold(SimpleContext::new(), SimpleContext::join_contexts)
     }
 }
 

@@ -9,6 +9,10 @@ pub struct SimpleContext {
 }
 
 impl SimpleContext {
+    pub fn join_contexts(ctx1: SimpleContext, ctx2: SimpleContext) -> SimpleContext {
+        ctx1.join(ctx2)
+    }
+
     pub fn from(entry: &[(String, String)]) -> SimpleContext {
         SimpleContext{
             tab: entry.to_vec(),
