@@ -28,9 +28,6 @@ fn get_args_or(query: &str) -> String {
     }
 }
 
-
-
-
 fn after_execution(knowledge: &impl Knowledgeable) -> impl Fn(&String) -> () + '_ {
     move |command| {
         if !knowledge.in_cache(command) {
@@ -51,7 +48,7 @@ fn execute(cmds: &[PredicatAST], knowledge: &impl Knowledgeable) -> Option<Simpl
     let context = knowledge
             .valid_commands(cmds.to_vec())?
             .iter()
-            .map(|x| knowledge.execute_subcommand(x))
+            .map(|x| knowledge.execute_command(x))
             .reduce(SimpleContext::join_contexts)?;
 
     context.get_aftercmds().iter()

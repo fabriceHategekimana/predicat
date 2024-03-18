@@ -22,7 +22,7 @@ pub trait Knowledgeable: Command + FactManager + RuleManager + Cache {
 
 pub trait Cache {
     fn in_cache(&self, cmd: &str) -> bool;
-    fn store_to_cache(&self, modifier: &PredicatAST);
+    fn store_to_cache(&self, modifier: &PredicatAST) -> PredicatAST;
     fn clear_cache(&self);
 }
 
@@ -40,13 +40,14 @@ pub trait Command: Cache {
             cmds.iter().all(|x| !self.is_invalid(x)).then_some(cmds)
     }
 
-    fn execute_subcommand(&self, subcmd: &PredicatAST) -> SimpleContext {
+    fn execute_command(&self, subcmd: &PredicatAST) -> SimpleContext {
         Some(subcmd)
-            .map(|cmd| {self.store_to_cache(&cmd); cmd})
-            .map(|cmd| self.translate(&cmd).unwrap_or(vec!["".to_string()]))
+            .map(|cmd| self.store_to_cache(&cmd))
+            .map(|cmd| self.translate(&cmd).expect("The translation gone wrong"))
             .unwrap().iter()
             .map(|cmd| self.execute(&cmd))
-            .fold(SimpleContext::new(), SimpleContext::join_contexts)
+            .reduce(SimpleContext::join_contexts)
+            .expect("The contexts don't have the right contents")
     }
 }
 

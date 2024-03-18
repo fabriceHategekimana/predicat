@@ -244,7 +244,7 @@ impl Cache for SqliteKnowledge {
         res
     }
 
-    fn store_to_cache(&self, modifier: &PredicatAST) {
+    fn store_to_cache(&self, modifier: &PredicatAST) -> PredicatAST {
         match modifier {
             PredicatAST::AddModifier(vec) => {
                 if let Triplet::Twww(subject, link, goal) = vec[0].clone() {
@@ -258,6 +258,7 @@ impl Cache for SqliteKnowledge {
             },
             _ => ()
         }
+        modifier.clone()
     }
 
 }
