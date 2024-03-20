@@ -1,17 +1,22 @@
 use parser;
-use knowledge;
 use std::env;
-use metaprogramming::substitute_variables;
-
-use crate::parser::parse_command;
-
-use crate::knowledge::Knowledgeable;
-use crate::knowledge::new_knowledge;
+use knowledge;
+use knowledge::Cache;
 use base_context::Context;
 use simple_context::SimpleContext;
+use crate::knowledge::Knowledgeable;
+use crate::knowledge::new_knowledge;
+use metaprogramming::substitute_variables;
 use crate::parser::base_parser::PredicatAST;
-use knowledge::Cache;
+use crate::parser::parse_command;
 
+
+fn parse(command: &String) -> Vec<PredicatAST> {
+    parse_command(command).iter()
+                .map(PredicatAST::clone)
+                .flat_map(substitute_variables(SimpleContext::new()))
+                .flatten().collect()
+}
 
 fn get_user_passed_arguments() -> String {
     env::args().skip(1)
@@ -28,22 +33,6 @@ fn get_args_or(query: &str) -> String {
     }
 }
 
-fn after_execution(knowledge: &impl Knowledgeable) -> impl Fn(&String) -> () + '_ {
-    move |command| {
-        if !knowledge.in_cache(command) {
-             let cmds = parse(&command);
-             execute(&cmds, knowledge);
-        }
-    }
-}
-
-fn parse(command: &str) -> Vec<PredicatAST> {
-    parse_command(command).iter()
-                .map(PredicatAST::clone)
-                .flat_map(substitute_variables(SimpleContext::new()))
-                .flatten().collect()
-}
-
 fn execute(cmds: &[PredicatAST], knowledge: &impl Knowledgeable) -> Option<SimpleContext> {
     let context = knowledge
             .valid_commands(cmds.to_vec())?
@@ -51,10 +40,18 @@ fn execute(cmds: &[PredicatAST], knowledge: &impl Knowledgeable) -> Option<Simpl
             .map(|x| knowledge.execute_command(x))
             .reduce(SimpleContext::join_contexts)?;
 
-    context.get_aftercmds().iter()
-                   .for_each(after_execution(knowledge));
+    //context.get_aftercmds().iter()
+                   //.for_each(after_execution(knowledge));
 
     Some(context.clone())
+}
+
+fn interpret(cmds: &[String], knowledge: &impl Knowledgeable) -> SimpleContext {
+    let cmds = cmds.iter()
+                .flat_map(parse)
+                .collect::<Vec<PredicatAST>>();
+    execute(&cmds, knowledge)
+                .expect("Something went wrong")
 }
 
 fn main() {
@@ -63,7 +60,12 @@ fn main() {
 
     knowledge.clear_cache();
 
-    let cmds = parse(&input_command);
-    execute(&cmds, &knowledge)
-        .expect("Something went wrong").display();
+    let round = 1;
+    let context = interpret(&vec![input_command], &knowledge);
+
+    while context.has_commands() && !context.has_error() {
+        let context = interpret(&context.get_aftercmds(), &knowledge);
+        let round = round + 1;
+    }
+    context.display(); //display context or error
 }

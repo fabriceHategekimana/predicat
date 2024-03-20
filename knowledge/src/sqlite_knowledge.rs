@@ -6,8 +6,11 @@ use sqlite::{
         Statement,
 };
 
+//use crate::parser::parse_command;
 use simple_context::SimpleContext;
 use base_context::Context;
+
+use metaprogramming::substitute_variables;
 
 use std::collections::HashMap;
 use super::Knowledgeable;
@@ -17,6 +20,8 @@ use parser::soft_predicat;
 
 use parser::base_parser::PredicatAST;
 use parser::base_parser::PredicatAST::{Query, AddModifier, DeleteModifier, Empty, Rule};
+
+use parser::parse_command;
 
 use parser::base_parser::Var;
 use parser::base_parser::Language;
@@ -101,6 +106,8 @@ fn extract_columns(sql_select_query: &str) -> Vec<&str> {
                    .collect()
 }
 
+
+
 impl Command for SqliteKnowledge {
     fn get(&self, cmd: &str) -> SimpleContext {
         let query = cmd;
@@ -112,7 +119,7 @@ impl Command for SqliteKnowledge {
             }
             true
         });
-        SimpleContext::from(&v)
+        SimpleContext::from(v)
     }
 
     fn get_all(&self) -> SimpleContext {
@@ -138,7 +145,7 @@ impl Command for SqliteKnowledge {
                 Ok(vec![commands.iter()
                             .map(|x| triplet_to_delete(x))
                             .fold("".to_string(), string_concat)]),
-                Rule(a, (b, c), (cmd, ast)) => {
+            Rule(a, (b, c), (cmd, ast)) => {
                     let scmd = match &cmd[0..3] { 
                         "get" => self.translate(ast).unwrap().iter().map(|x| x.replace("'", "%single_quote%")).collect(),
                         _ => cmd.clone()};
@@ -180,6 +187,7 @@ impl Command for SqliteKnowledge {
             _ => false
         }
     }
+
 
     fn get_command_from_triplet(&self, modifier: &str, tri: &Triplet) -> Vec<String> {
         let (sub, lin, goa) = tri.to_tuple();
@@ -312,10 +320,7 @@ fn match_triplet((sub1, lin1, goa1): (&str, &str, &str), (sub2, lin2, goa2): (&s
         .iter()
         .flat_map(|(el1, el2)| match is_variable(el2) { true => Some((el2.to_string(), el1.to_string())), false => None })
         .collect::<Vec<_>>();
-        SimpleContext {
-            tab: res,
-            cmds: vec![]
-        }
+         SimpleContext::from(res)
 }
 
 fn substitute_variable(var: &str, val:&str, cmd: &str) -> String {

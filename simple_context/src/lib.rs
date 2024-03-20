@@ -2,10 +2,14 @@ use cli_table::{Style, Table};
 use itertools::Itertools;
 use base_context::Context;
 
+type ColumnName = String;
+type Value = String;
+
 #[derive(Eq, PartialEq, Debug, Clone, Default)]
 pub struct SimpleContext {
-    pub tab: Vec<(String, String)>, // (column_name, value)
-    pub cmds: Vec<String>
+    pub tab: Vec<(ColumnName, Value)>, 
+    pub cmds: Vec<String>,
+    pub log: Vec<String>
 }
 
 impl SimpleContext {
@@ -13,14 +17,17 @@ impl SimpleContext {
         ctx1.join(ctx2)
     }
 
-    pub fn from(entry: &[(String, String)]) -> SimpleContext {
-        SimpleContext{
-            tab: entry.to_vec(),
-            cmds: vec![]
-        }
+    pub fn has_commands(&self) -> bool {
+        self.cmds != vec![] as Vec<String>
     }
 
+    pub fn has_error(&self) -> bool {
+        self.log == vec![] as Vec<String>
+    }
+
+
 pub fn display(&self) {
+    // TODO : display error if any and call revert back in the back
     match self.len() {
         x if x > 0 => {
         let variables = self.get_variables();
@@ -48,6 +55,16 @@ fn get_line(num: usize, body: &[Vec<String>]) -> Vec<String> {
     body.iter().map(|x| x[num].clone()).collect()
 }
 
+impl From<Vec<(String, String)>> for SimpleContext {
+    fn from(t: Vec<(String, String)>) -> Self {
+        SimpleContext { 
+            tab: t,
+            cmds: vec![],
+            log: vec![] 
+        }
+    }
+}
+
 
 impl Context for SimpleContext {
 
@@ -56,7 +73,8 @@ impl Context for SimpleContext {
     fn new() -> SimpleContext {
         SimpleContext{
             tab: vec![],
-            cmds: vec![]
+            cmds: vec![],
+            log: vec![]
         }
     }
 
@@ -76,7 +94,7 @@ impl Context for SimpleContext {
                           .map(|x| (name.to_string(), x.to_string()))
                           .collect::<Vec<(String, String)>>();
         let new_tab = self.tab.iter().chain(tab.iter()).map(|x| x.clone()).collect::<Vec<_>>();
-        SimpleContext::from(&new_tab)
+        SimpleContext::from(new_tab)
     }
 
     fn is_in_context(&self, key: String) -> bool {
