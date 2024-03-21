@@ -40,9 +40,6 @@ fn execute(cmds: &[PredicatAST], knowledge: &impl Knowledgeable) -> Option<Simpl
             .map(|x| knowledge.execute_command(x))
             .reduce(SimpleContext::join_contexts)?;
 
-    //context.get_aftercmds().iter()
-                   //.for_each(after_execution(knowledge));
-
     Some(context.clone())
 }
 
@@ -60,12 +57,11 @@ fn main() {
 
     knowledge.clear_cache();
 
-    let round = 1;
-    let context = interpret(&vec![input_command], &knowledge);
+    let mut context = interpret(&vec![input_command], &knowledge);
 
     while context.has_commands() && !context.has_error() {
-        let context = interpret(&context.get_aftercmds(), &knowledge);
-        let round = round + 1;
+        context = interpret(&context.get_aftercmds(), &knowledge);
     }
+
     context.display(); //display context or error
 }
