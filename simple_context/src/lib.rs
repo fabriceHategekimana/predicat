@@ -56,12 +56,20 @@ fn get_line(num: usize, body: &[Vec<String>]) -> Vec<String> {
 }
 
 impl From<Vec<(String, String)>> for SimpleContext {
-    fn from(t: Vec<(String, String)>) -> Self {
-        SimpleContext { 
-            tab: t,
-            cmds: vec![],
-            log: vec![] 
-        }
+    fn from(v: Vec<(String, String)>) -> SimpleContext {
+        SimpleContext { tab: v, cmds: vec![], log: vec![] }
+    }
+}
+
+
+impl From<Vec<[&str; 3]>> for SimpleContext {
+    fn from(v: Vec<[&str; 3]>) -> SimpleContext {
+       v.iter()
+        .flat_map(|x| [("subject".to_string(), x[0].to_string()),
+                        ("link".to_string(), x[1].to_string()),
+                        ("goal".to_string(), x[2].to_string())])
+        .collect::<Vec<(String, String)>>()
+        .into()
     }
 }
 

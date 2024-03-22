@@ -28,19 +28,18 @@ impl Interpreter {
         }
     }
 
-    fn run(&mut self) -> () {
-        let input_command = self.get_args_or("add socrate est mortel");
-
-        self.knowledge.clear_cache();
-
-        let mut context = self.interpret(&vec![input_command], &self.knowledge);
+    fn run(&mut self, cmd: &str) -> SimpleContext {
+        //let cmd = self.get_args_or("add socrate est mortel");
+        
+        let mut context = self.interpret(&vec![cmd.to_string()], &self.knowledge);
 
         while context.has_commands() && !context.has_error() {
             context = self.interpret(&context.get_aftercmds(), &self.knowledge);
         }
 
         context.display(); //display context or error
-        self.context = context;
+        self.context = context.clone();
+        context
     }
 
     fn parse(command: &String) -> Vec<PredicatAST> {
@@ -82,6 +81,10 @@ impl Interpreter {
         self.execute(&cmds, knowledge)
                     .expect("Something went wrong")
     }
+
+    fn clear(&self) -> () {
+        self.knowledge.clear_all();
+    }
 }
 
 impl Default for Interpreter {
@@ -96,4 +99,20 @@ impl Default for Interpreter {
 fn main() {
         //let knowledge = new_knowledge("sqlite").expect("Can't open the knowledge!");
     let interpreter = Interpreter::default();
+    //interpreter.run();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_add(){
+       let mut interpreter = Interpreter::default();
+       interpreter.clear();
+       interpreter.run("add Julien ami Julie");
+       assert_eq!(
+           SimpleContext::from(vec![["Julien", "ami", "Julie"]]),
+           interpreter.run("get Julien ami Julie"));
+    }
 }
