@@ -26,11 +26,12 @@ pub trait Cache {
 }
 
 pub trait Command: Cache {
-    fn get(&self, cmds: &str) -> SimpleContext;
+    type Language;
+    fn get(&self, cmds: &Self::Language) -> SimpleContext;
     fn get_all(&self) -> SimpleContext; // get a table of the datas included
-    fn modify(&self, cmds: &str) -> Result<SimpleContext, &str>;
-    fn translate<'a>(&'a self, s: &PredicatAST) -> Result<Vec<String>, &str>;
-    fn execute(&self, s: &str) -> SimpleContext;
+    fn modify(&self, cmds: &Self::Language) -> Result<SimpleContext, &str>;
+    fn translate<'a>(&'a self, s: &PredicatAST) -> Result<Vec<Self::Language>, &str>;
+    fn execute(&self, s: &Self::Language) -> SimpleContext;
     fn is_invalid(&self, cmd: &PredicatAST) -> bool;
     fn get_commands_from(&self, cmds: &PredicatAST) -> Vec<String>;
     fn get_command_from_triplet(&self, modifier: &str, tri: &Triplet) -> Vec<String>;
@@ -44,7 +45,7 @@ pub trait Command: Cache {
             .map(|cmd| self.store_to_cache(&cmd))
             .map(|cmd| self.translate(&cmd).expect("The translation gone wrong"))
             .unwrap().iter()
-            .map(|cmd| self.execute(&cmd))
+            .map(|cmd| self.execute(cmd))
             .reduce(SimpleContext::join_contexts)
             .expect("The contexts don't have the right contents")
     }

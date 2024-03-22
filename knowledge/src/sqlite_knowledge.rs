@@ -9,20 +9,14 @@ use sqlite::{
 //use crate::parser::parse_command;
 use simple_context::SimpleContext;
 use base_context::Context;
-
 use metaprogramming::substitute_variables;
-
 use std::collections::HashMap;
 use super::Knowledgeable;
 use crate::base_knowledge::{Command, FactManager, Cache, RuleManager};
-
 use parser::soft_predicat;
-
 use parser::base_parser::PredicatAST;
-use parser::base_parser::PredicatAST::{Query, AddModifier, DeleteModifier, Empty, Rule};
-
+use parser::base_parser::PredicatAST::{Query, AddModifier, DeleteModifier, Empty, Infer};
 use parser::parse_command;
-
 use parser::base_parser::Var;
 use parser::base_parser::Language;
 use parser::base_parser::Language::Word;
@@ -32,6 +26,20 @@ use parser::base_parser::Triplet::*;
 use parser::base_parser::Triplet;
 use itertools::izip;
 use serial_test::serial;
+
+pub struct Sql(String);
+
+impl Into<Sql> for &str {
+    fn into(self) -> Sql {
+        Sql(self.to_string())
+    }
+}
+
+impl Into<Sql> for String {
+    fn into(self) -> Sql {
+        Sql(self)
+    }
+}
 
 static SUBJECT: &str = ":subject";
 static LINK: &str = ":link";
@@ -47,7 +55,6 @@ static CREATE_FACTS : &str = "CREATE TABLE IF NOT EXISTS facts(
 static CREATE_RULES : &str = "CREATE TABLE IF NOT EXISTS rules(
                     'id' INTEGER PRIMARY KEY AUTOINCREMENT,
                     'name' TEXT,
-                    'event' TEXT, 
                     'modifier' TEXT, 
                     'subject' TEXT, 
                     'link' TEXT, 
@@ -109,8 +116,10 @@ fn extract_columns(sql_select_query: &str) -> Vec<&str> {
 
 
 impl Command for SqliteKnowledge {
-    fn get(&self, cmd: &str) -> SimpleContext {
-        let query = cmd;
+    type Language = Sql;
+
+    fn get(&self, cmd: &Sql) -> SimpleContext {
+        let query = &cmd.0;
         let mut v: Vec<(String, String)> = vec![];
         let _ = self.connection.iterate(query, |sqlite_couple| {
             for couple in sqlite_couple.iter() {
@@ -123,36 +132,38 @@ impl Command for SqliteKnowledge {
     }
 
     fn get_all(&self) -> SimpleContext {
-        self.get("SELECT A,B,C from (SELECT subject as A, link as B, goal as C FROM facts)")
+        self.get(&"SELECT A,B,C from (SELECT subject as A, link as B, goal as C FROM facts)".into())
     }
 
-    fn modify(&self, cmd: &str) -> Result<SimpleContext, &str> {
-        match self.connection.execute(cmd) {
+    fn modify(&self, cmd: &Sql) -> Result<SimpleContext, &str> {
+        match self.connection.execute(cmd.0.clone()) {
             Ok(r) => Ok(SimpleContext::new()),
             Err(r) => {println!("r: {:?}", r); Err("An error occured with the sqlite database")}
         }
     }
 
 
-    fn translate<'a>(&'a self, ast: &PredicatAST) -> Result<Vec<String>, &str> {
+    fn translate<'a>(&'a self, ast: &PredicatAST) -> Result<Vec<Sql>, &str> {
         match ast {
-            Query((get, link, filter)) => Ok(vec![query_to_sql(get, link, filter)]),
+            Query((get, link, filter)) => Ok(vec![query_to_sql(get, link, filter).into()]),
             AddModifier(commands) => 
                 Ok(vec![commands.iter()
                             .map(|x| triplet_to_insert(x))
-                            .fold("".to_string(), string_concat)]),
+                            .fold("".to_string(), string_concat)
+                            .into()]),
             DeleteModifier(commands) => 
                 Ok(vec![commands.iter()
                             .map(|x| triplet_to_delete(x))
-                            .fold("".to_string(), string_concat)]),
-            Rule(a, (b, c), (cmd, ast)) => {
+                            .fold("".to_string(), string_concat)
+                            .into()]),
+            Infer((b, c), (cmd, ast)) => {
                     let scmd = match &cmd[0..3] { 
-                        "get" => self.translate(ast).unwrap().iter().map(|x| x.replace("'", "%single_quote%")).collect(),
+                        "get" => self.translate(ast).unwrap().iter().map(|x| x.0.replace("'", "%single_quote%")).collect(),
                         _ => cmd.clone()};
                     let res = c.iter().map(|x| x.to_tuple_with_variable())
                         .map(|(t1, t2, t3)| {
-                            format!("%rule%%|%{:?}%|%{}%|%{}%|%{}%|%{}%|%{}%|%{}",
-                                       a, b.get_string(), t1, t2, t3, cmd, scmd)
+                            format!("%rule%%|%{}%|%{}%|%{}%|%{}%|%{}%|%{}",
+                                       b.get_string(), t1, t2, t3, cmd, scmd).into()
                         }).collect::<Vec<_>>();
                         Ok(res)
                             },
@@ -160,10 +171,10 @@ impl Command for SqliteKnowledge {
         }
     }
 
-    fn execute(&self, s: &str) -> SimpleContext {
-        let res = match &s[0..6]  {
+    fn execute(&self, s: &Sql) -> SimpleContext {
+        let res = match &s.0[0..6]  {
             "SELECT" => self.get(s),
-            "%rule%" => self.store_rule(s),
+            "%rule%" => self.store_rule(&s.0),
             _ => self.modify(s).unwrap()
         }.clone();
         res
@@ -171,16 +182,16 @@ impl Command for SqliteKnowledge {
 
     fn is_invalid(&self, cmd: &PredicatAST) -> bool {
         match cmd {
-            PredicatAST::Rule(a, (mo, tri), cmd) => {
+            PredicatAST::Infer((mo, tri), cmd) => {
                 tri.iter().map(|x| x.to_tuple_with_variable())
                     .map(|(t1, t2, t3)| {
                         let select = format!("SELECT * FROM Rules where modifier = {:?} subject = {:?} or link = {:?} or goal = {:?}",
                         mo, t1, t2, t3);
-                    match self.get(&select).get_values("backed_command") {
+                    match self.get(&select.into()).get_values("backed_command") {
                         None => false,
                         Some(v) => v.iter()
                             .map(|x| x.replace("%singlequote%", "'"))
-                            .any(|cmd| self.get(&cmd).is_not_empty())
+                            .any(|cmd| self.get(&cmd.into()).is_not_empty())
                         }
                     }).any(|x| x)
             },
@@ -192,7 +203,7 @@ impl Command for SqliteKnowledge {
     fn get_command_from_triplet(&self, modifier: &str, tri: &Triplet) -> Vec<String> {
         let (sub, lin, goa) = tri.to_tuple();
         let select = format!("SELECT * FROM rules where modifier='{}' AND event='Infer' AND (subject='{}' OR link='{}' OR goal='{}')", modifier, sub, lin, goa);
-        let rules = self.get(&select);
+        let rules = self.get(&select.into());
         let context = izip!(
                 rules.get_values("modifier").unwrap_or(vec![]),
                 rules.get_values("subject").unwrap_or(vec![]),
@@ -278,8 +289,8 @@ impl RuleManager for SqliteKnowledge {
 
     fn store_rule(&self, s: &str) -> SimpleContext {
         let values = s.split("%|%").collect::<Vec<_>>();
-        let cmd = format!("INSERT INTO rules (event, modifier, subject, link, goal, command, backed_command) VALUES (\'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\')",
-                    values[1], values[2], values[3], values[4], values[5], values[6], values[7]);
+        let cmd = format!("INSERT INTO rules (modifier, subject, link, goal, command, backed_command) VALUES (\'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\')",
+                    values[1], values[2], values[3], values[4], values[5], values[6]);
         match self.connection.execute(cmd) {
            Err(e) => {dbg!(e); SimpleContext::new()}
            _ => SimpleContext::new(),
@@ -305,9 +316,9 @@ impl Knowledgeable for SqliteKnowledge {
         let knowledge = SqliteKnowledge {
             connection: sqlite::open("data.db").unwrap(),
         };
-        let _ = knowledge.modify(CREATE_FACTS);
-        let _ = knowledge.modify(CREATE_RULES);
-        let _ = knowledge.modify(CREATE_CACHE);
+        let _ = knowledge.modify(&CREATE_FACTS.into());
+        let _ = knowledge.modify(&CREATE_RULES.into());
+        let _ = knowledge.modify(&CREATE_CACHE.into());
         knowledge
     }
 

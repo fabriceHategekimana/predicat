@@ -84,14 +84,13 @@ fn parse_cmd(s: &str) -> IResult<&str, (String, Box<PredicatAST>)> {
 
 fn parse_rule(s: &str) -> IResult<&str, PredicatAST> {
     let res = tuple((
-            tag("rule "),
-            parse_action,
+            tag("infer "),
             parse_trigger,
-            tag(" : "),
+            tag(" -> "),
             parse_cmd
           ))(s);
     match res {
-        Ok((s, (r, e, (ty, tri), _, (st, ast)))) => Ok((s, PredicatAST::Rule(e, (ty, tri), (st, ast)))),
+        Ok((s, (r, (ty, tri), _, (st, ast)))) => Ok((s, PredicatAST::Infer((ty, tri), (st, ast)))),
         Err(r) => Err(r)
     }
 }
@@ -203,7 +202,7 @@ mod tests {
     fn test_parse_rule() {
         assert_eq!(
             parse_rule("rule block add $A ami $B : get $A $B where $A ami $B").unwrap().1,
-            PredicatAST::Rule(Action::Block, 
+            PredicatAST::Infer(
                               (CommandType::Add, vec![Triplet::Tvwv("A".to_string(), "ami".to_string(), "B".to_string())]), ("get $A $B where $A ami $B".to_string(), Box::new(PredicatAST::Query((vec![Var("A".to_string()), Var("B".to_string())], vec![Triplet::Tvwv("A".to_string(), "ami".to_string(), "B".to_string())], vec![]))))),
                   );
     }
