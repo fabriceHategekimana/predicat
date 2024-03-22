@@ -1,4 +1,4 @@
-use super::sqlite_knowledge::SqliteKnowledge;
+pub use super::sqlite_knowledge::SqliteKnowledge;
 use parser::base_parser::{PredicatAST, Triplet};
 use simple_context::SimpleContext;
 

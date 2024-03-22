@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_variables, unused_imports, unreachable_code)]
 use parser;
 use std::env;
 use knowledge;
@@ -5,8 +6,9 @@ use knowledge::Cache;
 use base_context::Context;
 use simple_context::SimpleContext;
 use crate::knowledge::Knowledgeable;
-use crate::knowledge::new_knowledge;
+//use crate::knowledge::new_knowledge;
 use metaprogramming::substitute_variables;
+use knowledge::SqliteKnowledge;
 use crate::parser::base_parser::PredicatAST;
 use crate::parser::parse_command;
 
@@ -51,17 +53,45 @@ fn interpret(cmds: &[String], knowledge: &impl Knowledgeable) -> SimpleContext {
                 .expect("Something went wrong")
 }
 
-fn main() {
-    let input_command = get_args_or("add socrate est mortel");
-    let knowledge = new_knowledge("sqlite").expect("Can't open the knowledge!");
+struct Interpreter {
+    context: SimpleContext,
+    knowledge: SqliteKnowledge
+}
 
-    knowledge.clear_cache();
+impl Interpreter {
 
-    let mut context = interpret(&vec![input_command], &knowledge);
-
-    while context.has_commands() && !context.has_error() {
-        context = interpret(&context.get_aftercmds(), &knowledge);
+    fn new(k: SqliteKnowledge) -> Interpreter {
+        Interpreter {
+            context: SimpleContext::new(),
+            knowledge: k
+        }
     }
 
-    context.display(); //display context or error
+    fn run(&mut self) -> () {
+        let input_command = get_args_or("add socrate est mortel");
+
+        self.knowledge.clear_cache();
+
+        let mut context = interpret(&vec![input_command], &self.knowledge);
+
+        while context.has_commands() && !context.has_error() {
+            context = interpret(&context.get_aftercmds(), &self.knowledge);
+        }
+
+        context.display(); //display context or error
+        self.context = context;
+    }
+}
+
+impl Default for Interpreter {
+   fn default() -> Interpreter {
+       Interpreter {
+           context: SimpleContext::new(),
+           knowledge: SqliteKnowledge::new()
+       }
+   } 
+}
+
+fn main() {
+        //let knowledge = new_knowledge("sqlite").expect("Can't open the knowledge!");
 }
