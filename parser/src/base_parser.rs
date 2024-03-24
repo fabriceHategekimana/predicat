@@ -91,6 +91,7 @@ pub enum Language {
     Empty
 }
 
+
 impl Language {
     pub fn get_var(&self) -> Option<Var> {
         match self {
@@ -125,6 +126,17 @@ pub enum Triplet {
     Twvv(String, String, String),
     Tvvv(String, String, String),
     Empty
+}
+
+impl TryFrom<Language> for Triplet {
+    type Error = &'static str;
+
+    fn try_from(l: Language) -> Result<Self, Self::Error> {
+        match l {
+            Language::Tri(t) => Ok(t),
+            _ => Err("This is not a triplet")
+        }
+    }
 }
 
 

@@ -201,7 +201,7 @@ mod tests {
     #[test]
     fn test_parse_rule() {
         assert_eq!(
-            parse_rule("rule block add $A ami $B : get $A $B where $A ami $B").unwrap().1,
+            parse_rule("infer add $A ami $B -> get $A $B where $A ami $B").unwrap().1,
             PredicatAST::Infer(
                               (CommandType::Add, vec![Triplet::Tvwv("A".to_string(), "ami".to_string(), "B".to_string())]), ("get $A $B where $A ami $B".to_string(), Box::new(PredicatAST::Query((vec![Var("A".to_string()), Var("B".to_string())], vec![Triplet::Tvwv("A".to_string(), "ami".to_string(), "B".to_string())], vec![]))))),
                   );

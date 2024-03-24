@@ -37,9 +37,13 @@ impl Interpreter {
             context = self.interpret(&context.get_aftercmds(), &self.knowledge);
         }
 
-        context.display(); //display context or error
+        //context.display(); //display context or error
         self.context = context.clone();
         context
+    }
+
+    fn display(&self) -> () {
+        self.context.display()
     }
 
     fn parse(command: &String) -> Vec<PredicatAST> {
@@ -98,7 +102,7 @@ impl Default for Interpreter {
 
 fn main() {
         //let knowledge = new_knowledge("sqlite").expect("Can't open the knowledge!");
-    let interpreter = Interpreter::default();
+    //let interpreter = Interpreter::default();
     //interpreter.run();
 }
 
@@ -110,9 +114,24 @@ mod tests {
     fn test_add(){
        let mut interpreter = Interpreter::default();
        interpreter.clear();
-       interpreter.run("add Julien ami Julie");
+       interpreter.run("add julien ami julie");
        assert_eq!(
-           SimpleContext::from(vec![["Julien", "ami", "Julie"]]),
-           interpreter.run("get Julien ami Julie"));
+           SimpleContext::from(vec![["julien", "ami", "julie"]]),
+           interpreter.run("get julien ami julie"));
     }
+
+    // TODO
+    #[test]
+    fn test_rule_ami() {
+       let mut interpreter = Interpreter::default();
+       interpreter.clear();
+       interpreter.run("infer $A ami $B -> $B ami $A");
+       interpreter.run("add julien ami julie");
+        assert_eq!(
+            SimpleContext::from(vec![["julien", "ami", "julie"],
+                                    ["julie", "ami", "julien"]]),
+            interpreter.run("get $A $B $C")
+                  );
+    }
+
 }

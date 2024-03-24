@@ -153,11 +153,26 @@ fn parse_query_var3(s: &str) -> IResult<&str, QueryAST> {
     }
 }
 
+// get [connector] 
+pub fn parse_query_get(s: &str) -> IResult<&str, QueryAST> {
+    let res = tuple((parse_get,
+          many1(parse_triplet_and)
+          ))(s);
+    match res {
+        Ok((r, (g, c))) => Ok((r, (vec![] as Vec<Var>,
+                                   c.iter().flat_map(|x| x.clone().try_into()).collect(),
+                                   vec![] as Vec<Comp>))),
+        Err(e) => Err(e)
+    }
+}
+
+// main
 pub fn parse_query(s: &str) -> IResult<&str, PredicatAST> {
     let res = alt((
         parse_query_var1,
         parse_query_var2,
-        parse_query_var3
+        parse_query_var3,
+        parse_query_get,
         ))(s);
     match res {
         Ok((s, (var, tri, comp))) => Ok((s, PredicatAST::Query((var, tri, comp)))),
@@ -167,7 +182,9 @@ pub fn parse_query(s: &str) -> IResult<&str, PredicatAST> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{parse_modifier::Triplet::*, parse_query::recognize_variable};
+    use crate::{
+        parse_modifier::Triplet::*,
+        parse_query::{recognize_variable, parse_query_get}};
     use nom::error::{Error, ErrorKind};
     use crate::PredicatAST::Query;
     use super::{
@@ -400,6 +417,15 @@ mod tests {
                 Var("A".to_string())],
                 vec![Triplet::Empty],
                 vec![Comp(" $A > 7".to_string())])));
+    }
+
+    #[test]
+    fn test_parse_query_get() {
+        assert_eq!(
+          parse_query_get("get pierre ami julie").unwrap().1,
+          (vec![], 
+           vec![Twww("pierre".to_string(), "ami".to_string(), "julie".to_string())], 
+           vec![]));
     }
 
     #[test]
