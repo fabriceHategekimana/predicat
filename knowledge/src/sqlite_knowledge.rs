@@ -298,7 +298,7 @@ impl RuleManager for SqliteKnowledge {
     }
 
     fn get_rules(&self) -> Vec<String> {
-        let query = "SELECT event, modifier, subject, link, goal, command, backed_command FROM rules;".to_string();
+        let query = "SELECT modifier, subject, link, goal, command, backed_command FROM rules;".to_string();
         let mut v: Vec<String> = vec![];
         let _ = self.connection.iterate(query, |sqlite_couple| {
             for couple in sqlite_couple.iter() {

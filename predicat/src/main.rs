@@ -132,7 +132,7 @@ mod tests {
        interpreter.run("add julien ami julie");
        interpreter.get_rules();
        assert_eq!(interpreter.get_rules(),
-           vec!["infer add $A ami $B"]);
+          vec!["add", "$A", "ami", "$B", "add $B ami $A", "add $B ami $A"]);
     }
 
     #[test]
