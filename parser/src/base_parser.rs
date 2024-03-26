@@ -51,7 +51,7 @@ pub enum PredicatAST {
          Vec<Comp>)),
     AddModifier(Vec<Triplet>),
     DeleteModifier(Vec<Triplet>),
-    Infer((CommandType, Vec<Triplet>), (String, Box<PredicatAST>)),
+    Infer((CommandType, Vec<Triplet>), String),
     // TODO: add Block and Assert rules
     Empty,
     Debug(String)

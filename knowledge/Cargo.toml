@@ -8,7 +8,6 @@ edition = "2021"
 [dependencies]
 parser = { path = "../parser" }
 metaprogramming = { path = "../metaprogramming" }
-polars = "0.26.1"
 sqlite = "0.30.3"
 base_context = { path = "../base_context" }
 simple_context = { path = "../simple_context" }

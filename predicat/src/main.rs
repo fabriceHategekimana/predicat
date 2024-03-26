@@ -5,12 +5,15 @@ use knowledge;
 use knowledge::Cache;
 use base_context::Context;
 use simple_context::SimpleContext;
-use crate::knowledge::Knowledgeable;
+use knowledge::Knowledgeable;
 use metaprogramming::substitute_variables;
 use knowledge::SqliteKnowledge;
-use crate::parser::base_parser::PredicatAST;
-use crate::parser::parse_command;
+use parser::base_parser::PredicatAST;
+use parser::parse_command;
 use knowledge::RuleManager;
+use parser::base_parser::CommandType;
+use parser::base_parser::Triplet;
+use serial_test::serial;
 
 
 struct Interpreter {
@@ -110,6 +113,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[serial]
     fn test_add(){
        let mut interpreter = Interpreter::default();
        interpreter.clear();
@@ -119,19 +123,20 @@ mod tests {
            interpreter.run("get julien ami julie"));
     }
 
-    // TODO
     #[test]
+    #[serial]
     fn test_rule_1() {
        let mut interpreter = Interpreter::default();
        interpreter.clear();
        interpreter.run("infer add $A ami $B -> add $B ami $A");
        interpreter.run("add julien ami julie");
        interpreter.get_rules();
-       assert_eq!(interpreter.get_rules(), vec!["Hey".to_string()]);
+       assert_eq!(interpreter.get_rules(),
+           vec!["infer add $A ami $B"]);
     }
 
-    // TODO
     #[test]
+    #[serial]
     fn test_rule_2() {
        let mut interpreter = Interpreter::default();
        interpreter.clear();

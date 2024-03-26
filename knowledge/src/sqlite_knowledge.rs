@@ -156,7 +156,7 @@ impl Command for SqliteKnowledge {
                             .map(|x| triplet_to_delete(x))
                             .fold("".to_string(), string_concat)
                             .into()]),
-            Infer((b, c), (cmd, ast)) => {
+            Infer((b, c), cmd) => {
                     let scmd = match &cmd[0..3] { 
                         "get" => self.translate(ast).unwrap().iter().map(|x| x.0.replace("'", "%single_quote%")).collect(),
                         _ => cmd.clone()};

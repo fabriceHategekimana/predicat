@@ -3,5 +3,6 @@ command! Reset !rm data.db
 command! Db term nu -c "open data.db"
 command! Facts term nu -c "open /home/fabrice/sessions/projet/predicat/predicat/predicat/data.db | get facts"
 command! Rules term nu -c "open /home/fabrice/sessions/projet/predicat/predicat/predicat/data.db | get rules"
+command! Test cargo test -- --test-threads 1
 
 
