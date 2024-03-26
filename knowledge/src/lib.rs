@@ -5,6 +5,7 @@ pub use base_knowledge::{
     SqliteKnowledge,
     Knowledgeable,
     new_knowledge,
-    Cache
+    Cache,
+    RuleManager
 };
 

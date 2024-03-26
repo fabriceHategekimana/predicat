@@ -6,12 +6,11 @@ use knowledge::Cache;
 use base_context::Context;
 use simple_context::SimpleContext;
 use crate::knowledge::Knowledgeable;
-//use crate::knowledge::new_knowledge;
 use metaprogramming::substitute_variables;
 use knowledge::SqliteKnowledge;
 use crate::parser::base_parser::PredicatAST;
 use crate::parser::parse_command;
-
+use knowledge::RuleManager;
 
 
 struct Interpreter {
@@ -29,16 +28,11 @@ impl Interpreter {
     }
 
     fn run(&mut self, cmd: &str) -> SimpleContext {
-        //let cmd = self.get_args_or("add socrate est mortel");
         
         let mut context = self.interpret(&vec![cmd.to_string()], &self.knowledge);
 
         while context.has_commands() && !context.has_error() {
-            context = self.interpret(&context.get_aftercmds(), &self.knowledge);
-        }
-
-        //context.display(); //display context or error
-        self.context = context.clone();
+            context = self.interpret(&context.get_aftercmds(), &self.knowledge); } self.context = context.clone();
         context
     }
 
@@ -89,6 +83,11 @@ impl Interpreter {
     fn clear(&self) -> () {
         self.knowledge.clear_all();
     }
+    
+    fn get_rules(&self) -> Vec<String> {
+        self.knowledge.get_rules()
+    }
+
 }
 
 impl Default for Interpreter {
@@ -122,10 +121,21 @@ mod tests {
 
     // TODO
     #[test]
-    fn test_rule_ami() {
+    fn test_rule_1() {
        let mut interpreter = Interpreter::default();
        interpreter.clear();
-       interpreter.run("infer $A ami $B -> $B ami $A");
+       interpreter.run("infer add $A ami $B -> add $B ami $A");
+       interpreter.run("add julien ami julie");
+       interpreter.get_rules();
+       assert_eq!(interpreter.get_rules(), vec!["Hey".to_string()]);
+    }
+
+    // TODO
+    #[test]
+    fn test_rule_2() {
+       let mut interpreter = Interpreter::default();
+       interpreter.clear();
+       interpreter.run("infer add $A ami $B -> add $B ami $A");
        interpreter.run("add julien ami julie");
         assert_eq!(
             SimpleContext::from(vec![["julien", "ami", "julie"],

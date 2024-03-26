@@ -52,16 +52,6 @@ fn parse_query_and_modifier_bar(s: &str) -> IResult<&str, PredicatAST> {
     terminated(parse_query_and_modifier, parse_bar)(s)
 }
 
-fn parse_action(s: &str) -> IResult<&str, Action> {
-    let res = alt((tag("block "), (tag("infer "))))(s);
-    match res {
-        Ok((s, "block ")) => Ok((s, Action::Block)),
-        Ok((s, "infer ")) => Ok((s, Action::Infer)),
-        Err(r) => Err(r),
-        _ => todo!()
-    }
-}
-
 fn parse_trigger(s: &str) -> IResult<&str, (CommandType, Vec<Triplet>)> {
     let res = parse_modifier(s);
     match res {
