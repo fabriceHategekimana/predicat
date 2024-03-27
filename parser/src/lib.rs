@@ -10,26 +10,44 @@ use base_parser::PredicatAST;
 use base_parser::Action;
 use base_parser::CommandType;
 use base_parser::Command;
-
 use parse_query::{
     parse_query,
     alt
 };
-
-use base_context::Context;
-use simple_context::SimpleContext;
 use nom::multi::many1;
 use nom::sequence::terminated;
 use nom::bytes::complete::tag;
 use nom::sequence::tuple;
 use nom::IResult;
 use nom::combinator::recognize;
-
-
 use parse_modifier::parse_modifier;
-pub use self::base_parser::{Language, Var, Triplet, parse_bar};
-
 use crate::Triplet::*;
+pub use self::base_parser::{Language, Var, Triplet, parse_bar};
+use base_context::context_traits::Context;
+use base_context::simple_context::SimpleContext;
+
+
+pub trait ContextCMD {
+    type AST;
+    fn get_aftercmds(&self) -> Vec<String>;
+    fn add_aftercmd(self, aftcmd: &Self::AST) -> Self;
+}
+
+impl ContextCMD for SimpleContext {
+    type AST= PredicatAST;
+    fn add_aftercmd(self, aftcmd: &PredicatAST) -> SimpleContext {
+        SimpleContext{
+           tab: self.tab,
+           cmds: vec![aftcmd.clone().to_string()],
+           log: self.log
+        }
+    }
+
+    fn get_aftercmds(&self) -> Vec<String> {
+        self.cmds.clone()
+    }
+}
+
 
 pub fn soft_predicat(s: &str) -> &str {
     s

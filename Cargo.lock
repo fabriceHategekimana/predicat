@@ -21,6 +21,7 @@ checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
 name = "base_context"
 version = "0.1.0"
 dependencies = [
+ "cli-table",
  "itertools 0.11.0",
 ]
 
@@ -225,7 +226,6 @@ dependencies = [
  "metaprogramming",
  "parser",
  "serial_test",
- "simple_context",
  "sqlite",
 ]
 
@@ -269,7 +269,6 @@ version = "0.1.0"
 dependencies = [
  "base_context",
  "parser",
- "simple_context",
 ]
 
 [[package]]
@@ -325,7 +324,6 @@ dependencies = [
  "itertools 0.10.5",
  "nom",
  "regex",
- "simple_context",
 ]
 
 [[package]]
@@ -356,7 +354,6 @@ dependencies = [
  "metaprogramming",
  "parser",
  "serial_test",
- "simple_context",
 ]
 
 [[package]]
@@ -456,15 +453,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.26",
-]
-
-[[package]]
-name = "simple_context"
-version = "0.1.0"
-dependencies = [
- "base_context",
- "cli-table",
- "itertools 0.11.0",
 ]
 
 [[package]]

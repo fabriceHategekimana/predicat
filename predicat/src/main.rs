@@ -3,17 +3,17 @@ use parser;
 use std::env;
 use knowledge;
 use knowledge::Cache;
-use base_context::Context;
-use simple_context::SimpleContext;
-use knowledge::Knowledgeable;
-use metaprogramming::substitute_variables;
-use knowledge::SqliteKnowledge;
-use parser::base_parser::PredicatAST;
-use parser::parse_command;
-use knowledge::RuleManager;
-use parser::base_parser::CommandType;
-use parser::base_parser::Triplet;
 use serial_test::serial;
+use parser::parse_command;
+use base_context::Context;
+use knowledge::RuleManager;
+use knowledge::Knowledgeable;
+use knowledge::SqliteKnowledge;
+use parser::base_parser::Triplet;
+use simple_context::SimpleContext;
+use parser::base_parser::PredicatAST;
+use parser::base_parser::CommandType;
+use metaprogramming::substitute_variables;
 
 
 struct Interpreter {
@@ -69,7 +69,8 @@ impl Interpreter {
         let context = knowledge
                 .valid_commands(cmds.to_vec())?
                 .iter()
-                .map(|x| knowledge.execute_command(x))
+                .map(|x| (x, knowledge.get_commands_from(x)))
+                .map(|(cmd, aftcmd)| knowledge.execute_command(cmd).add_aftercmd(aftcmd))
                 .reduce(SimpleContext::join_contexts)?;
 
         Some(context.clone())
@@ -103,7 +104,7 @@ impl Default for Interpreter {
 }
 
 fn main() {
-        //let knowledge = new_knowledge("sqlite").expect("Can't open the knowledge!");
+    //let knowledge = new_knowledge("sqlite").expect("Can't open the knowledge!");
     //let interpreter = Interpreter::default();
     //interpreter.run();
 }

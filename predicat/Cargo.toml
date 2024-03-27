@@ -7,7 +7,6 @@ edition = "2021"
 
 [dependencies]
 base_context = { path = "../base_context" }
-simple_context = { path = "../simple_context" }
 knowledge = { path = "../knowledge" }
 parser = { path = "../parser" }
 importer = { path = "../importer" }

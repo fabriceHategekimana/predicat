@@ -1,6 +1,6 @@
 use cli_table::{Style, Table};
 use itertools::Itertools;
-use base_context::Context;
+use crate::context_traits::Context;
 
 type ColumnName = String;
 type Value = String;
@@ -24,6 +24,7 @@ impl SimpleContext {
     pub fn has_error(&self) -> bool {
         self.log == vec![] as Vec<String>
     }
+
 
 
 pub fn display(&self) {
@@ -134,10 +135,6 @@ impl Context for SimpleContext {
 
     fn is_not_empty(&self) -> bool {
        !self.is_empty() 
-    }
-
-    fn get_aftercmds(&self) -> Vec<String> {
-        self.cmds.clone()
     }
 
     fn get_table(&self) -> Vec<(String, String)> {

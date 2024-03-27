@@ -5,6 +5,5 @@ members = [
 	"parser",
 	"importer",
 	"base_context",
-	"simple_context",
 	"metaprogramming",
 ]
