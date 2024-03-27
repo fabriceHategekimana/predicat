@@ -1,8 +1,8 @@
 #![allow(dead_code, unused_variables, unused_imports, unreachable_code)]
 // will be use for the language (AST) manipulation
 
-use base_context::Context;
-use simple_context::SimpleContext;
+use base_context::context_traits::Context;
+use base_context::simple_context::SimpleContext;
 use parser::base_parser::{PredicatAST, Var, Triplet, Comp, Language};
 
 #[derive(PartialEq, Debug, Clone, Copy)]

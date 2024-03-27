@@ -9,8 +9,7 @@ pub use nom::{
             ErrorKind},
     IResult
 };
-
-use simple_context::SimpleContext;
+use base_context::simple_context::SimpleContext;
 
 pub use Triplet::*;
 
@@ -57,6 +56,8 @@ pub enum PredicatAST {
     Debug(String)
 }
 
+
+
 impl PredicatAST {
 
     pub fn is_query(&self) -> bool {
@@ -64,6 +65,12 @@ impl PredicatAST {
             PredicatAST::Query(q) => true,
             _ => false
         }
+    }
+}
+
+impl Into<String> for PredicatAST {
+    fn into(self) -> String {
+        todo!();
     }
 }
 

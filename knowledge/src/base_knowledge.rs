@@ -1,6 +1,6 @@
 pub use super::sqlite_knowledge::SqliteKnowledge;
 use parser::base_parser::{PredicatAST, Triplet};
-use simple_context::SimpleContext;
+use base_context::simple_context::SimpleContext;
 
 pub fn new_knowledge(kind: &str) -> Result<impl Knowledgeable, String> {
     match kind {

@@ -3,18 +3,18 @@ use parser;
 use std::env;
 use knowledge;
 use knowledge::Cache;
+use parser::ContextCMD;
 use serial_test::serial;
 use parser::parse_command;
-use base_context::Context;
 use knowledge::RuleManager;
 use knowledge::Knowledgeable;
 use knowledge::SqliteKnowledge;
 use parser::base_parser::Triplet;
-use simple_context::SimpleContext;
 use parser::base_parser::PredicatAST;
 use parser::base_parser::CommandType;
+use base_context::context_traits::Context;
 use metaprogramming::substitute_variables;
-
+use base_context::simple_context::SimpleContext;
 
 struct Interpreter {
     context: SimpleContext,
@@ -70,7 +70,7 @@ impl Interpreter {
                 .valid_commands(cmds.to_vec())?
                 .iter()
                 .map(|x| (x, knowledge.get_commands_from(x)))
-                .map(|(cmd, aftcmd)| knowledge.execute_command(cmd).add_aftercmd(aftcmd))
+                .map(|(cmd, aftcmd)| knowledge.execute_command(cmd).add_aftercmd(&aftcmd))
                 .reduce(SimpleContext::join_contexts)?;
 
         Some(context.clone())
@@ -112,6 +112,7 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use knowledge::base_knowledge::Command;
 
     #[test]
     #[serial]
@@ -149,5 +150,17 @@ mod tests {
             interpreter.run("get $A $B $C")
                   );
     }
+
+
+    #[test]
+    fn test_get_command_from() {
+       let mut interpreter = Interpreter::default();
+       interpreter.run("infer add $A ami $B -> add $B ami $A");
+       let cmds = interpreter.knowledge
+           .get_commands_from(&Interpreter::parse(&"add julien ami julie".to_string())[0]);
+       assert_eq!(cmds,
+                 ["cmds"]);
+    }
+
 
 }

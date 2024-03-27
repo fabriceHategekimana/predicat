@@ -28,17 +28,15 @@ use base_context::simple_context::SimpleContext;
 
 
 pub trait ContextCMD {
-    type AST;
     fn get_aftercmds(&self) -> Vec<String>;
-    fn add_aftercmd(self, aftcmd: &Self::AST) -> Self;
+    fn add_aftercmd(self, aftcmd: &[String]) -> Self;
 }
 
 impl ContextCMD for SimpleContext {
-    type AST= PredicatAST;
-    fn add_aftercmd(self, aftcmd: &PredicatAST) -> SimpleContext {
+    fn add_aftercmd(self, aftcmd: &[String]) -> SimpleContext {
         SimpleContext{
            tab: self.tab,
-           cmds: vec![aftcmd.clone().to_string()],
+           cmds: aftcmd.to_vec(),
            log: self.log
         }
     }
@@ -135,8 +133,8 @@ fn parse_query_and_modifier(s: &str) -> IResult<&str, PredicatAST> {
 
 #[cfg(test)]
 mod tests {
-    use base_context::Context;
-    use simple_context::SimpleContext;
+    use base_context::context_traits::Context;
+    use base_context::simple_context::SimpleContext;
     use crate::base_parser::PredicatAST;
 
     use super::*;

@@ -7,8 +7,8 @@ use sqlite::{
 };
 
 //use crate::parser::parse_command;
-use simple_context::SimpleContext;
-use base_context::Context;
+use base_context::context_traits::Context;
+use base_context::simple_context::SimpleContext;
 use metaprogramming::substitute_variables;
 use std::collections::HashMap;
 use super::Knowledgeable;
