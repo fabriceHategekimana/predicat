@@ -147,7 +147,7 @@ mod tests {
         assert_eq!(
             SimpleContext::from(vec![["julien", "ami", "julie"],
                                     ["julie", "ami", "julien"]]),
-            interpreter.run("get $A $B $C")
+            interpreter.run("get $subject $link $goal")
                   );
     }
 
@@ -155,11 +155,12 @@ mod tests {
     #[test]
     fn test_get_command_from() {
        let mut interpreter = Interpreter::default();
+       interpreter.clear();
        interpreter.run("infer add $A ami $B -> add $B ami $A");
        let cmds = interpreter.knowledge
            .get_commands_from(&Interpreter::parse(&"add julien ami julie".to_string())[0]);
        assert_eq!(cmds,
-                 ["cmds"]);
+                 ["add julie ami julien"]);
     }
 
 

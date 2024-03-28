@@ -202,7 +202,7 @@ impl Command for SqliteKnowledge {
 
     fn get_command_from_triplet(&self, modifier: &str, tri: &Triplet) -> Vec<String> {
         let (sub, lin, goa) = tri.to_tuple();
-        let select = format!("SELECT * FROM rules where modifier='{}' AND event='Infer' AND (subject='{}' OR link='{}' OR goal='{}')", modifier, sub, lin, goa);
+        let select = format!("SELECT * FROM rules where modifier='{}' AND (subject='{}' OR link='{}' OR goal='{}')", modifier, sub, lin, goa);
         let rules = self.get(&select.into());
         let context = izip!(
                 rules.get_values("modifier").unwrap_or(vec![]),
