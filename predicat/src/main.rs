@@ -1,13 +1,16 @@
+use std::fs;
 use std::env;
 use parser::ContextCMD;
 use parser::parse_command;
 use knowledge::Cache;
 use knowledge::Knowledgeable;
 use knowledge::SqliteKnowledge;
+use clap::{Command, Arg, ArgMatches};
 use parser::base_parser::PredicatAST;
 use base_context::context_traits::Context;
 use metaprogramming::substitute_variables;
 use base_context::simple_context::SimpleContext;
+
 
 struct Interpreter {
     context: SimpleContext,
@@ -89,11 +92,59 @@ impl Default for Interpreter {
    } 
 }
 
-fn main() {
+
+fn open(file_name: &str) -> String {
+    fs::read_to_string(file_name)
+                .expect(&format!("le fichier '{}' est illisible", file_name))
+}
+
+fn get_user_input() -> ArgMatches {
+    Command::new("MyApp")
+        .subcommand_required(true)
+        .arg_required_else_help(true)
+        .subcommand(
+            Command::new("cmd")
+                .about("Run a command passed as a parameter")
+                .arg(Arg::new("name"))
+        )
+        .subcommand(
+            Command::new("open")
+                .about("Open a file and execute its predicat's comment")
+                .arg(Arg::new("name"))
+                   )
+        .get_matches()
+}
+
+fn one_command(val: Option<&String>) -> () {
     let mut interpreter = Interpreter::default();
-    let args = interpreter.get_args_or("add socrate est mortel");
-    interpreter.run(&args);
+    //let args = interpreter.get_args_or("add socrate est mortel");
+    interpreter.run(&val.expect("No command where given as an argument"));
     interpreter.display();
+}
+
+
+fn process_string(input: &str) -> Vec<String> {
+    let input_without_newlines = input.replace("\n", " ");
+    input_without_newlines
+        .split(';')
+        .map(|s| s.trim().to_string())
+        .collect()
+}
+
+fn read_file(val: Option<&String>) -> () {
+    let val = open(val.expect("No file name was given"));
+    let val = process_string(&val);
+    let mut interpreter = Interpreter::default();
+    val.iter().for_each(|cmd| {interpreter.run(cmd);});
+    interpreter.display();
+}
+
+fn main() {
+    match get_user_input().subcommand() {
+        Some(("cmd", sub_matches)) => one_command(sub_matches.get_one::<String>("name")), 
+        Some(("open", sub_matches)) => read_file(sub_matches.get_one::<String>("name")),
+        _ => unreachable!("Exhausted list of subcommands and subcommand_required prevents `None`"),
+    }
 }
 
 #[cfg(test)]

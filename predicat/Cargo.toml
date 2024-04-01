@@ -12,3 +12,4 @@ parser = { path = "../parser" }
 importer = { path = "../importer" }
 metaprogramming = { path = "../metaprogramming" }
 serial_test = "2.0.0"
+clap = "4.5.4"
