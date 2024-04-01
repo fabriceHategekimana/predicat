@@ -22,7 +22,7 @@ impl SimpleContext {
     }
 
     pub fn has_error(&self) -> bool {
-        self.log == vec![] as Vec<String>
+        self.log != vec![] as Vec<String>
     }
 
 
@@ -118,14 +118,26 @@ impl Context for SimpleContext {
     }
 
     fn join(&self, c2: SimpleContext) -> SimpleContext {
-        let vec = self.get_tab()
+        let vec_tab = self.get_tab()
                     .iter()
                     .chain(c2.get_tab().iter())
                     .map(|x| x.clone())
                     .collect::<Vec<_>>();
+        let vec_cmds = self.cmds
+                    .iter()
+                    .chain(c2.cmds.iter())
+                    .map(|x| x.clone())
+                    .collect::<Vec<_>>();
+        let vec_log = self.log
+                    .iter()
+                    .chain(c2.log.iter())
+                    .map(|x| x.clone())
+                    .collect::<Vec<_>>();
+
         SimpleContext {
-            tab: vec.clone(),
-            ..c2
+            tab: vec_tab.clone(),
+            cmds: vec_cmds,
+            log: vec_log,
         }
     }
     

@@ -1,17 +1,10 @@
-#![allow(dead_code, unused_variables, unused_imports, unreachable_code)]
-use parser;
 use std::env;
-use knowledge;
-use knowledge::Cache;
 use parser::ContextCMD;
-use serial_test::serial;
 use parser::parse_command;
-use knowledge::RuleManager;
+use knowledge::Cache;
 use knowledge::Knowledgeable;
 use knowledge::SqliteKnowledge;
-use parser::base_parser::Triplet;
 use parser::base_parser::PredicatAST;
-use parser::base_parser::CommandType;
 use base_context::context_traits::Context;
 use metaprogramming::substitute_variables;
 use base_context::simple_context::SimpleContext;
@@ -23,20 +16,18 @@ struct Interpreter {
 
 impl Interpreter {
 
-    fn new(k: SqliteKnowledge) -> Interpreter {
-        Interpreter {
-            context: SimpleContext::new(),
-            knowledge: k
-        }
-    }
-
     fn run(&mut self, cmd: &str) -> SimpleContext {
         
         let mut context = self.interpret(&vec![cmd.to_string()], &self.knowledge);
-
         while context.has_commands() && !context.has_error() {
             context = self.interpret(&context.get_aftercmds(), &self.knowledge); } self.context = context.clone();
+        self.clear_cache();
+        self.context = context.clone();
         context
+    }
+
+    fn clear_cache(&self) -> () {
+        self.knowledge.clear_cache();
     }
 
     fn display(&self) -> () {
@@ -69,10 +60,10 @@ impl Interpreter {
         let context = knowledge
                 .valid_commands(cmds.to_vec())?
                 .iter()
+                .filter(|x| !knowledge.in_cache(x))
                 .map(|x| (x, knowledge.get_commands_from(x)))
                 .map(|(cmd, aftcmd)| knowledge.execute_command(cmd).add_aftercmd(&aftcmd))
                 .reduce(SimpleContext::join_contexts)?;
-
         Some(context.clone())
     }
 
@@ -80,18 +71,13 @@ impl Interpreter {
         let cmds = cmds.iter()
                     .flat_map(Self::parse)
                     .collect::<Vec<PredicatAST>>();
-        self.execute(&cmds, knowledge)
-                    .expect("Something went wrong")
+        self.execute(&cmds, knowledge).unwrap_or_default()
     }
 
     fn clear(&self) -> () {
         self.knowledge.clear_all();
     }
     
-    fn get_rules(&self) -> Vec<String> {
-        self.knowledge.get_rules()
-    }
-
 }
 
 impl Default for Interpreter {
@@ -104,15 +90,24 @@ impl Default for Interpreter {
 }
 
 fn main() {
-    //let knowledge = new_knowledge("sqlite").expect("Can't open the knowledge!");
-    //let interpreter = Interpreter::default();
-    //interpreter.run();
+    let mut interpreter = Interpreter::default();
+    let args = interpreter.get_args_or("add socrate est mortel");
+    interpreter.run(&args);
+    interpreter.display();
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use knowledge::base_knowledge::Command;
+    use serial_test::serial;
+    use knowledge::RuleManager;
+
+    impl Interpreter {
+        fn get_rules(&self) -> Vec<String> {
+            self.knowledge.get_rules()
+        }
+    }
 
     #[test]
     #[serial]
@@ -131,7 +126,6 @@ mod tests {
        let mut interpreter = Interpreter::default();
        interpreter.clear();
        interpreter.run("infer add $A ami $B -> add $B ami $A");
-       interpreter.run("add julien ami julie");
        interpreter.get_rules();
        assert_eq!(interpreter.get_rules(),
           vec!["add", "$A", "ami", "$B", "add $B ami $A", "add $B ami $A"]);
@@ -147,12 +141,12 @@ mod tests {
         assert_eq!(
             SimpleContext::from(vec![["julien", "ami", "julie"],
                                     ["julie", "ami", "julien"]]),
-            interpreter.run("get $subject $link $goal")
+            interpreter.run("get $subject $link $goal where $subject $link $goal")
                   );
     }
 
-
     #[test]
+    #[serial]
     fn test_get_command_from() {
        let mut interpreter = Interpreter::default();
        interpreter.clear();
@@ -162,6 +156,5 @@ mod tests {
        assert_eq!(cmds,
                  ["add julie ami julien"]);
     }
-
 
 }

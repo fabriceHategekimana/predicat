@@ -20,7 +20,7 @@ pub trait Knowledgeable: Command + FactManager + RuleManager + Cache {
 }
 
 pub trait Cache {
-    fn in_cache(&self, cmd: &str) -> bool;
+    fn in_cache(&self, cmd: &PredicatAST) -> bool;
     fn store_to_cache(&self, modifier: &PredicatAST) -> PredicatAST;
     fn clear_cache(&self);
 }

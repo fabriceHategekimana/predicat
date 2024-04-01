@@ -36,7 +36,7 @@ impl ContextCMD for SimpleContext {
     fn add_aftercmd(self, aftcmd: &[String]) -> SimpleContext {
         SimpleContext{
            tab: self.tab,
-           cmds: aftcmd.to_vec(),
+           cmds: self.cmds.iter().chain(aftcmd.iter()).map(|x| x.clone()).collect(),
            log: self.log
         }
     }

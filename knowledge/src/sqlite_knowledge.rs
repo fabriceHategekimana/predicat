@@ -251,9 +251,9 @@ impl Cache for SqliteKnowledge {
         let _ = self.connection.execute("DELETE FROM cache");
     }
 
-    fn in_cache(&self, cmd: &str) -> bool {
+    fn in_cache(&self, cmd: &PredicatAST) -> bool {
         let mut res: bool = false;
-        let query = format!("SELECT * FROM cache WHERE command = '{}'", cmd);
+        let query = format!("SELECT * FROM cache WHERE command = '{}'", String::from(cmd.clone()));
         let _ = self.connection.iterate(query, |sqlite_couple| {
             if sqlite_couple.iter().len() > 0 {
                 res = true;
@@ -264,19 +264,9 @@ impl Cache for SqliteKnowledge {
     }
 
     fn store_to_cache(&self, modifier: &PredicatAST) -> PredicatAST {
-        match modifier {
-            PredicatAST::AddModifier(vec) => {
-                if let Triplet::Twww(subject, link, goal) = vec[0].clone() {
-                    self.save_facts("add", &subject, &link, &goal);
-                }
-            },
-            PredicatAST::DeleteModifier(vec) => {
-                if let Triplet::Twww(subject, link, goal) = vec[0].clone() {
-                    self.save_facts("delete", &subject, &link, &goal);
-                }
-            },
-            _ => ()
-        }
+        let query = format!("INSERT INTO cache (command) VALUES ('{}')",
+            String::from(modifier.clone()));
+        let res = &self.connection.execute(query);
         modifier.clone()
     }
 

@@ -10,7 +10,6 @@ pub use nom::{
     IResult
 };
 use base_context::simple_context::SimpleContext;
-
 pub use Triplet::*;
 
 #[derive(PartialEq, Debug, Clone, Copy)]
@@ -68,11 +67,16 @@ impl PredicatAST {
     }
 }
 
-impl Into<String> for PredicatAST {
-    fn into(self) -> String {
-        todo!();
-    }
+impl From<PredicatAST> for String {
+    fn from(p: PredicatAST) -> String {
+        match p {
+            PredicatAST::AddModifier(v) => format!("add {}", v.iter().cloned().map(String::from).fold("".to_string(), |acc, x| format!("{} and {}", acc, x))),
+            PredicatAST::DeleteModifier(v) => format!("add {}", v.iter().cloned().map(String::from).fold("".to_string(), |acc, x| format!("{} and {}", acc, x))),
+            _ => "".to_string()
+        }
+    }    
 }
+
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct Var(pub String);
@@ -143,6 +147,29 @@ impl TryFrom<Language> for Triplet {
             Language::Tri(t) => Ok(t),
             _ => Err("This is not a triplet")
         }
+    }
+}
+
+impl From<Triplet> for (String, String, String) {
+    fn from(t: Triplet) -> (String, String, String) {
+        match t {
+           Triplet::Twww(a, b, c) => (a, b, c),
+           Triplet::Tvwv(a, b, c) => (a, b, c),
+           Triplet::Twvv(a, b, c) => (a, b, c),
+           Triplet::Twwv(a, b, c) => (a, b, c),
+           Triplet::Twvw(a, b, c) => (a, b, c),
+           Triplet::Tvvw(a, b, c) => (a, b, c),
+           Triplet::Tvww(a, b, c) => (a, b, c),
+           Triplet::Tvvv(a, b, c) => (a, b, c),
+           Triplet::Empty => ("".to_string(), "".to_string(), "".to_string())
+        }
+    }
+}
+
+impl From<Triplet> for String {
+    fn from(t: Triplet) -> String {
+        let tri : (String, String, String) = t.into();
+        format!("{} {} {}", tri.0, tri.1, tri.2)
     }
 }
 
