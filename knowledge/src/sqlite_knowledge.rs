@@ -19,7 +19,7 @@ use parser::base_parser::PredicatAST::{Query, AddModifier, DeleteModifier, Empty
 use parser::parse_command;
 use parser::base_parser::Var;
 use parser::base_parser::Language;
-use parser::base_parser::Language::Word;
+use parser::base_parser::Language::Element;
 use parser::base_parser::Language::Tri;
 use parser::base_parser::Comp;
 use parser::base_parser::Triplet::*;
@@ -445,7 +445,6 @@ fn format_triplets(tri: &[Triplet]) -> String {
 
 
 fn format_variables(vars: &[Var]) -> String {
-    // todo: check if it don't lead to problem
     if vars == []{
         String::from("SELECT * FROM ")
     }
@@ -476,19 +475,19 @@ fn format_comparisons(comp: &[Comp]) -> String {
 
 pub fn triplet_to_sql(tri: &Triplet) -> String {
     match tri {
-        Twww(a,b,c) => 
+        Teee(a,b,c) => 
             format!("SELECT subject,link,goal FROM facts WHERE subject='{}' AND link='{}' AND goal='{}'",a,b,c),
-        Tvww(a,b,c) => 
+        Tvee(a,b,c) => 
             format!("SELECT subject AS {} FROM facts WHERE link='{}' AND goal='{}'",a,b,c),
-        Twvw(a,b,c) => 
+        Teve(a,b,c) => 
             format!("SELECT link AS {} FROM facts WHERE subject='{}' AND goal='{}'",b,a,c),
-        Twwv(a,b,c) => 
+        Teev(a,b,c) => 
             format!("SELECT goal AS {} FROM facts WHERE subject='{}' AND link='{}'",c,a,b),
-        Tvvw(a,b,c) => 
+        Tvve(a,b,c) => 
             format!("SELECT subject AS {},link AS {} FROM facts WHERE goal='{}'",a,b,c),
-        Tvwv(a,b,c) => 
+        Tvev(a,b,c) => 
             format!("SELECT subject AS {},goal AS {} FROM facts WHERE link='{}'",a,c,b),
-        Twvv(a,b,c) => 
+        Tevv(a,b,c) => 
             format!("SELECT link AS {},goal AS {} FROM facts WHERE subject='{}'",b,c,a),
         Tvvv(a,b,c) => 
             format!("SELECT subject AS {},link AS {},goal AS {} FROM facts",a,b,c),
@@ -545,7 +544,7 @@ mod tests {
             "SELECT subject AS A,link AS B,goal AS C FROM facts".to_string()
         );
         assert_eq!(
-            triplet_to_sql(&Tvwv("A".to_string(),"B".to_string(),"C".to_string())),
+            triplet_to_sql(&Tvev("A".to_string(),"B".to_string(),"C".to_string())),
             "SELECT subject AS A,goal AS C FROM facts WHERE link='B'"
         );
     }
@@ -567,7 +566,7 @@ mod tests {
         assert_eq!(
             translate_one_ast(&PredicatAST::Query((
                     vec![Var("A".to_string())], 
-                    vec![Tvww("A".to_string(), "est".to_string(), "mortel".to_string())], 
+                    vec![Tvee("A".to_string(), "est".to_string(), "mortel".to_string())], 
                     vec![]))).unwrap(),
             "SELECT A FROM (SELECT subject AS A FROM facts WHERE link='est' AND goal='mortel');".to_string());
     }
@@ -575,7 +574,7 @@ mod tests {
     #[test]
     fn test_translate_one_ast_add_modifier() {
         assert_eq!(
-            translate_one_ast(&PredicatAST::AddModifier(vec![Twww("pierre".to_string(), "ami".to_string(), "jean".to_string())])).unwrap(),
+            translate_one_ast(&PredicatAST::AddModifier(vec![Teee("pierre".to_string(), "ami".to_string(), "jean".to_string())])).unwrap(),
             "INSERT or IGNORE INTO facts (subject,link,goal) VALUES ('pierre','ami','jean')".to_string())
     }
 

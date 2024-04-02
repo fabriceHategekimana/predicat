@@ -79,14 +79,14 @@ mod tests {
     fn test_add_modifier() {
         let (s, args) =  parse_add_modifier("add pierre ami jean").unwrap();
         assert_eq!(args, 
-                PredicatAST::AddModifier(vec![Twww("pierre".to_string(), "ami".to_string(), "jean".to_string())])
+                PredicatAST::AddModifier(vec![Teee("pierre".to_string(), "ami".to_string(), "jean".to_string())])
             );
     } 
 
     #[test]
     fn test_triplet_to_insert() {
         assert_eq!(
-            triplet_to_insert(&Twww("pierre".to_string(),"ami".to_string(),"jean".to_string())),
+            triplet_to_insert(&Teee("pierre".to_string(),"ami".to_string(),"jean".to_string())),
             "INSERT or IGNORE INTO facts (subject,link,goal) VALUES ('pierre','ami','jean')".to_string());
     }
 
@@ -95,7 +95,7 @@ mod tests {
     fn test_delete_modifier() {
         assert_eq!(
             parse_delete_modifier("delete pierre ami jean").unwrap().1,
-            PredicatAST::DeleteModifier(vec![Twww("pierre".to_string(), "ami".to_string(), "jean".to_string())]));
+            PredicatAST::DeleteModifier(vec![Teee("pierre".to_string(), "ami".to_string(), "jean".to_string())]));
 
     }
 
@@ -104,8 +104,8 @@ mod tests {
         assert_eq!(
             parse_modifier("add pierre ami julie and julie ami pierre").unwrap_or(("", PredicatAST::Empty)).1,
             PredicatAST::AddModifier(vec![
-                Twww("pierre".to_string(), "ami".to_string(), "julie".to_string()),
-                Twww("julie".to_string(), "ami".to_string(), "pierre".to_string())
+                Teee("pierre".to_string(), "ami".to_string(), "julie".to_string()),
+                Teee("julie".to_string(), "ami".to_string(), "pierre".to_string())
             ]));
     }
 

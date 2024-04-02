@@ -383,7 +383,7 @@ mod tests {
         assert_eq!(
             parse_query_var1("get $A where $A est mortel and $A > 4").unwrap().1,
               (vec![Var("A".to_string())], 
-               vec![Tvww("A".to_string(), "est".to_string(), "mortel".to_string())], 
+               vec![Tvee("A".to_string(), "est".to_string(), "mortel".to_string())], 
                vec![Comp(" $A > 4".to_string())]));
     }
 
@@ -393,7 +393,7 @@ mod tests {
         assert_eq!(
             parse_query_var2("get $A where $A est mortel").unwrap().1,
               (vec![Var("A".to_string())], 
-               vec![Tvww("A".to_string(), "est".to_string(), "mortel".to_string())], 
+               vec![Tvee("A".to_string(), "est".to_string(), "mortel".to_string())], 
                vec![]));
     }
 
@@ -424,7 +424,7 @@ mod tests {
         assert_eq!(
           parse_query_get("get pierre ami julie").unwrap().1,
           (vec![], 
-           vec![Twww("pierre".to_string(), "ami".to_string(), "julie".to_string())], 
+           vec![Teee("pierre".to_string(), "ami".to_string(), "julie".to_string())], 
            vec![]));
     }
 
