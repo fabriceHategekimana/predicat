@@ -13,6 +13,7 @@ pub use nom::{
 use nom::bytes::complete::take_while;
 use nom::character::complete::multispace0;
 use nom::character::complete::one_of;
+use nom::character::complete::none_of;
 
 use base_context::simple_context::SimpleContext;
 pub use Triplet::*;
@@ -283,24 +284,34 @@ fn alpha_num_underscore(s: &str) -> IResult<&str, String> {
 }
 
 fn parse_term(input: &str) -> IResult<&str, Element> {
-    let res = preceded(
-            multispace0,
-            alpha_num_underscore
-        )(input);
+    let res = alpha_num_underscore(input);
     match res {
         Ok((s, t)) => Ok((s, Element::Term(t.to_string()))),
         Err(e) => Err(e)
     }
 }
 
+fn string_content(s: &str) -> IResult<&str, String> {
+    let res = many1(none_of("'"))(s);
+    match res {
+        Ok((s, v)) => Ok((s, v.iter().collect())),
+        Err(r) => Err(r)
+    }
+}
+
 fn parse_string(s: &str) -> IResult<&str, Element> {
-    todo!();
+    let res = delimited(tag("'"), string_content, tag("'"))(s);
+    match res {
+        Ok((t, s)) => Ok((t, Element::String(s))),
+        Err(e) => Err(e)
+    }
 }
 
 fn parse_element(s: &str) -> IResult<&str,Language> {
-    let res = alt((
-                parse_term,
-                parse_string))(s);
+    let res = preceded(
+                multispace0,
+                alt((parse_term,
+                     parse_string)))(s);
     match res {
         Ok((t, e)) => Ok((t, Language::Element(e))),
         Err(e) => Err(e)
@@ -355,10 +366,10 @@ mod tests {
     #[test]
     fn test_term() {
         assert_eq!(
-            parse_term(" wow").unwrap().1,
+            parse_term("wow").unwrap().1,
             Element::Term("wow".to_string()));
         assert_eq!(
-            parse_term(" $A"),
+            parse_term("$A"),
             Err(nom::Err::Error(
                 Error {
                     input: "$A",
