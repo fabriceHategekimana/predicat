@@ -12,6 +12,7 @@ pub use nom::{
 
 use nom::bytes::complete::take_while;
 use nom::character::complete::multispace0;
+use nom::character::complete::one_of;
 
 use base_context::simple_context::SimpleContext;
 pub use Triplet::*;
@@ -273,12 +274,19 @@ pub fn parse_variable(s: &str) -> IResult<&str,Language> {
         )(s)
 }
 
+fn alpha_num_underscore(s: &str) -> IResult<&str, String> {
+    let res = many1(one_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"))(s);
+    match res {
+        Ok((s, v)) => Ok((s, v.iter().collect())),
+        Err(e) => Err(e)
+    }
+}
+
 fn parse_term(input: &str) -> IResult<&str, Element> {
     let res = preceded(
             multispace0,
-            take_while(|c: char| c.is_alphanumeric() || c == '_')
+            alpha_num_underscore
         )(input);
-        //.map(|(next_input, output)| (next_input, output.0.trim()))
     match res {
         Ok((s, t)) => Ok((s, Element::Term(t.to_string()))),
         Err(e) => Err(e)
@@ -354,7 +362,7 @@ mod tests {
             Err(nom::Err::Error(
                 Error {
                     input: "$A",
-                    code: ErrorKind::AlphaNumeric
+                    code: ErrorKind::OneOf
                 }
             )));
     }
