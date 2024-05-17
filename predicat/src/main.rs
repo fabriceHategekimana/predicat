@@ -1,5 +1,6 @@
 use std::fs;
 use std::env;
+use rustyline;
 use parser::ContextCMD;
 use parser::parse_command;
 use knowledge::Cache;
@@ -10,7 +11,6 @@ use parser::base_parser::PredicatAST;
 use base_context::context_traits::Context;
 use metaprogramming::substitute_variables;
 use base_context::simple_context::SimpleContext;
-
 
 struct Interpreter {
     context: SimpleContext,
@@ -112,6 +112,10 @@ fn get_user_input() -> ArgMatches {
                 .about("Open a file and execute its predicat's comment")
                 .arg(Arg::new("name"))
                    )
+        .subcommand(
+            Command::new("shell")
+                .about("Execute an interactive shell for predicat")
+                   )
         .get_matches()
 }
 
@@ -139,10 +143,24 @@ fn read_file(val: Option<&String>) -> () {
     interpreter.display();
 }
 
+fn shell() {
+    loop {
+        let mut rl = rustyline::DefaultEditor::new().unwrap();
+        let readline = rl.readline(">> ");
+        let exit = String::from("exit");
+        match readline {
+            Ok(exit) if exit == "exit"  => break,
+            Ok(line) => println!("Line: {:?}", line),
+            Err(_) => println!("No input"),
+        }
+    }
+}
+
 fn main() {
     match get_user_input().subcommand() {
         Some(("cmd", sub_matches)) => one_command(sub_matches.get_one::<String>("name")), 
         Some(("open", sub_matches)) => read_file(sub_matches.get_one::<String>("name")),
+        Some(("shell", sub_matches)) => shell(),
         _ => unreachable!("Exhausted list of subcommands and subcommand_required prevents `None`"),
     }
 }
