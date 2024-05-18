@@ -129,7 +129,6 @@ fn one_command(val: Option<&String>) -> () {
     interpreter.display();
 }
 
-
 fn process_string(input: &str) -> Vec<String> {
     let input_without_newlines = input.replace("\n", "");
     let mut vect = input_without_newlines
