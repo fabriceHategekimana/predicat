@@ -1,6 +1,9 @@
 use std::fs;
 use std::env;
-use rustyline;
+use rustyline::{Editor, Config, EditMode};
+use rustyline::error::ReadlineError;
+use rustyline::config::CompletionType;
+use rustyline::history::DefaultHistory;
 use parser::ContextCMD;
 use parser::parse_command;
 use knowledge::Cache;
@@ -128,7 +131,7 @@ fn one_command(val: Option<&String>) -> () {
 
 
 fn process_string(input: &str) -> Vec<String> {
-    let input_without_newlines = input.replace("\n", " ");
+    let input_without_newlines = input.replace("\n", "");
     input_without_newlines
         .split(';')
         .map(|s| s.trim().to_string())
@@ -137,20 +140,34 @@ fn process_string(input: &str) -> Vec<String> {
 
 fn read_file(val: Option<&String>) -> () {
     let val = open(val.expect("No file name was given"));
-    let val = process_string(&val);
+    let lines = process_string(&val);
     let mut interpreter = Interpreter::default();
-    val.iter().for_each(|cmd| {interpreter.run(cmd);});
+    lines.iter().for_each(|cmd| {interpreter.run(cmd);});
     interpreter.display();
 }
 
 fn shell() {
+    let config = Config::builder()
+        .edit_mode(EditMode::Emacs)
+        .completion_type(CompletionType::List)
+        .history_ignore_dups(true)
+        .expect("Error with the shell method")
+        .build();
+    let mut rl = Editor::<(), DefaultHistory>::with_config(config)
+        .expect("Erreur lors de l'initialisation de l'éditeur");
+
     loop {
-        let mut rl = rustyline::DefaultEditor::new().unwrap();
+        //let mut rl = rustyline::DefaultEditor::new().unwrap();
         let readline = rl.readline(">> ");
-        let exit = String::from("exit");
         match readline {
-            Ok(exit) if exit == "exit"  => break,
-            Ok(line) => println!("Line: {:?}", line),
+            Ok(exit) if exit == "exit" => break,
+            Ok(line) => {
+                let _ = rl.add_history_entry(line.as_str());
+                one_command(Some(&line))},
+            Err(ReadlineError::Interrupted) => {
+                println!("CTRL-C");
+                break;
+            },
             Err(_) => println!("No input"),
         }
     }

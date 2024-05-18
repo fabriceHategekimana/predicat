@@ -5,9 +5,9 @@ mod parse_query;
 pub mod base_parser;
 
 use regex::Regex;
+use base_parser::Action;
 use itertools::Itertools;
 use base_parser::PredicatAST;
-use base_parser::Action;
 use base_parser::CommandType;
 use base_parser::Command;
 use parse_query::{
@@ -111,7 +111,6 @@ pub fn parse_command<'a>(s: &'a str) -> Vec<PredicatAST> {
         )(s);
     match res {
         Ok((s, v)) => { 
-            //println!("{:?}", &v);
             v},
         Err(e) => { println!("{:?}", e); vec![] }
     }
