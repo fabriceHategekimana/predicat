@@ -132,10 +132,11 @@ fn one_command(val: Option<&String>) -> () {
 
 fn process_string(input: &str) -> Vec<String> {
     let input_without_newlines = input.replace("\n", "");
-    input_without_newlines
+    let mut vect = input_without_newlines
         .split(';')
         .map(|s| s.trim().to_string())
-        .collect()
+        .collect::<Vec<_>>();
+    vect.pop(); vect
 }
 
 fn read_file(val: Option<&String>) -> () {
