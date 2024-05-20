@@ -102,7 +102,22 @@ fn substitute_triplet(triplets: &[Triplet], context: &SimpleContext) -> Vec<Vec<
             Triplet::Tvev(v1, w1, v2) => substitute_2_var_triplet(v1, v2, w1, DoublePos::FirstThird, context),
             Triplet::Tevv(w1, v1, v2) => substitute_2_var_triplet(v1, v2, w1, DoublePos::SecondThird, context),
             Triplet::Tvvv(v1, v2, v3) => substitute_3_var_triplet(v1, v2, v3, context),
-            Triplet::Empty => vec![Triplet::Empty]
+            Triplet::Empty => vec![Triplet::Empty],
+            Triplet::TNeee(w1, w2, w3) => vec![Triplet::TNeee(w1.clone(), w2.clone(), w3.clone())],
+            Triplet::TNvee(v1, w1, w2) => substitute_1_var_triplet(v1, (w1, w2), Pos::First, context)
+                                            .iter().map(|x| x.clone().invert()).collect(),
+            Triplet::TNeve(w1, v1, w2) => substitute_1_var_triplet(v1, (w1, w2), Pos::Second, context)
+                                            .iter().map(|x| x.clone().invert()).collect(),
+            Triplet::TNeev(w1, w2, v1) => substitute_1_var_triplet(v1, (w1, w2), Pos::Third, context)
+                                            .iter().map(|x| x.clone().invert()).collect(),
+            Triplet::TNvve(v1, v2, w1) => substitute_2_var_triplet(v1, v2, w1, DoublePos::FirstSecond, context)
+                                            .iter().map(|x| x.clone().invert()).collect(),
+            Triplet::TNvev(v1, w1, v2) => substitute_2_var_triplet(v1, v2, w1, DoublePos::FirstThird, context)
+                                            .iter().map(|x| x.clone().invert()).collect(),
+            Triplet::TNevv(w1, v1, v2) => substitute_2_var_triplet(v1, v2, w1, DoublePos::SecondThird, context)
+                                            .iter().map(|x| x.clone().invert()).collect(),
+            Triplet::TNvvv(v1, v2, v3) => substitute_3_var_triplet(v1, v2, v3, context)
+                                            .iter().map(|x| x.clone().invert()).collect(),
         }
     }).map(|x| fullfill2(x, context)).collect();
     transpose(vec)

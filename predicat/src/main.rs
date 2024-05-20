@@ -124,7 +124,6 @@ fn get_user_input() -> ArgMatches {
 
 fn one_command(val: Option<&String>) -> () {
     let mut interpreter = Interpreter::default();
-    //let args = interpreter.get_args_or("add socrate est mortel");
     interpreter.run(&val.expect("No command where given as an argument"));
     interpreter.display();
 }

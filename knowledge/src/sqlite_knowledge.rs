@@ -427,7 +427,7 @@ fn query_to_sql(get: &[Var], link: &[Triplet], filter: &[Comp]) -> String {
     let head = format_variables(get);
     let columns = format_triplets(link); // warning, put the result into a parenthese
     let comparisons = format_comparisons(filter);
-    format!("{}{}{}", head, columns, comparisons )
+    format!("{}{}{}", head, columns, comparisons)
 }
 
 fn format_triplets(tri: &[Triplet]) -> String {
@@ -491,7 +491,22 @@ pub fn triplet_to_sql(tri: &Triplet) -> String {
             format!("SELECT link AS {},goal AS {} FROM facts WHERE subject='{}'",b,c,a),
         Tvvv(a,b,c) => 
             format!("SELECT subject AS {},link AS {},goal AS {} FROM facts",a,b,c),
-        Triplet::Empty => String::from("")
+        Triplet::Empty => String::from(""),
+        TNeee(a,b,c) => 
+            format!("SELECT subject AS {}, link AS {},goal AS {} FROM facts RIGHT JOIN facts t2 ON t1.subject = t2.subject AND t1.link = t2.link AND t1.goal = t2.goal",a,b,c),
+        TNvee(a,b,c) => 
+            format!("SELECT subject AS {} FROM facts WHERE subject NOT IN (SELECT subject AS {} FROM facts WHERE link='{}' AND goal='{}')", a,a,b,c),
+        TNeve(a,b,c) => 
+            format!("SELECT link AS {} FROM facts WHERE link NOT IN (SELECT link AS {} FROM facts WHERE subject='{}' AND goal='{}')", b,b,a,c),
+        TNeev(a,b,c) => 
+            format!("SELECT goal AS {} FROM facts WHERE link NOT IN (SELECT goal AS {} FROM facts WHERE subject='{}' AND link='{}')",c,c,a,b),
+        TNvve(a,b,c) => 
+            format!("SELECT subject AS {},link AS {} FROM facts t1 WHERE goal='{}' RIGHT JOIN facts t2 ON t1.subject = t2.subject AND t1.link = t2.link",a,b,c),
+        TNvev(a,b,c) => 
+            format!("SELECT subject AS {},goal AS {} FROM facts WHERE link='{}' RIGHT JOIN facts t2 ON t1.subject = t2.subject AND t1.goal = t2.goal",a,c,b),
+        TNevv(a,b,c) => 
+            format!("SELECT link AS {},goal AS {} FROM facts WHERE subject='{}' RIGHT JOIN facts t2 ON t1.link = t2.link AND t1.goal = t2.goal",b,c,a),
+        TNvvv(a,b,c) => String::from("SELECT * FROM facts HAVING 1 = 0"),
     }
 }
 
@@ -663,6 +678,5 @@ mod tests {
             change_variables("add $B ami $A", &context),
             "add emy ami pierre");
     }
-
 
 }

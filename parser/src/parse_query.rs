@@ -14,7 +14,7 @@ pub use super::base_parser::{
     Comp,
     Triplet,
     Triplet::*,
-    parse_variable,
+    parse_pure_variable,
     parse_triplet_and,
     extract_triplet
 };
@@ -112,7 +112,7 @@ fn parse_get(s: &str) -> IResult<&str,Language> {
 // get [vars] [connector] [triplets] [comparison]
 fn parse_query_var1(s: &str) -> IResult<&str, QueryAST> {
     let res = tuple((parse_get,
-          many1(parse_variable),
+          many1(parse_pure_variable),
           parse_connector,
           many1(parse_triplet_and),
           many1(parse_comparison_and)))(s);
@@ -128,7 +128,7 @@ fn parse_query_var1(s: &str) -> IResult<&str, QueryAST> {
 // get [variables] [connector] [triplets]
 fn parse_query_var2(s: &str) -> IResult<&str, QueryAST> {
     let res = tuple((parse_get,
-          many1(parse_variable),
+          many1(parse_pure_variable),
           parse_connector,
           many1(parse_triplet_and)))(s);
     match res {
@@ -142,7 +142,7 @@ fn parse_query_var2(s: &str) -> IResult<&str, QueryAST> {
 // get [vars] [connector] [comparison]
 fn parse_query_var3(s: &str) -> IResult<&str, QueryAST> {
     let res = tuple((parse_get,
-          many1(parse_variable),
+          many1(parse_pure_variable),
           parse_connector,
           many1(parse_comparison_and)))(s);
     match res {
@@ -194,7 +194,7 @@ mod tests {
         Triplet,
         PredicatAST,
         parse_get,
-        parse_variable,
+        parse_pure_variable,
         parse_connector,
         parse_operator,
         parse_comparison,
@@ -207,6 +207,7 @@ mod tests {
         parse_query_var2,
         parse_query_var3,
         parse_query,
+        parse_triplet_and
     };
 
     #[test]
@@ -223,16 +224,16 @@ mod tests {
     #[test]
     fn test_variable() {
         assert_eq!(
-            parse_variable(" $Hello").unwrap().1,
+            parse_pure_variable(" $Hello").unwrap().1,
             Language::Var("Hello".to_string()));
         assert_eq!(
-            parse_variable(" $A").unwrap().1,
+            parse_pure_variable(" $A").unwrap().1,
             Language::Var("A".to_string()));
         assert_eq!(
-            parse_variable(" $2").unwrap().1,
+            parse_pure_variable(" $2").unwrap().1,
             Language::Var("2".to_string()));
         assert_eq!(
-            parse_variable(" hey"),
+            parse_pure_variable(" hey"),
             Err(nom::Err::Error(
                 Error {
                     input: "hey",
@@ -456,6 +457,13 @@ mod tests {
         assert_eq!(
             parse_valvar(" | ").unwrap_or(("", "not")).1,
             "not");
+    }
+
+    #[test]
+    fn test_parse_triplet_not() {
+        assert_eq!(
+            parse_triplet_and(" $A not ami pierre").unwrap().1,
+            Language::Tri(Triplet::TNvee("A".to_string(), "ami".to_string(), "pierre".to_string())));
     }
 
 }

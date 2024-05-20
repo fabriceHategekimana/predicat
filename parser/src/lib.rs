@@ -104,9 +104,10 @@ fn parse_rule(s: &str) -> IResult<&str, PredicatAST> {
 pub fn parse_command<'a>(s: &'a str) -> Vec<PredicatAST> {
     let res = many1(
         alt((
-            parse_query_and_modifier,
             parse_query_and_modifier_bar,
+            parse_query_and_modifier,
             parse_rule
+            // TODO: add validation rule
             ))
         )(s);
     match res {
