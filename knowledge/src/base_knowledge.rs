@@ -33,8 +33,8 @@ pub trait Command: Cache {
     fn translate<'a>(&'a self, s: &PredicatAST) -> Result<Vec<Self::Language>, &str>;
     fn execute(&self, s: &Self::Language) -> SimpleContext;
     fn is_invalid(&self, cmd: &PredicatAST) -> bool;
-    fn get_commands_from(&self, cmds: &PredicatAST) -> Vec<String>;
-    fn get_command_from_triplet(&self, modifier: &str, tri: &Triplet) -> Vec<String>;
+    fn infer_commands_from(&self, cmds: &PredicatAST) -> Vec<String>;
+    fn infer_command_from_triplet(&self, modifier: &str, tri: &Triplet) -> Vec<String>;
 
     fn valid_commands(&self, cmds: Vec<PredicatAST>) -> Option<Vec<PredicatAST>> {
             cmds.iter().all(|x| !self.is_invalid(x)).then_some(cmds)

@@ -67,7 +67,7 @@ impl Interpreter {
                 .valid_commands(cmds.to_vec())?
                 .iter()
                 .filter(|x| !knowledge.in_cache(x))
-                .map(|x| (x, knowledge.get_commands_from(x)))
+                .map(|x| (x, knowledge.infer_commands_from(x)))
                 .map(|(cmd, aftcmd)| knowledge.execute_command(cmd).add_aftercmd(&aftcmd))
                 .reduce(SimpleContext::join_contexts)?;
         Some(context.clone())
@@ -237,7 +237,7 @@ mod tests {
        interpreter.clear();
        interpreter.run("infer add $A ami $B -> add $B ami $A");
        let cmds = interpreter.knowledge
-           .get_commands_from(&Interpreter::parse(&"add julien ami julie".to_string())[0]);
+           .infer_commands_from(&Interpreter::parse(&"add julien ami julie".to_string())[0]);
        assert_eq!(cmds,
                  ["add julie ami julien"]);
     }

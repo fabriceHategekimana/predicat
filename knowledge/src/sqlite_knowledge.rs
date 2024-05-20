@@ -200,7 +200,7 @@ impl Command for SqliteKnowledge {
     }
 
 
-    fn get_command_from_triplet(&self, modifier: &str, tri: &Triplet) -> Vec<String> {
+    fn infer_command_from_triplet(&self, modifier: &str, tri: &Triplet) -> Vec<String> {
         let (sub, lin, goa) = tri.to_tuple();
         let select = format!("SELECT * FROM rules where modifier='{}' AND (subject='{}' OR link='{}' OR goal='{}')", modifier, sub, lin, goa);
         let rules = self.get(&select.into());
@@ -209,7 +209,7 @@ impl Command for SqliteKnowledge {
                 rules.get_values("subject").unwrap_or(vec![]),
                 rules.get_values("link").unwrap_or(vec![]),
                 rules.get_values("goal").unwrap_or(vec![]))
-            .map(|(modi, subj, link, goal)| match_triplet((&sub, &lin, &goa), (&subj, &link, &goal)))
+            .map(|(modi, subj, link, goal)| unify_triplet((&sub, &lin, &goa), (&subj, &link, &goal)))
             .reduce(|context1, context2| context1.join(context2))
             .unwrap_or(SimpleContext::new());
 
@@ -218,13 +218,13 @@ impl Command for SqliteKnowledge {
             .collect()
     }
 
-    fn get_commands_from(&self, cmd: &PredicatAST) -> Vec<String> {
+    fn infer_commands_from(&self, cmd: &PredicatAST) -> Vec<String> {
         match cmd {
             PredicatAST::AddModifier(v_of_tri) => v_of_tri.iter()
-                .flat_map(|x| self.get_command_from_triplet("add", x))
+                .flat_map(|x| self.infer_command_from_triplet("add", x))
                 .collect::<Vec<_>>(),
             PredicatAST::DeleteModifier(v_of_tri) => v_of_tri.iter()
-                .flat_map(|x| self.get_command_from_triplet("delete", x))
+                .flat_map(|x| self.infer_command_from_triplet("delete", x))
                 .collect::<Vec<_>>(),
             _ => vec![]
         }
@@ -316,7 +316,7 @@ impl Knowledgeable for SqliteKnowledge {
 
 }
 
-fn match_triplet((sub1, lin1, goa1): (&str, &str, &str), (sub2, lin2, goa2): (&str, &str, &str)) -> SimpleContext {
+fn unify_triplet((sub1, lin1, goa1): (&str, &str, &str), (sub2, lin2, goa2): (&str, &str, &str)) -> SimpleContext {
     let res = [(sub1, sub2), (lin1, lin2), (goa1, goa2)]
         .iter()
         .flat_map(|(el1, el2)| match is_variable(el2) { true => Some((el2.to_string(), el1.to_string())), false => None })
@@ -325,7 +325,7 @@ fn match_triplet((sub1, lin1, goa1): (&str, &str, &str), (sub2, lin2, goa2): (&s
 }
 
 fn substitute_variable(var: &str, val:&str, cmd: &str) -> String {
-    cmd.replace(var, val).to_string()
+    cmd.replace(var, &format!("'{}'", val)).to_string()
 }
 
 fn change_variables(cmd: &str, context: &SimpleContext) -> String {
@@ -337,7 +337,8 @@ fn change_variables(cmd: &str, context: &SimpleContext) -> String {
              context.get_values(var)
              .unwrap_or(vec![]).iter().zip(commands.iter())
              .map(|(val, cmd)| substitute_variable(var, val, cmd))
-             .collect()).get(0).unwrap_or(&"".to_string()).clone()
+             .collect())
+        .get(0).unwrap_or(&"".to_string()).clone()
 }
 
 fn triplet_to_delete(tri: &Triplet) -> String {
@@ -657,7 +658,7 @@ mod tests {
         context = context.add_column("$B", &["emi"]);
 
         assert_eq!(
-            match_triplet(("pierre", "ami", "emi"), ("$A", "ami", "$B")),
+            unify_triplet(("pierre", "ami", "emi"), ("$A", "ami", "$B")),
             context   
         );
     }
