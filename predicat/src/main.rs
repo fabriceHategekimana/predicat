@@ -1,5 +1,6 @@
 use std::fs;
 use std::env;
+use rustyline::Context as ConsoleContext;
 use rustyline::{Editor, Config, EditMode};
 use rustyline::error::ReadlineError;
 use rustyline::config::CompletionType;
@@ -15,20 +16,27 @@ use base_context::context_traits::Context;
 use metaprogramming::substitute_variables;
 use base_context::simple_context::SimpleContext;
 
-struct Interpreter {
+struct Interpreter<K: Knowledgeable> {
     context: SimpleContext,
-    knowledge: SqliteKnowledge
+    knowledge: K
 }
 
-impl Interpreter {
+impl<K: Knowledgeable> Interpreter<K> {
+
+    fn new(k: K) -> Self {
+        Interpreter { 
+            context: SimpleContext::default(),
+            knowledge: k
+            }
+    }
 
     fn run(&mut self, cmd: &str) -> SimpleContext {
-        
-        let mut context = self.interpret(&vec![cmd.to_string()], &self.knowledge);
+        let mut context = self.interpret(&vec![cmd.to_string()]);
         while context.has_commands() && !context.has_error() {
-            context = self.interpret(&context.get_aftercmds(), &self.knowledge); } self.context = context.clone();
-        self.clear_cache();
+            context = self.interpret(&context.get_aftercmds());
+        }
         self.context = context.clone();
+        self.clear_cache();
         context
     }
 
@@ -63,7 +71,7 @@ impl Interpreter {
     }
 
     fn execute(&self, cmds: &[PredicatAST], knowledge: &impl Knowledgeable) -> Option<SimpleContext> {
-        let context = knowledge
+        let context = self.knowledge
                 .valid_commands(cmds.to_vec())?
                 .iter()
                 .filter(|x| !knowledge.in_cache(x))
@@ -73,26 +81,17 @@ impl Interpreter {
         Some(context.clone())
     }
 
-    fn interpret(&self, cmds: &[String], knowledge: &impl Knowledgeable) -> SimpleContext {
+    fn interpret(&self, cmds: &[String]) -> SimpleContext {
         let cmds = cmds.iter()
                     .flat_map(Self::parse)
                     .collect::<Vec<PredicatAST>>();
-        self.execute(&cmds, knowledge).unwrap_or_default()
+        self.execute(&cmds, &self.knowledge).unwrap_or_default()
     }
 
     fn clear(&self) -> () {
         self.knowledge.clear_all();
     }
     
-}
-
-impl Default for Interpreter {
-   fn default() -> Interpreter {
-       Interpreter {
-           context: SimpleContext::new(),
-           knowledge: SqliteKnowledge::new()
-       }
-   } 
 }
 
 
@@ -122,9 +121,9 @@ fn get_user_input() -> ArgMatches {
         .get_matches()
 }
 
-fn one_command(val: Option<&String>) -> () {
-    let mut interpreter = Interpreter::default();
-    interpreter.run(&val.expect("No command where given as an argument"));
+fn one_command(val: &String) -> () {
+    let mut interpreter = Interpreter::new(SqliteKnowledge::new());
+    interpreter.run(&val);
     interpreter.display();
 }
 
@@ -137,10 +136,10 @@ fn process_string(input: &str) -> Vec<String> {
     vect.pop(); vect
 }
 
-fn read_file(val: Option<&String>) -> () {
-    let val = open(val.expect("No file name was given"));
+fn read_file(val: &String) -> () {
+    let val = open(val);
     let lines = process_string(&val);
-    let mut interpreter = Interpreter::default();
+    let mut interpreter = Interpreter::new(SqliteKnowledge::new());
     lines.iter().for_each(|cmd| {interpreter.run(cmd);});
     interpreter.display();
 }
@@ -162,7 +161,7 @@ fn shell() {
             Ok(exit) if exit == "exit" => break,
             Ok(line) => {
                 let _ = rl.add_history_entry(line.as_str());
-                one_command(Some(&line))},
+                one_command(&line)},
             Err(ReadlineError::Interrupted) => {
                 println!("CTRL-C");
                 break;
@@ -174,8 +173,10 @@ fn shell() {
 
 fn main() {
     match get_user_input().subcommand() {
-        Some(("cmd", sub_matches)) => one_command(sub_matches.get_one::<String>("name")), 
-        Some(("open", sub_matches)) => read_file(sub_matches.get_one::<String>("name")),
+        Some(("cmd", sub_matches)) => one_command(sub_matches.get_one::<String>("name")
+                                                  .expect("No command where given as an argument")), 
+        Some(("open", sub_matches)) => read_file(sub_matches.get_one::<String>("name")
+                                                  .expect("No file name where given")), 
         Some(("shell", sub_matches)) => shell(),
         _ => unreachable!("Exhausted list of subcommands and subcommand_required prevents `None`"),
     }
