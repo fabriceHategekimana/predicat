@@ -7,7 +7,7 @@ use sqlite::{
 };
 
 //use crate::parser::parse_command;
-use base_context::context_traits::Context;
+use base_context::context_traits::{Context, Var};
 use base_context::simple_context::SimpleContext;
 use metaprogramming::substitute_variables;
 use std::collections::HashMap;
@@ -17,7 +17,6 @@ use parser::soft_predicat;
 use parser::base_parser::PredicatAST;
 use parser::base_parser::PredicatAST::{Query, AddModifier, DeleteModifier, Empty, Infer};
 use parser::parse_command;
-use parser::base_parser::Var;
 use parser::base_parser::Language;
 use parser::base_parser::Language::Element;
 use parser::base_parser::Language::Tri;
@@ -204,7 +203,7 @@ impl Command for SqliteKnowledge {
         let (sub, lin, goa) = tri.to_tuple();
         let select = format!("SELECT * FROM rules where modifier='{}' AND (subject='{}' OR link='{}' OR goal='{}')", modifier, sub, lin, goa);
         let rules = self.get(&select.into());
-        let context = izip!(
+        let dataframe_of_variables = izip!(
                 rules.get_values("modifier").unwrap_or(vec![]),
                 rules.get_values("subject").unwrap_or(vec![]),
                 rules.get_values("link").unwrap_or(vec![]),
@@ -214,7 +213,7 @@ impl Command for SqliteKnowledge {
             .unwrap_or(SimpleContext::new());
 
         rules.get_values("command").unwrap_or(vec![]).iter()
-            .map(|cmd| change_variables(cmd, &context))
+            .map(|cmd| change_variables(cmd, &dataframe_of_variables))
             .collect()
     }
 
@@ -324,8 +323,8 @@ fn unify_triplet((sub1, lin1, goa1): (&str, &str, &str), (sub2, lin2, goa2): (&s
          SimpleContext::from(res)
 }
 
-fn substitute_variable(var: &str, val:&str, cmd: &str) -> String {
-    cmd.replace(var, &format!("'{}'", val)).to_string()
+fn substitute_variable(var: &Var, val:&str, cmd: &str) -> String {
+    cmd.replace(&var.0, &format!("'{}'", val)).to_string()
 }
 
 fn change_variables(cmd: &str, context: &SimpleContext) -> String {
@@ -334,7 +333,7 @@ fn change_variables(cmd: &str, context: &SimpleContext) -> String {
 
     context.get_variables().iter()
         .fold(cmds, |commands, var| 
-             context.get_values(var)
+             context.get_values(&var.0)
              .unwrap_or(vec![]).iter().zip(commands.iter())
              .map(|(val, cmd)| substitute_variable(var, val, cmd))
              .collect())

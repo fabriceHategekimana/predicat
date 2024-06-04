@@ -8,9 +8,9 @@ pub use nom::{
     IResult,
 };
 
+use base_context::context_traits::Var;
 pub use super::base_parser::{
     Language,
-    Var,
     Comp,
     Triplet,
     Triplet::*,

@@ -22,7 +22,8 @@ use nom::IResult;
 use nom::combinator::recognize;
 use parse_modifier::parse_modifier;
 use crate::Triplet::*;
-pub use self::base_parser::{Language, Var, Triplet, parse_bar};
+pub use self::base_parser::{Language, Triplet, parse_bar};
+use base_context::context_traits::Var;
 use base_context::context_traits::Context;
 use base_context::simple_context::SimpleContext;
 

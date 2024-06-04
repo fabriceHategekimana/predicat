@@ -16,6 +16,7 @@ use nom::character::complete::one_of;
 use nom::character::complete::none_of;
 
 use base_context::simple_context::SimpleContext;
+use base_context::context_traits::Var;
 pub use Triplet::*;
 
 #[derive(PartialEq, Debug, Clone, Copy)]
@@ -82,10 +83,6 @@ impl From<PredicatAST> for String {
         }
     }    
 }
-
-
-#[derive(PartialEq, Debug, Clone)]
-pub struct Var(pub String);
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct Comp(pub String);

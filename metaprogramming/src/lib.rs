@@ -1,9 +1,9 @@
 #![allow(dead_code, unused_variables, unused_imports, unreachable_code)]
 // will be use for the language (AST) manipulation
 
-use base_context::context_traits::Context;
+use base_context::context_traits::{Context, Var};
 use base_context::simple_context::SimpleContext;
-use parser::base_parser::{PredicatAST, Var, Triplet, Comp, Language};
+use parser::base_parser::{PredicatAST, Triplet, Comp, Language};
 
 #[derive(PartialEq, Debug, Clone, Copy)]
 enum Pos {
@@ -175,7 +175,7 @@ fn substitute_query(vars: &[Var], triplets: &[Triplet], comps: &[Comp], context:
        let tripletss = substitute_triplet(triplets, context);
        let compss = substitute_comp(comps, context);
        let new_vars = vars.iter()
-           .filter(|Var(var)| context.get_variables().iter().all(|x| x != var))
+           .filter(|Var(var)| context.get_variables().iter().all(|x| x.0 != *var))
            .map(Var::clone)
            .collect::<Vec<_>>();
        tripletss.iter().zip(compss.iter())

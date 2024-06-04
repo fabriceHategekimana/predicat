@@ -8,7 +8,6 @@ pub use nom::{
 
 pub use super::base_parser::{
     Language,
-    Var,
     Comp,
     Triplet,
     Triplet::*,
@@ -19,6 +18,7 @@ pub use super::base_parser::{
 use nom::Err;
 use nom::error::Error;
 use super::base_parser::PredicatAST;
+use base_context::context_traits::Var;
 
 type QueryAST = (Vec<Var>, Vec<Language>,Vec<Comp>);
 type QueryVarAST<'a> = (Vec<String>, Vec<&'a str>);

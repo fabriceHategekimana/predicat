@@ -1,6 +1,6 @@
 use cli_table::{Style, Table};
 use itertools::Itertools;
-use crate::context_traits::Context;
+use crate::context_traits::{Context, Var};
 
 type ColumnName = String;
 type Value = String;
@@ -33,7 +33,7 @@ pub fn display(&self) {
         x if x > 0 => {
         let variables = self.get_variables();
         let body = self.get_variables().iter()
-            .map(|x| self.get_values(x).unwrap())
+            .map(|x| self.get_values(&x.0).unwrap())
             .collect::<Vec<_>>();
         let table = (0..self.len()).map(|x| get_line(x, &body))
             .table()
@@ -74,7 +74,6 @@ impl From<Vec<[&str; 3]>> for SimpleContext {
     }
 }
 
-
 impl Context for SimpleContext {
 
     type FellowContext = SimpleContext;
@@ -87,8 +86,8 @@ impl Context for SimpleContext {
         }
     }
 
-    fn get_variables(&self) -> Vec<String>{
-        self.tab.iter().map(|x| x.0.clone()).sorted().unique().collect()
+    fn get_variables(&self) -> Vec<Var>{
+        self.tab.iter().map(|x| Var::new(&x.0.clone()).unwrap()).sorted().unique().collect()
     }
 
     fn get_values(&self, key: &str) -> Option<Vec<String>> {
@@ -107,7 +106,7 @@ impl Context for SimpleContext {
     }
 
     fn is_in_context(&self, key: String) -> bool {
-        self.get_variables().iter().any(|x| &x[..] == key)
+        self.get_variables().iter().any(|x| &x.0[..] == key)
     }
 
     fn len(&self) -> usize {
