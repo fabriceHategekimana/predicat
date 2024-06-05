@@ -48,6 +48,9 @@ pub enum Command {
     Predicat(String, Box<PredicatAST>)
 }
 
+type Premice = String;
+type Conclusion = String;
+
 #[derive(PartialEq, Debug, Clone)]
 pub enum PredicatAST {
     Query(
@@ -56,7 +59,7 @@ pub enum PredicatAST {
          Vec<Comp>)),
     AddModifier(Vec<Triplet>),
     DeleteModifier(Vec<Triplet>),
-    Infer((CommandType, Vec<Triplet>), String),
+    Infer((CommandType, Vec<Triplet>), Premice, Conclusion),
     // TODO: add Block and Assert rules
     Empty,
     Debug(String)

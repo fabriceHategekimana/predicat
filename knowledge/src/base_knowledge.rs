@@ -27,9 +27,9 @@ pub trait Cache {
 
 pub trait Command: Cache {
     type Language;
-    fn get(&self, cmds: &Self::Language) -> SimpleContext;
+    fn get(&self, cmds: &str) -> SimpleContext;
     fn get_all(&self) -> SimpleContext; // get a table of the datas included
-    fn modify(&self, cmds: &Self::Language) -> Result<SimpleContext, &str>;
+    fn modify(&self, cmds: &str) -> Result<SimpleContext, &str>;
     fn translate<'a>(&'a self, s: &PredicatAST) -> Result<Vec<Self::Language>, &str>;
     fn execute(&self, s: &Self::Language) -> SimpleContext;
     fn is_invalid(&self, cmd: &PredicatAST) -> bool;

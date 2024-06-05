@@ -14,6 +14,8 @@ use parse_query::{
     parse_query,
     alt
 };
+
+use nom::combinator::peek;
 use nom::multi::many1;
 use nom::sequence::terminated;
 use nom::bytes::complete::tag;
@@ -69,12 +71,15 @@ fn parse_query_and_modifier_bar(s: &str) -> IResult<&str, PredicatAST> {
     terminated(parse_query_and_modifier, parse_bar)(s)
 }
 
-fn parse_trigger(s: &str) -> IResult<&str, (CommandType, Vec<Triplet>)> {
+fn parse_trigger(s: &str) -> IResult<&str, (CommandType, Vec<Triplet>, &str)> {
     let res = parse_modifier(s);
-    match res {
-        Ok((s, PredicatAST::AddModifier(v))) => Ok((s, (CommandType::Add, v.clone()))),
-        Ok((s, PredicatAST::DeleteModifier(v))) => Ok((s, (CommandType::Delete, v.clone()))),
-        Err(r) => Err(r),
+    let part = recognize(parse_modifier)(s);
+    match (res, part) {
+        (Ok((so, PredicatAST::AddModifier(v))), Ok((s0, s1))) => 
+            Ok((so, (CommandType::Add, v.clone(), s1))),
+        (Ok((so, PredicatAST::DeleteModifier(v))), Ok((s0, s1))) => 
+            Ok((so, (CommandType::Delete, v.clone(), s1))),
+        (Err(r), Err(r1)) => Err(r),
         _ => todo!()
     }
 }
@@ -89,7 +94,7 @@ fn parse_cmd(s: &str) -> IResult<&str, (String, Box<PredicatAST>)> {
     }
 }
 
-fn parse_rule(s: &str) -> IResult<&str, PredicatAST> {
+fn parse_infer(s: &str) -> IResult<&str, PredicatAST> {
     let res = tuple((
             tag("infer "),
             parse_trigger,
@@ -97,7 +102,7 @@ fn parse_rule(s: &str) -> IResult<&str, PredicatAST> {
             parse_cmd
           ))(s);
     match res {
-        Ok((s, (r, (ty, tri), _, (st, ast)))) => Ok((s, PredicatAST::Infer((ty, tri), st))),
+        Ok((s, (r, (ty, tri, premi), _, (st, ast)))) => Ok((s, PredicatAST::Infer((ty, tri), st, premi.to_string()))),
         Err(r) => Err(r)
     }
 }
@@ -107,7 +112,7 @@ pub fn parse_command<'a>(s: &'a str) -> Vec<PredicatAST> {
         alt((
             parse_query_and_modifier_bar,
             parse_query_and_modifier,
-            parse_rule
+            parse_infer
             // TODO: add validation rule
             ))
         )(s);

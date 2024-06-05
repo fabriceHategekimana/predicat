@@ -26,17 +26,27 @@ use parser::base_parser::Triplet;
 use itertools::izip;
 use serial_test::serial;
 
-pub struct Sql(String);
+//pub struct Sql(String);
 
-impl Into<Sql> for &str {
-    fn into(self) -> Sql {
-        Sql(self.to_string())
-    }
+pub enum Sql {
+    Query(String),
+    Rule(String),
+    Modify(String)
 }
 
 impl Into<Sql> for String {
     fn into(self) -> Sql {
-        Sql(self)
+        match &self[0..6]  {
+            "SELECT" => Sql::Query(self.to_string()),
+            "%rule%" => Sql::Rule(self.to_string()),
+            _ => Sql::Modify(self.to_string())
+        }
+    }
+}
+
+impl Into<Sql> for &str {
+    fn into(self) -> Sql {
+        String::into(self.to_string())
     }
 }
 
@@ -117,10 +127,9 @@ fn extract_columns(sql_select_query: &str) -> Vec<&str> {
 impl Command for SqliteKnowledge {
     type Language = Sql;
 
-    fn get(&self, cmd: &Sql) -> SimpleContext {
-        let query = &cmd.0;
+    fn get(&self, cmd: &str) -> SimpleContext {
         let mut v: Vec<(String, String)> = vec![];
-        let _ = self.connection.iterate(query, |sqlite_couple| {
+        let _ = self.connection.iterate(cmd, |sqlite_couple| {
             for couple in sqlite_couple.iter() {
                 v.push((couple.0.to_string(),
                         couple.1.unwrap_or("").to_string()));
@@ -131,11 +140,11 @@ impl Command for SqliteKnowledge {
     }
 
     fn get_all(&self) -> SimpleContext {
-        self.get(&"SELECT A,B,C from (SELECT subject as A, link as B, goal as C FROM facts)".into())
+        self.get(&"SELECT A,B,C from (SELECT subject as A, link as B, goal as C FROM facts)")
     }
 
-    fn modify(&self, cmd: &Sql) -> Result<SimpleContext, &str> {
-        match self.connection.execute(cmd.0.clone()) {
+    fn modify(&self, cmd: &str) -> Result<SimpleContext, &str> {
+        match self.connection.execute(cmd) {
             Ok(r) => Ok(SimpleContext::new()),
             Err(r) => {println!("r: {:?}", r); Err("An error occured with the sqlite database")}
         }
@@ -155,14 +164,20 @@ impl Command for SqliteKnowledge {
                             .map(|x| triplet_to_delete(x))
                             .fold("".to_string(), string_concat)
                             .into()]),
-            Infer((b, c), cmd) => {
+            Infer((b, c), pre, cmd) => {
+                    // TODO : perhaps remove the match (isn't used yet)
                     let scmd = match &cmd[0..3] { 
-                        "get" => self.translate(ast).unwrap().iter().map(|x| x.0.replace("'", "%single_quote%")).collect(),
+                        "get" => self.translate(ast).unwrap().iter()
+                                .map(|x| {
+                                    if let Sql::Rule(rule) = x {
+                                        Some(rule.replace("'", "%single_quote%"))
+                                    } else { None }.unwrap() })
+                                .collect(),
                         _ => cmd.clone()};
                     let res = c.iter().map(|x| x.to_tuple_with_variable())
                         .map(|(t1, t2, t3)| {
                             format!("%rule%%|%{}%|%{}%|%{}%|%{}%|%{}%|%{}",
-                                       b.get_string(), t1, t2, t3, cmd, scmd).into()
+                                       b.get_string(), t1, t2, t3, pre, cmd).into()
                         }).collect::<Vec<_>>();
                         Ok(res)
                             },
@@ -171,26 +186,26 @@ impl Command for SqliteKnowledge {
     }
 
     fn execute(&self, s: &Sql) -> SimpleContext {
-        let res = match &s.0[0..6]  {
-            "SELECT" => self.get(s),
-            "%rule%" => self.store_rule(&s.0),
-            _ => self.modify(s).unwrap()
+        let res = match s  {
+            Sql::Query(q) => self.get(q),
+            Sql::Rule(r) => self.store_rule(r),
+            Sql::Modify(m) => self.modify(m).unwrap()
         }.clone();
         res
     }
 
     fn is_invalid(&self, cmd: &PredicatAST) -> bool {
         match cmd {
-            PredicatAST::Infer((mo, tri), cmd) => {
+            PredicatAST::Infer((mo, tri), pre, cmd) => {
                 tri.iter().map(|x| x.to_tuple_with_variable())
                     .map(|(t1, t2, t3)| {
                         let select = format!("SELECT * FROM Rules where modifier = {:?} subject = {:?} or link = {:?} or goal = {:?}",
                         mo, t1, t2, t3);
-                    match self.get(&select.into()).get_values("backed_command") {
+                    match self.get(&select).get_values("backed_command") {
                         None => false,
                         Some(v) => v.iter()
                             .map(|x| x.replace("%singlequote%", "'"))
-                            .any(|cmd| self.get(&cmd.into()).is_not_empty())
+                            .any(|cmd| self.get(&cmd).is_not_empty())
                         }
                     }).any(|x| x)
             },
@@ -202,7 +217,7 @@ impl Command for SqliteKnowledge {
     fn infer_command_from_triplet(&self, modifier: &str, tri: &Triplet) -> Vec<String> {
         let (sub, lin, goa) = tri.to_tuple();
         let select = format!("SELECT * FROM rules where modifier='{}' AND (subject='{}' OR link='{}' OR goal='{}')", modifier, sub, lin, goa);
-        let rules = self.get(&select.into());
+        let rules = self.get(&select);
         let dataframe_of_variables = izip!(
                 rules.get_values("modifier").unwrap_or(vec![]),
                 rules.get_values("subject").unwrap_or(vec![]),
@@ -305,14 +320,11 @@ impl Knowledgeable for SqliteKnowledge {
         let knowledge = SqliteKnowledge {
             connection: sqlite::open("data.db").unwrap(),
         };
-        let _ = knowledge.modify(&CREATE_FACTS.into());
-        let _ = knowledge.modify(&CREATE_RULES.into());
-        let _ = knowledge.modify(&CREATE_CACHE.into());
+        let _ = knowledge.modify(&CREATE_FACTS);
+        let _ = knowledge.modify(&CREATE_RULES);
+        let _ = knowledge.modify(&CREATE_CACHE);
         knowledge
     }
-
-
-
 }
 
 fn unify_triplet((sub1, lin1, goa1): (&str, &str, &str), (sub2, lin2, goa2): (&str, &str, &str)) -> SimpleContext {
