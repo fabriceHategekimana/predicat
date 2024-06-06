@@ -143,7 +143,7 @@ fn substitute_comp(comps: &[Comp], context: &SimpleContext) -> Vec<Vec<Comp>> {
         }
     }).collect();
     fullfill(transpose(vec), context)},
-    false => (0..context.len()).into_iter().map(|x| vec![]).collect()
+    false => (0..context.dataframe_len()).into_iter().map(|x| vec![]).collect()
     }
 }
 
@@ -156,20 +156,20 @@ fn substitute_query_helper(query: &PredicatAST, context: &SimpleContext) -> Vec<
 
 fn fullfill<E: Clone>(v: Vec<Vec<E>>, context: &SimpleContext) -> Vec<Vec<E>> {
     match v.len() == 1 {
-        true => (0..context.len()).into_iter().map(|x| v[0].clone()).collect(),
+        true => (0..context.dataframe_len()).into_iter().map(|x| v[0].clone()).collect(),
         false => v.clone()
     }
 }
 
 fn fullfill2<E: Clone>(v: Vec<E>, context: &SimpleContext) -> Vec<E> {
     match v.len() == 1 {
-        true => (0..context.len()).into_iter().map(|x| v[0].clone()).collect(),
+        true => (0..context.dataframe_len()).into_iter().map(|x| v[0].clone()).collect(),
         false => v.clone()
     }
 }
 
 fn substitute_query(vars: &[Var], triplets: &[Triplet], comps: &[Comp], context: &SimpleContext) -> Vec<PredicatAST> {
-   match context.len() {
+   match context.dataframe_len() {
        0 => vec![PredicatAST::Query((vars.to_vec(), triplets.to_vec(), comps.to_vec()))],
        _ => {
        let tripletss = substitute_triplet(triplets, context);
@@ -192,7 +192,7 @@ where C : Fn(Vec<Triplet>) -> PredicatAST {
 
 pub fn substitute_variables(context: SimpleContext) -> impl Fn(PredicatAST) -> Option<Vec<PredicatAST>> {
     move |ast: PredicatAST| -> Option<Vec<PredicatAST>> {
-        if context.len() == 0 {
+        if context.dataframe_len() == 0 {
             Some(vec![ast.clone()])
         } else {
             let res = match ast {

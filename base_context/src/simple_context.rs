@@ -1,13 +1,73 @@
 use cli_table::{Style, Table};
-use itertools::Itertools;
 use crate::context_traits::{Context, Var};
+use itertools::*;
 
 type ColumnName = String;
 type Value = String;
 
 #[derive(Eq, PartialEq, Debug, Clone, Default)]
+pub struct DataFrame(Vec<(ColumnName, Value)>);
+
+impl DataFrame {
+    fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    fn get_variables(&self) -> Vec<Var>{
+        self.clone().map(|x| Var::new(&x.0.clone()).unwrap()).sorted().unique().collect()
+    }
+
+    fn get_values(&self, key: &str) -> Option<Vec<String>> {
+        match self.is_in_context(key.to_string()) {
+            true => Some(self.clone().filter(|x| x.0.clone() == key).map(|x| x.1.clone()).collect::<Vec<String>>()),
+            _ => None
+        }
+    }
+
+    fn get_values2(&self, columns: &[&str]) -> Option<Vec<Vec<String>>> {
+        let res = columns.iter()
+            .flat_map(|c| self.get_values(c))
+            .collect::<Vec<_>>();
+        if res.len() < columns.len() {
+            None
+        } else {
+            Some((0..(res[0].len()))
+                .map(|index| res.iter().map(|x| x[index].clone()).collect::<Vec<_>>())
+                .collect())
+        }
+    }
+
+    fn add_column(&mut self, name: &str, elements: &[&str]) -> SimpleContext {
+        let tab = elements.iter()
+                          .map(|x| (name.to_string(), x.to_string()))
+                          .collect::<Vec<(String, String)>>();
+        let new_tab = self.chain(tab).map(|x| x.clone()).collect::<Vec<_>>();
+        SimpleContext::from(new_tab)
+    }
+
+    fn is_in_context(&self, key: String) -> bool {
+        self.get_variables().iter().any(|x| &x.0[..] == key)
+    }
+}
+
+impl Iterator for DataFrame {
+    type Item = (String, String);
+
+    fn next(&mut self) ->Option<Self::Item> {
+        self.0.iter().next().cloned()
+    }
+}
+
+
+impl Into<DataFrame> for Vec<(String, String)> {
+    fn into(self) -> DataFrame {
+       DataFrame(self)
+    }
+}
+
+#[derive(Eq, PartialEq, Debug, Clone, Default)]
 pub struct SimpleContext {
-    pub tab: Vec<(ColumnName, Value)>, 
+    pub tab: DataFrame,
     pub cmds: Vec<String>,
     pub log: Vec<String>
 }
@@ -29,13 +89,13 @@ impl SimpleContext {
 
 pub fn display(&self) {
     // TODO : display error if any and call revert back in the back
-    match self.len() {
+    match self.dataframe_len() {
         x if x > 0 => {
         let variables = self.get_variables();
         let body = self.get_variables().iter()
             .map(|x| self.get_values(&x.0).unwrap())
             .collect::<Vec<_>>();
-        let table = (0..self.len()).map(|x| get_line(x, &body))
+        let table = (0..self.dataframe_len()).map(|x| get_line(x, &body))
             .table()
             .title(variables)
             .bold(true)
@@ -47,7 +107,7 @@ pub fn display(&self) {
     }
 }
 
-    pub fn get_tab(&self) -> Vec<(String, String)> {
+    pub fn get_tab(&self) -> DataFrame {
         self.tab.clone()
     }
 }
@@ -58,7 +118,7 @@ fn get_line(num: usize, body: &[Vec<String>]) -> Vec<String> {
 
 impl From<Vec<(String, String)>> for SimpleContext {
     fn from(v: Vec<(String, String)>) -> SimpleContext {
-        SimpleContext { tab: v, cmds: vec![], log: vec![] }
+        SimpleContext { tab: v.into(), cmds: vec![], log: vec![] }
     }
 }
 
@@ -74,52 +134,52 @@ impl From<Vec<[&str; 3]>> for SimpleContext {
     }
 }
 
+fn join_vec<T: Clone>(v1: Vec<T>, v2: Vec<T>) -> Vec<T> {
+        v1.iter()
+        .chain(v2.iter())
+        .map(|x| x.clone())
+        .collect()
+}
+
 impl Context for SimpleContext {
 
     type FellowContext = SimpleContext;
 
     fn new() -> SimpleContext {
         SimpleContext{
-            tab: vec![],
+            tab: DataFrame(vec![]),
             cmds: vec![],
             log: vec![]
         }
     }
 
-    fn get_variables(&self) -> Vec<Var>{
-        self.tab.iter().map(|x| Var::new(&x.0.clone()).unwrap()).sorted().unique().collect()
+    fn get_variables(&self) -> Vec<Var> {
+        self.tab.get_variables()
     }
 
-    fn get_values(&self, key: &str) -> Option<Vec<String>> {
-        match self.is_in_context(key.to_string()) {
-            true => Some(self.tab.iter().filter(|x| x.0.clone() == key).map(|x| x.1.clone()).collect::<Vec<String>>()),
-            _ => None
-        }
+    fn get_values(&self, key: &str) -> Option<Vec<String>>{
+        self.tab.get_values(key)
     }
 
-    fn add_column(&mut self, name: &str, elements: &[&str]) -> SimpleContext {
-        let tab = elements.iter()
-                          .map(|x| (name.to_string(), x.to_string()))
-                          .collect::<Vec<(String, String)>>();
-        let new_tab = self.tab.iter().chain(tab.iter()).map(|x| x.clone()).collect::<Vec<_>>();
-        SimpleContext::from(new_tab)
+    fn get_values2(&self, columns: &[&str]) -> Option<Vec<Vec<String>>> {
+        self.tab.get_values2(columns)
+    }
+
+    fn add_column(&mut self, name: &str, elements: &[&str]) -> Self{
+        self.tab.add_column(name, elements)
     }
 
     fn is_in_context(&self, key: String) -> bool {
-        self.get_variables().iter().any(|x| &x.0[..] == key)
+        self.tab.is_in_context(key)
     }
 
-    fn len(&self) -> usize {
-        match self.tab.len() {
-            0 => 0,
-            _ => self.get_values(&self.tab[0].0).unwrap().len()
-        }
+    fn dataframe_len(&self) -> usize {
+        self.tab.len()
     }
 
     fn join(&self, c2: SimpleContext) -> SimpleContext {
         let vec_tab = self.get_tab()
-                    .iter()
-                    .chain(c2.get_tab().iter())
+                    .chain(c2.get_tab())
                     .map(|x| x.clone())
                     .collect::<Vec<_>>();
         let vec_cmds = self.cmds
@@ -134,14 +194,14 @@ impl Context for SimpleContext {
                     .collect::<Vec<_>>();
 
         SimpleContext {
-            tab: vec_tab.clone(),
+            tab: vec_tab.clone().into(),
             cmds: vec_cmds,
             log: vec_log,
         }
     }
     
     fn is_empty(&self) -> bool {
-        self.len() > 0
+        self.dataframe_len() > 0
     }
 
     fn is_not_empty(&self) -> bool {
@@ -149,7 +209,6 @@ impl Context for SimpleContext {
     }
 
     fn get_table(&self) -> Vec<(String, String)> {
-        self.tab.clone()
+        self.tab.0.clone()
     }
 }
-

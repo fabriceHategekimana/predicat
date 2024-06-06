@@ -64,7 +64,7 @@ fn extract_variables(command: &str) -> Vec<String> {
 }
 
 fn duplicate_command(command: &str, context: &SimpleContext) -> Vec<String> {
-    (0..context.len()).into_iter().map(|_x| command.to_string()).collect()
+    (0..context.dataframe_len()).into_iter().map(|_x| command.to_string()).collect()
 }
 
 fn parse_query_and_modifier_bar(s: &str) -> IResult<&str, PredicatAST> {

@@ -24,6 +24,7 @@ use parser::base_parser::Comp;
 use parser::base_parser::Triplet::*;
 use parser::base_parser::Triplet;
 use itertools::izip;
+use itertools::Itertools;
 use serial_test::serial;
 
 //pub struct Sql(String);
@@ -218,11 +219,8 @@ impl Command for SqliteKnowledge {
         let (sub, lin, goa) = tri.to_tuple();
         let select = format!("SELECT * FROM rules where modifier='{}' AND (subject='{}' OR link='{}' OR goal='{}')", modifier, sub, lin, goa);
         let rules = self.get(&select);
-        let dataframe_of_variables = izip!(
-                rules.get_values("modifier").unwrap_or(vec![]),
-                rules.get_values("subject").unwrap_or(vec![]),
-                rules.get_values("link").unwrap_or(vec![]),
-                rules.get_values("goal").unwrap_or(vec![]))
+        let dataframe_of_variables = rules.get_values2(&["modifier, subject", "link", "goal"])
+            .unwrap().iter().map(|x| x.into_iter().collect_tuple().unwrap()) // to tuple
             .map(|(modi, subj, link, goal)| unify_triplet((&sub, &lin, &goa), (&subj, &link, &goal)))
             .reduce(|context1, context2| context1.join(context2))
             .unwrap_or(SimpleContext::new());
@@ -340,7 +338,7 @@ fn substitute_variable(var: &Var, val:&str, cmd: &str) -> String {
 }
 
 fn change_variables(cmd: &str, context: &SimpleContext) -> String {
-    let cmds = (0..(context.len()))
+    let cmds = (0..(context.dataframe_len()))
         .map(|_| cmd.to_string()).collect::<Vec<_>>();
 
     context.get_variables().iter()
