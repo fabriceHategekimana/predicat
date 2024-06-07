@@ -84,8 +84,8 @@ impl<K: Knowledgeable> Interpreter<K> {
     fn execute(&self, cmds: &[PredicatAST]) -> Option<SimpleContext> {
         let context = self.knowledge
                 .valid_commands(cmds.to_vec())?.iter()
-                .filter(|x| !self.knowledge.in_cache(x))
-                .map(|x| (x, self.knowledge.infer_commands_from(x)))
+                .filter(|cmd| !self.knowledge.in_cache(cmd))
+                .map(|cmd| (cmd, self.knowledge.infer_commands_from(cmd)))
                 .map(|(cmd, aftcmd)| self.knowledge.execute_command(cmd).add_aftercmd(&aftcmd))
                 .reduce(SimpleContext::join_contexts)?;
         Some(context.clone())

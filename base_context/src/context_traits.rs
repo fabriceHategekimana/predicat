@@ -1,16 +1,29 @@
 use core::fmt::Debug;
+use std::ops::Deref;
 use std::fmt;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash, PartialOrd, Ord)]
 pub struct Var(pub String);
 
 impl Var {
-    pub fn new(s: &str) -> Option<Self> {
+    pub fn new(s: &str) -> Self {
         if s[0..1] == *"$" {
-            Some(Var(s.to_string()))
+            Var(s.to_string())
         } else {
-            None
+            Var(format!("${}", s))
         }
+    }
+
+    pub fn without_dollar(&self) -> String {
+        self[1..].to_string()
+    }
+}
+
+impl Deref for Var {
+    type Target = String;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 

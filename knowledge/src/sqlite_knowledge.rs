@@ -27,8 +27,7 @@ use itertools::izip;
 use itertools::Itertools;
 use serial_test::serial;
 
-//pub struct Sql(String);
-
+#[derive(Debug)]
 pub enum Sql {
     Query(String),
     Rule(String),
@@ -219,15 +218,19 @@ impl Command for SqliteKnowledge {
         let (sub, lin, goa) = tri.to_tuple();
         let select = format!("SELECT * FROM rules where modifier='{}' AND (subject='{}' OR link='{}' OR goal='{}')", modifier, sub, lin, goa);
         let rules = self.get(&select);
-        let dataframe_of_variables = rules.get_values2(&["modifier, subject", "link", "goal"])
-            .unwrap().iter().map(|x| x.into_iter().collect_tuple().unwrap()) // to tuple
+        if rules.is_not_empty() {
+        let dataframe_of_variables = rules.get_values2(&["modifier", "subject", "link", "goal"]).unwrap()
+            .iter().map(|x| x.into_iter().collect_tuple().unwrap()) // to tuple
             .map(|(modi, subj, link, goal)| unify_triplet((&sub, &lin, &goa), (&subj, &link, &goal)))
             .reduce(|context1, context2| context1.join(context2))
             .unwrap_or(SimpleContext::new());
 
-        rules.get_values("command").unwrap_or(vec![]).iter()
-            .map(|cmd| change_variables(cmd, &dataframe_of_variables))
+        rules.get_values("command").unwrap().iter()
+            .flat_map(|cmd| change_variables(cmd, &dataframe_of_variables))
             .collect()
+        } else {
+            vec![]
+        }
     }
 
     fn infer_commands_from(&self, cmd: &PredicatAST) -> Vec<String> {
@@ -337,17 +340,16 @@ fn substitute_variable(var: &Var, val:&str, cmd: &str) -> String {
     cmd.replace(&var.0, &format!("'{}'", val)).to_string()
 }
 
-fn change_variables(cmd: &str, context: &SimpleContext) -> String {
+fn change_variables(cmd: &str, context: &SimpleContext) -> Vec<String> {
     let cmds = (0..(context.dataframe_len()))
         .map(|_| cmd.to_string()).collect::<Vec<_>>();
 
     context.get_variables().iter()
-        .fold(cmds, |commands, var| 
-             context.get_values(&var.0)
-             .unwrap_or(vec![]).iter().zip(commands.iter())
+        .map(|var| (var, context.get_values(&var).unwrap_or(vec![])))
+        .fold(cmds, |commands, (var, vals)| 
+              vals.iter().zip(commands.iter())
              .map(|(val, cmd)| substitute_variable(var, val, cmd))
              .collect())
-        .get(0).unwrap_or(&"".to_string()).clone()
 }
 
 fn triplet_to_delete(tri: &Triplet) -> String {
