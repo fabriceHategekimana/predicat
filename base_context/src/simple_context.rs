@@ -6,14 +6,51 @@ type ColumnName = String;
 type Value = String;
 
 #[derive(Eq, PartialEq, Debug, Clone, Default)]
-pub struct DataFrame(Vec<(ColumnName, Value)>);
+pub struct DataFrame {
+    cells: Vec<(ColumnName, Value)>,
+    rows: i32,
+    columns: i8
+}
 
 impl DataFrame {
     fn len(&self) -> usize {
-        match self.0.len() {
+        match self.cells.len() {
             0 =>  0,
             _ => self.get_values(&self.get_variables()[0].without_dollar()).unwrap().len()
         }
+    }
+
+    fn new() -> Self {
+        DataFrame {
+            cells: vec![],
+            rows: 0,
+            columns: 0
+        }
+    }
+
+    fn body(t: &[(String, String)]) -> Option<Self> {
+        Self::check(t)
+            .then(||
+                    DataFrame { 
+                        cells: t.to_vec(),
+                        rows: Self::nb_rows(t),
+                        columns: Self::nb_columns(t)
+                    })
+    } 
+
+
+    fn check(t: &[(String, String)]) -> bool {
+       todo!(); 
+       // si le nombre d'élément est proportionnel au nombre de colonnes
+       // si chaque colonne a le même nombre d'éléments
+    }
+
+    fn nb_rows(t: &[(String, String)]) -> i32 {
+        todo!();
+    }
+
+    fn nb_columns(t: &[(String, String)]) -> i8 {
+        todo!();
     }
 
     fn iter(&self) -> DataFrameIterator {
@@ -56,7 +93,7 @@ impl DataFrame {
                           .map(|x| (name.to_string(), x.to_string()))
                           .collect::<Vec<(String, String)>>();
         let new_tab = self.iter().chain(tab).map(|x| x.clone()).collect::<Vec<_>>();
-        SimpleContext::from(new_tab)
+        SimpleContext::try_from(new_tab).unwrap()
     }
 
     fn is_in_dataframe(&self, key: String) -> bool {
@@ -74,8 +111,8 @@ impl<'a> Iterator for DataFrameIterator<'a> {
     type Item = (String, String);
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.index < self.dataframe.0.len() {
-            let result = &self.dataframe.0[self.index];
+        if self.index < self.dataframe.cells.len() {
+            let result = &self.dataframe.cells[self.index];
             self.index += 1;
             Some(result.clone())
         } else {
@@ -84,9 +121,10 @@ impl<'a> Iterator for DataFrameIterator<'a> {
     }
 }
 
-impl Into<DataFrame> for Vec<(String, String)> {
-    fn into(self) -> DataFrame {
-       DataFrame(self)
+impl TryInto<DataFrame> for Vec<(String, String)> {
+    type Error = String;
+    fn try_into(self) -> Result<DataFrame, Self::Error> {
+        DataFrame::body(&self).ok_or("Wasn't able to convert to dataframe".to_string())
     }
 }
 
@@ -142,9 +180,14 @@ fn get_line(num: usize, body: &[Vec<String>]) -> Vec<String> {
     body.iter().map(|x| x.iter().nth(num).unwrap_or(&"".to_string()).clone()).collect()
 }
 
-impl From<Vec<(String, String)>> for SimpleContext {
-    fn from(v: Vec<(String, String)>) -> SimpleContext {
-        SimpleContext { tab: v.into(), cmds: vec![], log: vec![] }
+impl TryFrom<Vec<(String, String)>> for SimpleContext {
+    type Error = String;
+
+    fn try_from(v: Vec<(String, String)>) -> Result<Self, Self::Error> {
+        match DataFrame::body(&v) {
+            Some(df) => Ok(SimpleContext { tab: df, cmds: vec![], log: vec![]}),
+            _ => Err("We weren't able to convert the list of tuple to a context".to_string())
+        }
     }
 }
 
@@ -156,7 +199,7 @@ impl From<Vec<[&str; 3]>> for SimpleContext {
                         ("link".to_string(), x[1].to_string()),
                         ("goal".to_string(), x[2].to_string())])
         .collect::<Vec<(String, String)>>()
-        .into()
+        .try_into().expect("The dataframe is malformed")
     }
 }
 
@@ -166,7 +209,7 @@ impl Context for SimpleContext {
 
     fn new() -> SimpleContext {
         SimpleContext{
-            tab: DataFrame(vec![]),
+            tab: DataFrame::new(),
             cmds: vec![],
             log: vec![]
         }
@@ -214,7 +257,7 @@ impl Context for SimpleContext {
                     .collect::<Vec<_>>();
 
         SimpleContext {
-            tab: vec_tab.clone().into(),
+            tab: vec_tab.try_into().unwrap(),
             cmds: vec_cmds,
             log: vec_log,
         }
@@ -229,6 +272,6 @@ impl Context for SimpleContext {
     }
 
     fn get_table(&self) -> Vec<(String, String)> {
-        self.tab.0.clone()
+        self.tab.cells.clone()
     }
 }

@@ -136,7 +136,7 @@ impl Command for SqliteKnowledge {
             }
             true
         });
-        SimpleContext::from(v)
+        SimpleContext::try_from(v).unwrap()
     }
 
     fn get_all(&self) -> SimpleContext {
@@ -224,7 +224,8 @@ impl Command for SqliteKnowledge {
             .map(|(modi, subj, link, goal)| unify_triplet((&sub, &lin, &goa), (&subj, &link, &goal)))
             .reduce(|context1, context2| context1.join(context2))
             .unwrap_or(SimpleContext::new());
-
+        
+        dbg!(&dataframe_of_variables);
         rules.get_values("command").unwrap().iter()
             .flat_map(|cmd| change_variables(cmd, &dataframe_of_variables))
             .collect()
@@ -333,7 +334,7 @@ fn unify_triplet((sub1, lin1, goa1): (&str, &str, &str), (sub2, lin2, goa2): (&s
         .iter()
         .flat_map(|(el1, el2)| match is_variable(el2) { true => Some((el2.to_string(), el1.to_string())), false => None })
         .collect::<Vec<_>>();
-         SimpleContext::from(res)
+         SimpleContext::try_from(res).unwrap()
 }
 
 fn substitute_variable(var: &Var, val:&str, cmd: &str) -> String {

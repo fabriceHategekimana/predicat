@@ -33,6 +33,7 @@ impl<K: Knowledgeable> Interpreter<K> {
     }
 
     fn propagate(&mut self, ctx: SimpleContext) -> SimpleContext {
+        dbg!(&ctx.cmds);
         let mut context = ctx;
         while context.has_commands() && !context.has_error() {
             context = Some(&context.get_aftercmds())
