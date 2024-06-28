@@ -1,28 +1,52 @@
 use cli_table::{Style, Table};
 use crate::context_traits::{Context, Var};
 use itertools::*;
+use std::collections::HashMap;
+
+trait Adder {
+    fn add(&mut self, k: &str, v: &str);
+}
+
+impl Adder for HashMap<String, Vec<String>> {
+    fn add(&mut self, k: &str, v: &str) {
+        if self.contains_key(k) {
+            let val = self.get(k).unwrap().iter()
+                        .chain([v.to_string()].iter())
+                        .cloned()
+                        .collect::<Vec<_>>();
+            self.insert(k.to_string(), val);
+        } else {
+            self.insert(k.to_string(), vec![v.to_string()]);
+        }
+    }
+}
+
+fn create_hashmap(item: Vec<(String,String)>) -> HashMap<String, Vec<String>> {
+    let mut hm = HashMap::new();
+    item.iter().for_each(|(k,v)| hm.add(k, v));
+    hm
+}
+
 
 type ColumnName = String;
 type Value = String;
 
 #[derive(Eq, PartialEq, Debug, Clone, Default)]
 pub struct DataFrame {
-    cells: Vec<(ColumnName, Value)>,
+    cells: HashMap<String, Vec<String>>,
     rows: i32,
     columns: i8
 }
 
 impl DataFrame {
     fn len(&self) -> usize {
-        match self.cells.len() {
-            0 =>  0,
-            _ => self.get_values(&self.get_variables()[0].without_dollar()).unwrap().len()
-        }
+       self.cells.iter()
+            .next().unwrap().1.len()
     }
 
     fn new() -> Self {
         DataFrame {
-            cells: vec![],
+            cells: HashMap::new(),
             rows: 0,
             columns: 0
         }
@@ -32,7 +56,7 @@ impl DataFrame {
         Self::check(t)
             .then(||
                     DataFrame { 
-                        cells: t.to_vec(),
+                        cells: create_hashmap(t.to_vec()),
                         rows: Self::nb_rows(t),
                         columns: Self::nb_columns(t)
                     })
@@ -108,11 +132,15 @@ struct DataFrameIterator<'a> {
 }
 
 impl<'a> Iterator for DataFrameIterator<'a> {
-    type Item = (String, String);
+    type Item = Vec<String>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.index < self.dataframe.cells.len() {
-            let result = &self.dataframe.cells[self.index];
+        if self.index < self.dataframe.len() {
+            //let result = &self.dataframe.cells.get(self.index).unwrap();
+            // get the ith index of the dataframe for each column
+            let result = self.dataframe.get_variables()
+                .iter().map(|var| self.dataframe.cells.get(&var.0).unwrap()[self.index].clone())
+                .collect::<Vec<_>>();
             self.index += 1;
             Some(result.clone())
         } else {
