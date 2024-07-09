@@ -678,7 +678,7 @@ mod tests {
     #[test]
     fn test_substitute_variable() {
         assert_eq!(
-            substitute_variable("$A", "pierre", "add $A ami $B"),
+            substitute_variable(&Var::new("$A"), "pierre", "add $A ami $B"),
             "add pierre ami $B".to_string());
     }
 
@@ -689,7 +689,7 @@ mod tests {
         context = context.add_column("$B", &["emy"]);
         assert_eq!(
             change_variables("add $B ami $A", &context),
-            "add emy ami pierre");
+            ["add emy ami pierre"]);
     }
 
 }

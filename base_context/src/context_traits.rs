@@ -1,6 +1,7 @@
 use core::fmt::Debug;
 use std::ops::Deref;
 use std::fmt;
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash, PartialOrd, Ord)]
 pub struct Var(pub String);
@@ -38,7 +39,7 @@ pub trait Context: Debug {
     fn get_variables(&self) -> Vec<Var>; // get column's names
     fn get_values(&self, key: &str) -> Option<Vec<String>>; // get column's values
     fn get_values2(&self, columns: &[&str]) -> Option<Vec<Vec<String>>>;
-    fn get_table(&self) -> Vec<(String, String)>; // get the whole table
+    fn get_table(&self) -> HashMap<String, Vec<String>>; // get the whole table
     fn add_column(&mut self, name: &str, elements: &[&str]) -> Self;
     fn is_in_context(&self, key: String) -> bool;
     fn dataframe_len(&self) -> usize;

@@ -63,17 +63,17 @@ impl DataFrame {
     } 
 
 
-    fn check(t: &[(String, String)]) -> bool {
+    fn check(_t: &[(String, String)]) -> bool {
        todo!(); 
        // si le nombre d'élément est proportionnel au nombre de colonnes
        // si chaque colonne a le même nombre d'éléments
     }
 
-    fn nb_rows(t: &[(String, String)]) -> i32 {
+    fn nb_rows(_t: &[(String, String)]) -> i32 {
         todo!();
     }
 
-    fn nb_columns(t: &[(String, String)]) -> i8 {
+    fn nb_columns(_t: &[(String, String)]) -> i8 {
         todo!();
     }
 
@@ -85,8 +85,8 @@ impl DataFrame {
     }
 
     fn get_variables(&self) -> Vec<Var>{
-        self.iter()
-            .map(|(var, _val)| {
+        self.cells.keys()
+            .map(|var| {
                     Var::new(&var.clone())
                 })
             .sorted().unique().collect()
@@ -94,7 +94,7 @@ impl DataFrame {
 
     fn get_values(&self, key: &str) -> Option<Vec<String>> {
         match self.is_in_dataframe(key.to_string()) {
-            true => Some(self.iter().filter(|x| x.0.clone() == key).map(|x| x.1.clone()).collect::<Vec<String>>()),
+            true => self.cells.get(key).cloned(),
             _ => None
         }
     }
@@ -112,12 +112,9 @@ impl DataFrame {
         }
     }
 
-    fn add_column(&mut self, name: &str, elements: &[&str]) -> SimpleContext {
-        let tab = elements.iter()
-                          .map(|x| (name.to_string(), x.to_string()))
-                          .collect::<Vec<(String, String)>>();
-        let new_tab = self.iter().chain(tab).map(|x| x.clone()).collect::<Vec<_>>();
-        SimpleContext::try_from(new_tab).unwrap()
+    fn add_column(&mut self, name: &str, elements: &[&str]) {
+        self.cells.insert(name.to_string(),
+                          elements.iter().map(|x| x.to_string()).collect());
     }
 
     fn is_in_dataframe(&self, key: String) -> bool {
@@ -176,7 +173,9 @@ impl SimpleContext {
         self.log != vec![] as Vec<String>
     }
 
-
+    pub fn len(&self) -> usize {
+        self.tab.len()
+    }
 
 pub fn display(&self) {
     // TODO : display error if any and call revert back in the back
@@ -255,8 +254,9 @@ impl Context for SimpleContext {
         self.tab.get_values2(columns)
     }
 
-    fn add_column(&mut self, name: &str, elements: &[&str]) -> Self{
-        self.tab.add_column(name, elements)
+    fn add_column(&mut self, name: &str, elements: &[&str]) -> SimpleContext{
+        self.tab.add_column(name, elements);
+        self.clone()
     }
 
     fn is_in_context(&self, key: String) -> bool {
@@ -284,11 +284,12 @@ impl Context for SimpleContext {
                     .map(|x| x.clone())
                     .collect::<Vec<_>>();
 
-        SimpleContext {
-            tab: vec_tab.try_into().unwrap(),
-            cmds: vec_cmds,
-            log: vec_log,
-        }
+        todo!();
+        //SimpleContext {
+            //tab: vec_tab.try_into().unwrap(),
+            //cmds: vec_cmds,
+            //log: vec_log,
+        //}
     }
     
     fn is_empty(&self) -> bool {
@@ -299,7 +300,9 @@ impl Context for SimpleContext {
        !self.is_empty() 
     }
 
-    fn get_table(&self) -> Vec<(String, String)> {
+    fn get_table(&self) -> HashMap<String, Vec<String>> {
         self.tab.cells.clone()
     }
 }
+
+
