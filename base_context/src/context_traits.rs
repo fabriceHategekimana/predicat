@@ -18,6 +18,10 @@ impl Var {
     pub fn without_dollar(&self) -> String {
         self[1..].to_string()
     }
+
+    pub fn format(s: &str) -> String {
+        Self::new(s).0.to_string()
+    }
 }
 
 impl Deref for Var {
@@ -36,8 +40,9 @@ impl fmt::Display for Var {
 
 pub trait Context: Debug {
     type FellowContext;
+    type DataError;
     fn get_variables(&self) -> Vec<Var>; // get column's names
-    fn get_values(&self, key: &str) -> Option<Vec<String>>; // get column's values
+    fn get_values(&self, key: &str) -> Result<Vec<String>, Self::DataError>; // get column's values
     fn get_values2(&self, columns: &[&str]) -> Option<Vec<Vec<String>>>;
     fn get_table(&self) -> HashMap<String, Vec<String>>; // get the whole table
     fn add_column(&mut self, name: &str, elements: &[&str]) -> Self;

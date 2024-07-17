@@ -3,6 +3,11 @@ use crate::context_traits::{Context, Var};
 use itertools::*;
 use std::collections::HashMap;
 
+#[derive(Debug)]
+pub enum DataFrameError {
+    InexistentColumnIn(String, Vec<String>)
+}
+
 trait Adder {
     fn add(&mut self, k: &str, v: &str);
 }
@@ -23,13 +28,9 @@ impl Adder for HashMap<String, Vec<String>> {
 
 fn create_hashmap(item: Vec<(String,String)>) -> HashMap<String, Vec<String>> {
     let mut hm = HashMap::new();
-    item.iter().for_each(|(k,v)| hm.add(k, v));
+    item.iter().for_each(|(k,v)| hm.add(&Var::format(k), v));
     hm
 }
-
-
-type ColumnName = String;
-type Value = String;
 
 #[derive(Eq, PartialEq, Debug, Clone, Default)]
 pub struct DataFrame {
@@ -39,12 +40,17 @@ pub struct DataFrame {
 }
 
 impl DataFrame {
-    fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
        self.cells.iter()
-            .next().unwrap().1.len()
+            .next().unwrap_or((&"".to_string(), &vec![])).1.len()
     }
 
-    fn new() -> Self {
+    pub fn empty(&self) -> bool {
+        // todo
+        self.rows == 0
+    }
+
+    pub fn new() -> Self {
         DataFrame {
             cells: HashMap::new(),
             rows: 0,
@@ -53,28 +59,56 @@ impl DataFrame {
     }
 
     fn body(t: &[(String, String)]) -> Option<Self> {
-        Self::check(t)
-            .then(||
-                    DataFrame { 
-                        cells: create_hashmap(t.to_vec()),
-                        rows: Self::nb_rows(t),
-                        columns: Self::nb_columns(t)
-                    })
+        let df = Self::to_dataframe(t);
+        match Self::check(&df) {
+            true => Some(df.clone()),
+            false => None
+        }
     } 
 
+    fn to_dataframe(t: &[(String, String)]) -> DataFrame {
+        let df = DataFrame { 
+            cells: create_hashmap(t.to_vec()),
+            rows: 0, 
+            columns: 0
+        };
 
-    fn check(_t: &[(String, String)]) -> bool {
-       todo!(); 
-       // si le nombre d'élément est proportionnel au nombre de colonnes
-       // si chaque colonne a le même nombre d'éléments
+        DataFrame {
+            rows: Self::nb_rows(&df) as i32,
+            columns: Self::nb_columns(&df) as i8,
+            ..df
+        }
     }
 
-    fn nb_rows(_t: &[(String, String)]) -> i32 {
-        todo!();
+    fn check(df: &DataFrame) -> bool {
+        if df.empty() {
+            true
+        } else {
+           let same_size = |x, y| if x == y { x } else { -1 };
+           let same = df.get_variables().iter()
+               .map(|var| df.get_values(var).unwrap().len() as i32)
+               .reduce(same_size)
+               .unwrap();
+           match same {
+               -1 => false,
+               _ => true
+           }
+        }
     }
 
-    fn nb_columns(_t: &[(String, String)]) -> i8 {
-        todo!();
+    fn nb_rows(df: &DataFrame) -> usize {
+        if df.empty() {
+            return 0 as usize;
+        } else {
+            let variables = df.get_variables();
+            let first_column = variables.iter().next().unwrap();
+            df.get_values(&first_column.0).unwrap().len()
+        }
+    }
+
+    fn nb_columns(df: &DataFrame) -> usize {
+        let variables = df.get_variables();
+        variables.len()
     }
 
     fn iter(&self) -> DataFrameIterator {
@@ -92,14 +126,16 @@ impl DataFrame {
             .sorted().unique().collect()
     }
 
-    fn get_values(&self, key: &str) -> Option<Vec<String>> {
-        match self.is_in_dataframe(key.to_string()) {
-            true => self.cells.get(key).cloned(),
-            _ => None
-        }
+    pub fn get_values(&self, key: &str) -> Result<Vec<String>, DataFrameError> {
+        self.cells.get(key).cloned()
+            .ok_or(
+                DataFrameError::InexistentColumnIn(
+                    key.to_string(),
+                    self.get_variables().iter().map(|Var(x)| x.to_string()).collect())
+                  )
     }
 
-    fn get_values2(&self, columns: &[&str]) -> Option<Vec<Vec<String>>> {
+    pub fn get_values2(&self, columns: &[&str]) -> Option<Vec<Vec<String>>> {
         let res = columns.iter()
             .flat_map(|c| self.get_values(c))
             .collect::<Vec<_>>();
@@ -115,13 +151,24 @@ impl DataFrame {
     fn add_column(&mut self, name: &str, elements: &[&str]) {
         self.cells.insert(name.to_string(),
                           elements.iter().map(|x| x.to_string()).collect());
+        self.rows = elements.len() as i32;
+        self.columns = self.columns + 1;
     }
 
     fn is_in_dataframe(&self, key: String) -> bool {
-        self.get_variables().iter().map(Var::without_dollar).any(|x| &x[..] == key)
+        self.get_variables().iter()
+            //.map(Var::without_dollar)
+            .any(|x| &x[..] == key)
     }
 }
 
+impl TryFrom<Vec<(String, String)>> for DataFrame {
+    type Error = String;
+
+    fn try_from(v: Vec<(String, String)>) -> Result<Self, Self::Error> {
+        DataFrame::body(&v).ok_or(String::from("Failed to build Dataframe from Vex<(String, String)>"))
+    }
+}
 
 struct DataFrameIterator<'a> {
     dataframe: &'a DataFrame,
@@ -143,13 +190,6 @@ impl<'a> Iterator for DataFrameIterator<'a> {
         } else {
             None
         }
-    }
-}
-
-impl TryInto<DataFrame> for Vec<(String, String)> {
-    type Error = String;
-    fn try_into(self) -> Result<DataFrame, Self::Error> {
-        DataFrame::body(&self).ok_or("Wasn't able to convert to dataframe".to_string())
     }
 }
 
@@ -218,6 +258,11 @@ impl TryFrom<Vec<(String, String)>> for SimpleContext {
     }
 }
 
+impl From<DataFrame> for SimpleContext {
+    fn from(value: DataFrame) -> SimpleContext {
+        SimpleContext { tab: value, cmds: vec![], log: vec![] }
+    }
+}
 
 impl From<Vec<[&str; 3]>> for SimpleContext {
     fn from(v: Vec<[&str; 3]>) -> SimpleContext {
@@ -233,6 +278,7 @@ impl From<Vec<[&str; 3]>> for SimpleContext {
 impl Context for SimpleContext {
 
     type FellowContext = SimpleContext;
+    type DataError = DataFrameError;
 
     fn new() -> SimpleContext {
         SimpleContext{
@@ -246,7 +292,7 @@ impl Context for SimpleContext {
         self.tab.get_variables()
     }
 
-    fn get_values(&self, key: &str) -> Option<Vec<String>>{
+    fn get_values(&self, key: &str) -> Result<Vec<String>, DataFrameError> {
         self.tab.get_values(key)
     }
 
@@ -305,4 +351,20 @@ impl Context for SimpleContext {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_dataframe_check(){
+        let sql_datas = [("$A".to_string(), "voila".to_string()),
+                         ("$B".to_string(), "truc".to_string()),
+                         ("$C".to_string(), "machin".to_string()),
+                         ("$C".to_string(), "chose".to_string())];
+        let df = DataFrame::to_dataframe(&sql_datas);
+        assert_eq!(
+            DataFrame::check(&df),
+            false);
+    }
+}
 

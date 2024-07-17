@@ -17,13 +17,14 @@ use parser::base_parser::PredicatAST;
 use base_context::context_traits::Context;
 use metaprogramming::substitute_variables;
 use base_context::simple_context::SimpleContext;
+use base_context::simple_context::DataFrame;
 
-struct Interpreter<K: Knowledgeable> {
+struct Interpreter<K: Knowledgeable<DataFrame>> {
     context: SimpleContext,
     knowledge: K
 }
 
-impl<K: Knowledgeable> Interpreter<K> {
+impl<K: Knowledgeable<DataFrame>> Interpreter<K> {
 
     fn new(k: K) -> Self {
         Interpreter { 
@@ -33,7 +34,6 @@ impl<K: Knowledgeable> Interpreter<K> {
     }
 
     fn propagate(&mut self, ctx: SimpleContext) -> SimpleContext {
-        dbg!(&ctx.cmds);
         let mut context = ctx;
         while context.has_commands() && !context.has_error() {
             context = Some(&context.get_aftercmds())
@@ -88,7 +88,10 @@ impl<K: Knowledgeable> Interpreter<K> {
                 .valid_commands(cmds.to_vec())?.iter()
                 .filter(|cmd| !self.knowledge.in_cache(cmd))
                 .map(|cmd| (cmd, self.knowledge.infer_commands_from(cmd)))
-                .map(|(cmd, aftcmd)| self.knowledge.execute_command(cmd).add_aftercmd(&aftcmd))
+                .map(|(cmd, aftcmd)| {
+                        let context: SimpleContext = self.knowledge.execute_command(cmd).into();
+                            context.add_aftercmd(&aftcmd)
+                })
                 .reduce(SimpleContext::join_contexts)?;
         Some(context.clone())
     }

@@ -31,60 +31,60 @@ where
 
 fn substitute_1_var_triplet(v1: &str, ws: (&str, &str), pos: Pos, context: &SimpleContext) -> Vec<Triplet> {
     match (context.get_values(&v1), pos) {
-        (None, Pos::First) => vec![Triplet::Tvee(v1.to_string(), ws.0.to_string(), ws.1.to_string())],
-        (None, Pos::Second) => vec![Triplet::Teve(ws.0.to_string(), v1.to_string(), ws.1.to_string())],
-        (None, Pos::Third) => vec![Triplet::Teev(ws.0.to_string(), ws.1.to_string(), v1.to_string())],
-        (Some(v), Pos::First) => 
+        (Err(_), Pos::First) => vec![Triplet::Tvee(v1.to_string(), ws.0.to_string(), ws.1.to_string())],
+        (Err(_), Pos::Second) => vec![Triplet::Teve(ws.0.to_string(), v1.to_string(), ws.1.to_string())],
+        (Err(_), Pos::Third) => vec![Triplet::Teev(ws.0.to_string(), ws.1.to_string(), v1.to_string())],
+        (Ok(v), Pos::First) => 
             v.iter().map(|x| Triplet::Teee(x.to_string(), ws.0.to_string(), ws.1.to_string())).collect(),
-        (Some(v), Pos::Second) => 
+        (Ok(v), Pos::Second) => 
             v.iter().map(|x| Triplet::Teee(ws.0.to_string(), x.to_string(), ws.1.to_string())).collect(),
-        (Some(v), Pos::Third) => 
+        (Ok(v), Pos::Third) => 
             v.iter().map(|x| Triplet::Teee(ws.0.to_string(), ws.1.to_string(), x.to_string())).collect()
     }
 }
 
 fn substitute_2_var_triplet(v1: &str, v2: &str, w: &str, doublepos: DoublePos, context: &SimpleContext) -> Vec<Triplet> {
     match (context.get_values(&v1), context.get_values(&v2), doublepos) {
-        (None, None, DoublePos::FirstSecond) => vec![Triplet::Tvve(v1.to_string(), v2.to_string(), w.to_string())],
-        (None, None, DoublePos::FirstThird) => vec![Triplet::Tvev(v1.to_string(), w.to_string(), v2.to_string())],
-        (None, None, DoublePos::SecondThird) => vec![Triplet::Tevv(w.to_string(), v1.to_string(), v2.to_string())],
-        (Some(v), None, DoublePos::FirstSecond) => 
+        (Err(_), Err(_), DoublePos::FirstSecond) => vec![Triplet::Tvve(v1.to_string(), v2.to_string(), w.to_string())],
+        (Err(_), Err(_), DoublePos::FirstThird) => vec![Triplet::Tvev(v1.to_string(), w.to_string(), v2.to_string())],
+        (Err(_), Err(_), DoublePos::SecondThird) => vec![Triplet::Tevv(w.to_string(), v1.to_string(), v2.to_string())],
+        (Ok(v), Err(_), DoublePos::FirstSecond) => 
            v.iter().map(|x| Triplet::Teve(x.to_string(), v2.to_string(), w.to_string())).collect(),
-        (Some(v), None, DoublePos::FirstThird) => 
+        (Ok(v), Err(_), DoublePos::FirstThird) => 
             v.iter().map(|x| Triplet::Teev(x.to_string(), w.to_string(), v2.to_string())).collect(),
-        (Some(v), None, DoublePos::SecondThird) => 
+        (Ok(v), Err(_), DoublePos::SecondThird) => 
             v.iter().map(|x| Triplet::Teev(w.to_string(), x.to_string(), v2.to_string())).collect(),
-        (None, Some(v), DoublePos::FirstSecond) => 
+        (Err(_), Ok(v), DoublePos::FirstSecond) => 
             v.iter().map(|x| Triplet::Tvee(v1.to_string(), x.to_string(), w.to_string())).collect(),
-        (None, Some(v), DoublePos::FirstThird) => 
+        (Err(_), Ok(v), DoublePos::FirstThird) => 
             v.iter().map(|x| Triplet::Tvee(v1.to_string(), w.to_string(), x.to_string())).collect(),
-        (None, Some(v), DoublePos::SecondThird) => 
+        (Err(_), Ok(v), DoublePos::SecondThird) => 
             v.iter().map(|x| Triplet::Teve(w.to_string(), v1.to_string(), x.to_string())).collect(),
-        (Some(v1), Some(v2), DoublePos::FirstSecond) => 
+        (Ok(v1), Ok(v2), DoublePos::FirstSecond) => 
             v1.iter().zip(v2.iter()).map(|(x1,x2)| Triplet::Teee(x1.to_string(), x2.to_string(), w.to_string())).collect(),
-        (Some(v1), Some(v2), DoublePos::FirstThird) => 
+        (Ok(v1), Ok(v2), DoublePos::FirstThird) => 
             v1.iter().zip(v2.iter()).map(|(x1,x2)| Triplet::Teee(x1.to_string(), w.to_string(), x2.to_string())).collect(),
-        (Some(v1), Some(v2), DoublePos::SecondThird) => 
+        (Ok(v1), Ok(v2), DoublePos::SecondThird) => 
             v1.iter().zip(v2.iter()).map(|(x1,x2)| Triplet::Teee(w.to_string(), x1.to_string(), x2.to_string())).collect(),
     }
 }
 
 fn substitute_3_var_triplet(va1: &str, va2:&str, va3: &str, context: &SimpleContext) -> Vec<Triplet> {
    match (context.get_values(va1), context.get_values(va2), context.get_values(va3)) {
-       (None, None, None) => vec![Triplet::Tvvv(va1.to_string(), va2.to_string(), va3.to_string())],
-       (Some(v), None, None) => 
+       (Err(_), Err(_), Err(_)) => vec![Triplet::Tvvv(va1.to_string(), va2.to_string(), va3.to_string())],
+       (Ok(v), Err(_), Err(_)) => 
            v.iter().map(|x| Triplet::Tevv( x.to_string(), va2.to_string(), va3.to_string())).collect(),
-       (None, Some(v), None) => 
+       (Err(_), Ok(v), Err(_)) => 
            v.iter().map(|x| Triplet::Tvev(va1.to_string(), x.to_string(), va3.to_string())).collect(),
-       (None, None, Some(v)) => 
+       (Err(_), Err(_), Ok(v)) => 
            v.iter().map(|x| Triplet::Tvve(va1.to_string(), va2.to_string(), x.to_string())).collect(),
-       (Some(v1), Some(v2), None) => 
+       (Ok(v1), Ok(v2), Err(_)) => 
            v1.iter().zip(v2.iter()).map(|(x1, x2)| Triplet::Teev(x1.to_string(), x2.to_string(), va3.to_string())).collect(),
-       (Some(v1), None, Some(v2)) => 
+       (Ok(v1), Err(_), Ok(v2)) => 
            v1.iter().zip(v2.iter()).map(|(x1, x2)| Triplet::Teve(x1.to_string(), va2.to_string(), x2.to_string())).collect(),
-       (None, Some(v1), Some(v2)) => 
+       (Err(_), Ok(v1), Ok(v2)) => 
            v1.iter().zip(v2.iter()).map(|(x1, x2)| Triplet::Teev(va1.to_string(), x2.to_string(), va2.to_string())).collect(),
-       (Some(v1), Some(v2), Some(v3)) => 
+       (Ok(v1), Ok(v2), Ok(v3)) => 
            v1.iter().zip(v2.iter()).zip(v3.iter())
            .map(|((x1, x2), x3)| (x1, x2, x3))
            .map(|(x1, x2, x3)| Triplet::Teee(x1.to_string(), x2.to_string(), x3.to_string())).collect(),
@@ -132,13 +132,13 @@ fn substitute_comp(comps: &[Comp], context: &SimpleContext) -> Vec<Vec<Comp>> {
     true => {let vec = comps.iter().map(|comp| {
         let (val1, op, val2) = comp.get_content();
         match (context.get_values(&val1), context.get_values(&val2)) {
-            (None, None) => 
+            (Err(_), Err(_)) => 
                 vec![format_comp(&val1, &op, &val2)],
-            (Some(v), None) => 
+            (Ok(v), Err(_)) => 
                 v.iter().map(|x| format_comp(x, &op, &val2)).collect(),
-            (None, Some(v)) => 
+            (Err(_), Ok(v)) => 
                 v.iter().map(|x| format_comp(&val1, &op, x)).collect(),
-            (Some(v1), Some(v2)) => 
+            (Ok(v1), Ok(v2)) => 
                 v1.iter().zip(v2.iter()).map(|(x1, x2)| format_comp(x1, &op, x2)).collect()
         }
     }).collect();

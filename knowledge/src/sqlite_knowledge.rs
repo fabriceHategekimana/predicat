@@ -26,6 +26,9 @@ use parser::base_parser::Triplet;
 use itertools::izip;
 use itertools::Itertools;
 use serial_test::serial;
+use base_context::simple_context::DataFrame;
+use crate::base_knowledge::Joinable;
+use std::convert::TryFrom;
 
 #[derive(Debug)]
 pub enum Sql {
@@ -123,11 +126,16 @@ fn extract_columns(sql_select_query: &str) -> Vec<&str> {
 }
 
 
+impl Joinable for DataFrame {
+    fn join(a: Self, b: Self) -> Self {
+        DataFrame::join(a, b)
+    }
+}
 
-impl Command for SqliteKnowledge {
+impl Command<DataFrame> for SqliteKnowledge {
     type Language = Sql;
 
-    fn get(&self, cmd: &str) -> SimpleContext {
+    fn get(&self, cmd: &str) -> DataFrame {
         let mut v: Vec<(String, String)> = vec![];
         let _ = self.connection.iterate(cmd, |sqlite_couple| {
             for couple in sqlite_couple.iter() {
@@ -136,16 +144,16 @@ impl Command for SqliteKnowledge {
             }
             true
         });
-        SimpleContext::try_from(v).unwrap()
+        DataFrame::try_from(v).unwrap()
     }
 
-    fn get_all(&self) -> SimpleContext {
+    fn get_all(&self) -> DataFrame {
         self.get(&"SELECT A,B,C from (SELECT subject as A, link as B, goal as C FROM facts)")
     }
 
-    fn modify(&self, cmd: &str) -> Result<SimpleContext, &str> {
+    fn modify(&self, cmd: &str) -> Result<DataFrame, &str> {
         match self.connection.execute(cmd) {
-            Ok(r) => Ok(SimpleContext::new()),
+            Ok(r) => Ok(DataFrame::new()),
             Err(r) => {println!("r: {:?}", r); Err("An error occured with the sqlite database")}
         }
     }
@@ -185,7 +193,7 @@ impl Command for SqliteKnowledge {
         }
     }
 
-    fn execute(&self, s: &Sql) -> SimpleContext {
+    fn execute(&self, s: &Sql) -> DataFrame {
         let res = match s  {
             Sql::Query(q) => self.get(q),
             Sql::Rule(r) => self.store_rule(r),
@@ -202,10 +210,10 @@ impl Command for SqliteKnowledge {
                         let select = format!("SELECT * FROM Rules where modifier = {:?} subject = {:?} or link = {:?} or goal = {:?}",
                         mo, t1, t2, t3);
                     match self.get(&select).get_values("backed_command") {
-                        None => false,
-                        Some(v) => v.iter()
+                        Err(_) => false,
+                        Ok(v) => v.iter()
                             .map(|x| x.replace("%singlequote%", "'"))
-                            .any(|cmd| self.get(&cmd).is_not_empty())
+                            .any(|cmd| ! self.get(&cmd).empty())
                         }
                     }).any(|x| x)
             },
@@ -218,14 +226,18 @@ impl Command for SqliteKnowledge {
         let (sub, lin, goa) = tri.to_tuple();
         let select = format!("SELECT * FROM rules where modifier='{}' AND (subject='{}' OR link='{}' OR goal='{}')", modifier, sub, lin, goa);
         let rules = self.get(&select);
-        if rules.is_not_empty() {
-        let dataframe_of_variables = rules.get_values2(&["modifier", "subject", "link", "goal"]).unwrap()
-            .iter().map(|x| x.into_iter().collect_tuple().unwrap()) // to tuple
-            .map(|(modi, subj, link, goal)| unify_triplet((&sub, &lin, &goa), (&subj, &link, &goal)))
-            .reduce(|context1, context2| context1.join(context2))
-            .unwrap_or(SimpleContext::new());
+        if ! rules.empty() {
+        let dataframe_of_variables = 
+            match rules.get_values2(&["modifier", "subject", "link", "goal"]) {
+            Some(df) => {
+                df.iter().map(|x| x.into_iter().collect_tuple().unwrap()) // to tuple
+                .map(|(modi, subj, link, goal)| unify_triplet((&sub, &lin, &goa), (&subj, &link, &goal)))
+                .reduce(|context1, context2| context1.join(context2))
+                .unwrap_or(SimpleContext::new())
+            },
+            None => SimpleContext::new(),
+        };
         
-        dbg!(&dataframe_of_variables);
         rules.get_values("command").unwrap().iter()
             .flat_map(|cmd| change_variables(cmd, &dataframe_of_variables))
             .collect()
@@ -288,18 +300,18 @@ impl Cache for SqliteKnowledge {
 
 }
 
-impl RuleManager for SqliteKnowledge {
+impl RuleManager<DataFrame> for SqliteKnowledge {
     fn clear_rules(&self) {
         let _ = self.connection.execute("DELETE FROM rules");
     }
 
-    fn store_rule(&self, s: &str) -> SimpleContext {
+    fn store_rule(&self, s: &str) -> DataFrame {
         let values = s.split("%|%").collect::<Vec<_>>();
         let cmd = format!("INSERT INTO rules (modifier, subject, link, goal, command, backed_command) VALUES (\'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\')",
                     values[1], values[2], values[3], values[4], values[5], values[6]);
         match self.connection.execute(cmd) {
-           Err(e) => {dbg!(e); SimpleContext::new()}
-           _ => SimpleContext::new(),
+           Err(e) => {dbg!(e); DataFrame::new()}
+           _ => DataFrame::new(),
         }
     }
 
@@ -317,7 +329,7 @@ impl RuleManager for SqliteKnowledge {
 }
 
 
-impl Knowledgeable for SqliteKnowledge {
+impl Knowledgeable<DataFrame> for SqliteKnowledge {
     fn new() -> SqliteKnowledge {
         let knowledge = SqliteKnowledge {
             connection: sqlite::open("data.db").unwrap(),
@@ -346,10 +358,10 @@ fn change_variables(cmd: &str, context: &SimpleContext) -> Vec<String> {
         .map(|_| cmd.to_string()).collect::<Vec<_>>();
 
     context.get_variables().iter()
-        .map(|var| (var, context.get_values(&var).unwrap_or(vec![])))
+        .map(|Var(var)| (var, context.get_values(&var).unwrap_or(vec![])))
         .fold(cmds, |commands, (var, vals)| 
               vals.iter().zip(commands.iter())
-             .map(|(val, cmd)| substitute_variable(var, val, cmd))
+             .map(|(val, cmd)| substitute_variable(&Var::new(var), val, cmd))
              .collect())
 }
 
@@ -642,12 +654,12 @@ mod tests {
     #[test]
     fn test_to_context2() {
         let mut hm: HashMap<String, Vec<String>> = HashMap::new();
-        hm.insert("A".to_owned(), vec!["socrate".to_owned()]);
-        hm.insert("B".to_owned(), vec!["est".to_owned()]);
-        hm.insert("C".to_owned(), vec!["mortel".to_owned()]);
-        let new_context = to_context(hm, vec!["A", "B", "C"]);
+        hm.insert("$A".to_owned(), vec!["socrate".to_owned()]);
+        hm.insert("$B".to_owned(), vec!["est".to_owned()]);
+        hm.insert("$C".to_owned(), vec!["mortel".to_owned()]);
+        let new_context = to_context(hm, vec!["$A", "$B", "$C"]);
         assert_eq!(
-            new_context.get_values("A"),
+            new_context.get_values("$A").ok(),
             Some(vec!["socrate".to_string()])
                   );
     }
@@ -679,7 +691,26 @@ mod tests {
     fn test_substitute_variable() {
         assert_eq!(
             substitute_variable(&Var::new("$A"), "pierre", "add $A ami $B"),
-            "add pierre ami $B".to_string());
+            "add 'pierre' ami $B".to_string());
+    }
+
+    #[test]
+    fn test_get_values() {
+        let mut context = SimpleContext::new();
+        context = context.add_column("$A", &["pierre"]);
+        context = context.add_column("$B", &["emy"]);
+        assert_eq!(context.get_values("$B").ok(), Some(vec!["emy".to_string()]));
+    }
+
+    #[test]
+    fn test_get_variable() {
+        let mut context = SimpleContext::new();
+        context = context.add_column("$A", &["pierre"]);
+        context = context.add_column("$B", &["emy"]);
+        assert_eq!(
+            context.get_variables(),
+            [Var::new("$A"), Var::new("$B")]
+            );
     }
 
     #[test]
@@ -689,7 +720,7 @@ mod tests {
         context = context.add_column("$B", &["emy"]);
         assert_eq!(
             change_variables("add $B ami $A", &context),
-            ["add emy ami pierre"]);
+            ["add 'emy' ami 'pierre'"]);
     }
 
 }
