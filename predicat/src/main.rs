@@ -19,6 +19,12 @@ use metaprogramming::substitute_variables;
 use base_context::simple_context::SimpleContext;
 use base_context::simple_context::DataFrame;
 
+struct Cmd(String);
+
+fn to_command(s: &str) -> Cmd {
+    Cmd(String::from(s))
+}
+
 struct Interpreter<K: Knowledgeable<DataFrame>> {
     context: SimpleContext,
     knowledge: K
@@ -46,7 +52,6 @@ impl<K: Knowledgeable<DataFrame>> Interpreter<K> {
 
     fn run(&mut self, cmd: &str) -> SimpleContext {
         Some(&vec![cmd.to_string()])
-            //.inspect(|x| println!("Command: {:?}", x))
             .map(|x| self.parse(x))
             .map(|x| self.execute(&x).unwrap_or_default())
             .map(|x| self.propagate(x))

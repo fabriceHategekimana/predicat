@@ -46,8 +46,7 @@ impl DataFrame {
     }
 
     pub fn empty(&self) -> bool {
-        // todo
-        self.rows == 0
+        self.rows == 0 && self.columns == 0
     }
 
     pub fn new() -> Self {
@@ -160,13 +159,27 @@ impl DataFrame {
             //.map(Var::without_dollar)
             .any(|x| &x[..] == key)
     }
+
+    fn join(&self, df: Self) -> Self {
+       //cells: HashMap<String, Vec<String>>,
+       todo!();
+    }
 }
 
 impl TryFrom<Vec<(String, String)>> for DataFrame {
     type Error = String;
 
     fn try_from(v: Vec<(String, String)>) -> Result<Self, Self::Error> {
-        DataFrame::body(&v).ok_or(String::from("Failed to build Dataframe from Vex<(String, String)>"))
+        DataFrame::body(&v).ok_or(String::from("Failed to build Dataframe from Vec<(String, String)>"))
+    }
+}
+
+impl TryFrom<Vec<Vec<String>>> for DataFrame {
+    type Error = String;
+
+    fn try_from(v: Vec<Vec<String>>) -> Result<Self, Self::Error> {
+        let vs = v.iter().map(|vec| (vec[0].clone(), vec[1].clone())).collect::<Vec<_>>();
+        DataFrame::body(&vs).ok_or(String::from("Failed to build Dataframe from Vec<Vec<String>>"))
     }
 }
 
@@ -330,12 +343,13 @@ impl Context for SimpleContext {
                     .map(|x| x.clone())
                     .collect::<Vec<_>>();
 
+        SimpleContext {
+            tab: vec_tab.try_into().unwrap(),
+            cmds: vec_cmds,
+            log: vec_log,
+        };
+
         todo!();
-        //SimpleContext {
-            //tab: vec_tab.try_into().unwrap(),
-            //cmds: vec_cmds,
-            //log: vec_log,
-        //}
     }
     
     fn is_empty(&self) -> bool {
@@ -356,15 +370,35 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_dataframe_check(){
-        let sql_datas = [("$A".to_string(), "voila".to_string()),
+    fn test_test_dataframe_check_empty() {
+        let df = DataFrame::new();
+        assert_eq!(DataFrame::check(&df),
+                   true);
+    }
+
+    #[test]
+    fn test_dataframe_check_emp(){
+        let sql_datas = vec![("$A".to_string(), "voila".to_string()),
                          ("$B".to_string(), "truc".to_string()),
                          ("$C".to_string(), "machin".to_string()),
                          ("$C".to_string(), "chose".to_string())];
-        let df = DataFrame::to_dataframe(&sql_datas);
+        let df: DataFrame = sql_datas.try_into().unwrap();
         assert_eq!(
-            DataFrame::check(&df),
+            df.empty(),
             false);
     }
+
+    //#[test]
+    //fn test_dataframe_check(){
+        //let sql_datas = vec![("$A".to_string(), "voila".to_string()),
+                         //("$B".to_string(), "truc".to_string()),
+                         //("$C".to_string(), "machin".to_string()),
+                         //("$C".to_string(), "chose".to_string())];
+        //let df = sql_datas.try_into().unwrap();
+        //assert_eq!(
+            //DataFrame::check(&df),
+            //false);
+    //}
+
 }
 
