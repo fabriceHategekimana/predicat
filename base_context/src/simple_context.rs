@@ -377,28 +377,30 @@ mod tests {
     }
 
     #[test]
-    fn test_dataframe_check_emp(){
+    fn test_dataframe_check_create_dataframe_from_malformed_vec_of_tuple(){
         let sql_datas = vec![("$A".to_string(), "voila".to_string()),
                          ("$B".to_string(), "truc".to_string()),
                          ("$C".to_string(), "machin".to_string()),
                          ("$C".to_string(), "chose".to_string())];
-        let df: DataFrame = sql_datas.try_into().unwrap();
+        let df: Result<DataFrame, String> = sql_datas.try_into();
         assert_eq!(
-            df.empty(),
-            false);
+            df,
+            Err(String::from("Failed to build Dataframe from Vec<(String, String)>")));
     }
 
-    //#[test]
-    //fn test_dataframe_check(){
-        //let sql_datas = vec![("$A".to_string(), "voila".to_string()),
-                         //("$B".to_string(), "truc".to_string()),
-                         //("$C".to_string(), "machin".to_string()),
-                         //("$C".to_string(), "chose".to_string())];
-        //let df = sql_datas.try_into().unwrap();
-        //assert_eq!(
-            //DataFrame::check(&df),
-            //false);
-    //}
+    #[test]
+    fn test_dataframe_check_create_dataframe_from_wellformed_vec_of_tuple(){
+        let sql_datas = vec![("$A".to_string(), "voila".to_string()),
+                         ("$A".to_string(), "element".to_string()),
+                         ("$B".to_string(), "truc".to_string()),
+                         ("$B".to_string(), "hey".to_string()),
+                         ("$C".to_string(), "machin".to_string()),
+                         ("$C".to_string(), "chose".to_string())];
+        let df: DataFrame = sql_datas.try_into().unwrap();
+        assert_eq!(
+            DataFrame::check(&df),
+            true);
+    }
 
 }
 
