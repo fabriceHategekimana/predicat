@@ -1,9 +1,11 @@
 #![allow(dead_code, unused_variables, unused_imports, unreachable_code)]
 // will be use for the language (AST) manipulation
 
-use base_context::context_traits::{Context, Var};
+use base_context::context_traits::Context;
 use base_context::simple_context::SimpleContext;
 use parser::base_parser::{PredicatAST, Triplet, Comp, Language};
+use parser::var::Var;
+
 
 #[derive(PartialEq, Debug, Clone, Copy)]
 enum Pos {

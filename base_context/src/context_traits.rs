@@ -1,42 +1,7 @@
 use core::fmt::Debug;
-use std::ops::Deref;
-use std::fmt;
 use std::collections::HashMap;
+use parser::var::Var;
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash, PartialOrd, Ord)]
-pub struct Var(pub String);
-
-impl Var {
-    pub fn new(s: &str) -> Self {
-        if s[0..1] == *"$" {
-            Var(s.to_string())
-        } else {
-            Var(format!("${}", s))
-        }
-    }
-
-    pub fn without_dollar(&self) -> String {
-        self[1..].to_string()
-    }
-
-    pub fn format(s: &str) -> String {
-        Self::new(s).0.to_string()
-    }
-}
-
-impl Deref for Var {
-    type Target = String;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl fmt::Display for Var {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Var('{}')", self.0)
-    }
-}
 
 pub trait Context: Debug {
     type FellowContext;

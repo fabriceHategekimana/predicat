@@ -1,3 +1,53 @@
 layout {
+	pane_template name="fpane" {
+		x "10%"
+		width "80%"
+		height "80%"
+	}
+	cwd "/home/fabrice/sessions/projet/predicat"
 
-}
+	tab hide_floating_panes=true {
+		pane name="interpreter" {
+			cwd "/home/fabrice/temp"
+			command "predicat"
+			args "shell"
+		}
+	
+		floating_panes {
+			fpane name="reset" {
+				cwd "/home/fabrice/temp"
+				command "rm"
+				args "data.db"
+				y "10%"
+			}
+		}
+	}
+
+	tab hide_floating_panes=true {
+		pane name="code" {
+			command "nvim"
+			args "predicat/predicat/src/main.rs"
+			close_on_exit true
+		}
+		floating_panes {
+			fpane name="console" {
+				cwd "predicat/"
+				command "evcxr"
+				y "20%"
+			}
+			fpane name="build" {
+				cwd "predicat/"
+				command "cargo"
+				args "build"
+				y "10%"
+			}	
+			fpane name="test" {
+				cwd "predicat/"
+				command "cargo"
+				args "test"
+				y "15%"
+			}
+		}
+	}
+
+} 

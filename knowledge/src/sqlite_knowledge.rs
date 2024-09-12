@@ -6,8 +6,7 @@ use sqlite::{
         Statement,
 };
 
-//use crate::parser::parse_command;
-use base_context::context_traits::{Context, Var};
+use base_context::context_traits::Context;
 use base_context::simple_context::SimpleContext;
 use metaprogramming::substitute_variables;
 use std::collections::HashMap;
@@ -23,10 +22,13 @@ use parser::base_parser::Language::Tri;
 use parser::base_parser::Comp;
 use parser::base_parser::Triplet::*;
 use parser::base_parser::Triplet;
+use parser::var::Var;
+use parser::cmd::Cmd;
+use parser::parse_modifier::parse_modifier;
 use itertools::izip;
 use itertools::Itertools;
 use serial_test::serial;
-use base_context::simple_context::DataFrame;
+use base_context::dataframe::DataFrame;
 use crate::base_knowledge::Joinable;
 use std::convert::TryFrom;
 
@@ -71,8 +73,8 @@ static CREATE_RULES : &str = "CREATE TABLE IF NOT EXISTS rules(
                     'subject' TEXT, 
                     'link' TEXT, 
                     'goal' TEXT, 
-                    'command' TEXT,
-                    'backed_command');
+                    'pre_conditions' TEXT,
+                    'post_conditions' TEXT);
                     ";
 
 static CREATE_CACHE : &str = "CREATE TABLE IF NOT EXISTS cache(
@@ -116,6 +118,24 @@ pub struct SqliteKnowledge {
     connection: Connection,
 }
 
+impl SqliteKnowledge{
+
+    fn get_vec(&self, cmd: &str) -> Vec<(String, String)> {
+        let query = cmd;
+        let mut v: Vec<(String, String)> = vec![];
+        let _ = self.connection.iterate(query, |sqlite_couple| {
+            for couple in sqlite_couple.iter() {
+                v.push((couple.0.to_string(),
+                        couple.1.unwrap_or("").to_string()));
+            }
+            true
+        });
+        v.clone()
+    }
+
+}
+
+
 fn extract_columns(sql_select_query: &str) -> Vec<&str> {
    sql_select_query.split_once(" FROM")
                    .unwrap().0
@@ -127,15 +147,35 @@ fn extract_columns(sql_select_query: &str) -> Vec<&str> {
 
 
 impl Joinable for DataFrame {
-    fn join(a: Self, b: Self) -> Self {
-        DataFrame::join(a, b)
+    fn join(df1: Self, df2: Self) -> Self {
+        // merge all the variables
+        let variables = df1.get_variables().into_iter().chain(df2.get_variables().into_iter()).collect::<Vec<_>>();
+        // create a new Hashmap
+        let mut hm: HashMap<String, Vec<String>> = HashMap::new();
+        let join_column = |col: String| {
+            let (l1, l2) = (df1.len(), df2.len());
+            match (df1.get_values(&col), df2.get_values(&col)) {
+                (Ok(x), Err(y)) => 
+                    (col, x.iter().map(String::clone).chain((0..l2).map(|_| "".to_string())).collect::<Vec<_>>()),
+                (Ok(x), Ok(y)) => 
+                    (col, x.iter().chain(y.iter()).map(String::clone).collect::<Vec<_>>()),
+                (Err(x), Ok(y)) => 
+                    (col, (0..l1).map(|_| "".to_string()).chain(y.iter().map(String::clone)).collect::<Vec<_>>()),
+                (Err(x), Err(y)) => todo!()
+            }
+        };
+        variables.iter()
+            .map(|Var(x)| x.clone())
+            .map(|x| join_column(x))
+            .for_each(|(var, col)| {hm.insert(var.to_string(), col); });
+        return  hm.try_into().unwrap()
     }
 }
 
 impl Command<DataFrame> for SqliteKnowledge {
     type Language = Sql;
 
-    fn get(&self, cmd: &str) -> DataFrame {
+    fn query_sqlite_db(&self, cmd: &str) -> DataFrame {
         let mut v: Vec<(String, String)> = vec![];
         let _ = self.connection.iterate(cmd, |sqlite_couple| {
             for couple in sqlite_couple.iter() {
@@ -144,11 +184,12 @@ impl Command<DataFrame> for SqliteKnowledge {
             }
             true
         });
-        DataFrame::try_from(v).unwrap()
+        let transform = DataFrame::try_from(v).unwrap();
+        transform
     }
 
-    fn get_all(&self) -> DataFrame {
-        self.get(&"SELECT A,B,C from (SELECT subject as A, link as B, goal as C FROM facts)")
+    fn query_all_sqlite_db(&self) -> DataFrame {
+        self.query_sqlite_db(&"SELECT A,B,C from (SELECT subject as A, link as B, goal as C FROM facts)")
     }
 
     fn modify(&self, cmd: &str) -> Result<DataFrame, &str> {
@@ -172,22 +213,33 @@ impl Command<DataFrame> for SqliteKnowledge {
                             .map(|x| triplet_to_delete(x))
                             .fold("".to_string(), string_concat)
                             .into()]),
-            Infer((b, c), pre, cmd) => {
-                    // TODO : perhaps remove the match (isn't used yet)
-                    let scmd = match &cmd[0..3] { 
-                        "get" => self.translate(ast).unwrap().iter()
-                                .map(|x| {
-                                    if let Sql::Rule(rule) = x {
-                                        Some(rule.replace("'", "%single_quote%"))
-                                    } else { None }.unwrap() })
-                                .collect(),
-                        _ => cmd.clone()};
-                    let res = c.iter().map(|x| x.to_tuple_with_variable())
-                        .map(|(t1, t2, t3)| {
-                            format!("%rule%%|%{}%|%{}%|%{}%|%{}%|%{}%|%{}",
-                                       b.get_string(), t1, t2, t3, pre, cmd).into()
-                        }).collect::<Vec<_>>();
-                        Ok(res)
+            Infer(pre_conditions, post_conditions) => {
+                    //infer add $A ami $B -> add $B ami $A
+                    let (modifier, triplets) = match parse_modifier(pre_conditions).unwrap() {
+                        (_, PredicatAST::AddModifier(v)) => Some(("add", v.clone())),
+                        (_, PredicatAST::DeleteModifier(v)) => Some(("delete", v.clone())),
+                        _ => None
+                    }.expect("the translation of the rule failed since the preconditions where note add/delete modifier");
+                    let subjects = triplets.iter()
+                        .map(|tri| tri.to_tuple().0)
+                        .filter(|x| &x[..1] != "$")
+                        .unique()
+                        .collect::<Vec<_>>();
+                    let links = triplets.iter()
+                        .map(|tri| tri.to_tuple().1)
+                        .filter(|x| &x[..1] != "$")
+                        .unique()
+                        .collect::<Vec<_>>();
+                    let goals = triplets.iter()
+                        .map(|tri| tri.to_tuple().2)
+                        .filter(|x| &x[..1] != "$")
+                        .unique()
+                        .collect::<Vec<_>>();
+                    let rule = Sql::Rule(format!(
+                         "INSERT INTO rules (name, modifier, subject, link, goal, pre_conditions, post_conditions)
+                         VALUES ('{}', '{}', '{}', '{}', '{}', '{}', '{}')",
+                         "-", modifier, subjects.join(","), links.join(","), goals.join(","), pre_conditions, post_conditions));
+                    Ok(vec![rule])
                             },
             _ => Err("The AST is empty") 
         }
@@ -195,7 +247,7 @@ impl Command<DataFrame> for SqliteKnowledge {
 
     fn execute(&self, s: &Sql) -> DataFrame {
         let res = match s  {
-            Sql::Query(q) => self.get(q),
+            Sql::Query(q) => self.query_sqlite_db(q),
             Sql::Rule(r) => self.store_rule(r),
             Sql::Modify(m) => self.modify(m).unwrap()
         }.clone();
@@ -203,29 +255,14 @@ impl Command<DataFrame> for SqliteKnowledge {
     }
 
     fn is_invalid(&self, cmd: &PredicatAST) -> bool {
-        match cmd {
-            PredicatAST::Infer((mo, tri), pre, cmd) => {
-                tri.iter().map(|x| x.to_tuple_with_variable())
-                    .map(|(t1, t2, t3)| {
-                        let select = format!("SELECT * FROM Rules where modifier = {:?} subject = {:?} or link = {:?} or goal = {:?}",
-                        mo, t1, t2, t3);
-                    match self.get(&select).get_values("backed_command") {
-                        Err(_) => false,
-                        Ok(v) => v.iter()
-                            .map(|x| x.replace("%singlequote%", "'"))
-                            .any(|cmd| ! self.get(&cmd).empty())
-                        }
-                    }).any(|x| x)
-            },
-            _ => false
-        }
+        false
     }
 
 
     fn infer_command_from_triplet(&self, modifier: &str, tri: &Triplet) -> Vec<String> {
         let (sub, lin, goa) = tri.to_tuple();
         let select = format!("SELECT * FROM rules where modifier='{}' AND (subject='{}' OR link='{}' OR goal='{}')", modifier, sub, lin, goa);
-        let rules = self.get(&select);
+        let rules = self.query_sqlite_db(&select);
         if ! rules.empty() {
         let dataframe_of_variables = 
             match rules.get_values2(&["modifier", "subject", "link", "goal"]) {
@@ -238,7 +275,7 @@ impl Command<DataFrame> for SqliteKnowledge {
             None => SimpleContext::new(),
         };
         
-        rules.get_values("command").unwrap().iter()
+        rules.get_values("post_conditions").unwrap().iter()
             .flat_map(|cmd| change_variables(cmd, &dataframe_of_variables))
             .collect()
         } else {
@@ -246,13 +283,15 @@ impl Command<DataFrame> for SqliteKnowledge {
         }
     }
 
-    fn infer_commands_from(&self, cmd: &PredicatAST) -> Vec<String> {
+    fn infer_commands_from(&self, cmd: &PredicatAST) -> Vec<Cmd> {
         match cmd {
             PredicatAST::AddModifier(v_of_tri) => v_of_tri.iter()
                 .flat_map(|x| self.infer_command_from_triplet("add", x))
+                .map(Cmd::from)
                 .collect::<Vec<_>>(),
             PredicatAST::DeleteModifier(v_of_tri) => v_of_tri.iter()
                 .flat_map(|x| self.infer_command_from_triplet("delete", x))
+                .map(Cmd::from)
                 .collect::<Vec<_>>(),
             _ => vec![]
         }
@@ -306,13 +345,7 @@ impl RuleManager<DataFrame> for SqliteKnowledge {
     }
 
     fn store_rule(&self, s: &str) -> DataFrame {
-        let values = s.split("%|%").collect::<Vec<_>>();
-        let cmd = format!("INSERT INTO rules (modifier, subject, link, goal, command, backed_command) VALUES (\'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\')",
-                    values[1], values[2], values[3], values[4], values[5], values[6]);
-        match self.connection.execute(cmd) {
-           Err(e) => {dbg!(e); DataFrame::new()}
-           _ => DataFrame::new(),
-        }
+        let _ = self.connection.execute(s); DataFrame::new()
     }
 
     fn get_rules(&self) -> Vec<String> {
@@ -396,21 +429,6 @@ fn string_concat(acc: String, x: String) -> String {
     format!("{}{}", acc, x)
 }
 
-impl SqliteKnowledge{
-
-    fn get_vec(&self, cmd: &str) -> Vec<(String, String)> {
-        let query = cmd;
-        let mut v: Vec<(String, String)> = vec![];
-        let _ = self.connection.iterate(query, |sqlite_couple| {
-            for couple in sqlite_couple.iter() {
-                v.push((couple.0.to_string(),
-                        couple.1.unwrap_or("").to_string()));
-            }
-            true
-        });
-        v.clone()
-    }
-}
 
 fn add<'l>(connection: &Connection, elements: &[(&str, Value)]) -> Result<(), sqlite::Error> {
     let sql_query = format!(
@@ -536,7 +554,8 @@ pub fn triplet_to_sql(tri: &Triplet) -> String {
 }
 
 fn is_variable(s: &str) -> bool {
-    &s[0..1] == "$"
+    if s == "" { false } 
+    else { &s[0..1] == "$" }
 }
 
 fn extract_substitution_list(triplet: Triplet, tri_param: &[&str]) -> Vec<(String, String)> {

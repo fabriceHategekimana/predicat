@@ -10,14 +10,15 @@ pub use nom::{
     IResult
 };
 
+use std::fmt;
+
 use nom::bytes::complete::take_while;
 use nom::character::complete::multispace0;
 use nom::character::complete::one_of;
 use nom::character::complete::none_of;
+use crate::var::Var;
 
-use base_context::simple_context::SimpleContext;
-use base_context::context_traits::Var;
-pub use Triplet::*;
+pub use crate::Triplet;
 
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub enum Action {
@@ -32,15 +33,12 @@ pub enum CommandType {
     Get
 }
 
-impl CommandType {
-    pub fn get_string(&self) -> String {
-        match self {
-            CommandType::Add => "add".to_string(),
-            CommandType::Delete => "delete".to_string(),
-            CommandType::Get => "get".to_string(),
-        }
+impl fmt::Display for CommandType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self)
     }
 }
+
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum Command {
@@ -59,7 +57,7 @@ pub enum PredicatAST {
          Vec<Comp>)),
     AddModifier(Vec<Triplet>),
     DeleteModifier(Vec<Triplet>),
-    Infer((CommandType, Vec<Triplet>), Premice, Conclusion),
+    Infer(String, String),
     // TODO: add Block and Assert rules
     Empty,
     Debug(String)
@@ -98,7 +96,7 @@ impl Comp {
 }
 
 #[derive(PartialEq, Debug, Clone)]
-enum Element {
+pub enum Element {
     Term(String),
     String(String)
 }
@@ -141,35 +139,6 @@ impl Language {
     }
 }
 
-
-pub fn extract_triplet(tri: &Language) -> Option<Triplet> {
-    match tri {
-        Language::Tri(tri) => Some(tri.clone()),
-        _ => None
-    }
-}
-
-#[derive(Clone, PartialEq, Debug)]
-pub enum Triplet {
-    Teee(String, String, String),
-    Tvee(String, String, String),
-    Teve(String, String, String),
-    Teev(String, String, String),
-    Tvve(String, String, String),
-    Tvev(String, String, String),
-    Tevv(String, String, String),
-    Tvvv(String, String, String),
-    TNeee(String, String, String),
-    TNvee(String, String, String),
-    TNeve(String, String, String),
-    TNeev(String, String, String),
-    TNvve(String, String, String),
-    TNvev(String, String, String),
-    TNevv(String, String, String),
-    TNvvv(String, String, String),
-    Empty
-}
-
 impl TryFrom<Language> for Triplet {
     type Error = &'static str;
 
@@ -181,120 +150,11 @@ impl TryFrom<Language> for Triplet {
     }
 }
 
-impl From<Triplet> for (String, String, String) {
-    fn from(t: Triplet) -> (String, String, String) {
-        match t {
-           Triplet::Teee(a, b, c) => (a, b, c),
-           Triplet::Tvev(a, b, c) => (a, b, c),
-           Triplet::Tevv(a, b, c) => (a, b, c),
-           Triplet::Teev(a, b, c) => (a, b, c),
-           Triplet::Teve(a, b, c) => (a, b, c),
-           Triplet::Tvve(a, b, c) => (a, b, c),
-           Triplet::Tvee(a, b, c) => (a, b, c),
-           Triplet::Tvvv(a, b, c) => (a, b, c),
-           Triplet::TNeee(a, b, c) => (format!("not_{}", a), b, c),
-           Triplet::TNvev(a, b, c) => (format!("not_{}", a), b, c),
-           Triplet::TNevv(a, b, c) => (format!("not_{}", a), b, c),
-           Triplet::TNeev(a, b, c) => (format!("not_{}", a), b, c),
-           Triplet::TNeve(a, b, c) => (format!("not_{}", a), b, c),
-           Triplet::TNvve(a, b, c) => (format!("not_{}", a), b, c),
-           Triplet::TNvee(a, b, c) => (format!("not_{}", a), b, c),
-           Triplet::TNvvv(a, b, c) => (format!("not_{}", a), b, c),
-           Triplet::Empty => ("".to_string(), "".to_string(), "".to_string())
-        }
-    }
-}
 
-impl From<Triplet> for String {
-    fn from(t: Triplet) -> String {
-        let tri : (String, String, String) = t.into();
-        format!("{} {} {}", tri.0, tri.1, tri.2)
-    }
-}
-
-
-fn to_var(s: &str) -> String {
-    format!("${}", s)
-}
-
-fn format_tuple_of_three(t: (&String, &String, &String)) -> (String, String, String) {
-    match t {
-        (a, b, c) => (a.to_owned(), b.to_owned(), c.to_owned()) 
-    } 
-}
-
-impl Triplet {
-    pub fn invert(self) -> Triplet {
-        match self {
-            Teee(a,b,c) => Teee(a,b,c),
-            Tvee(a,b,c) => Tvee(a,b,c),
-            Teve(a,b,c) => Teve(a,b,c),
-            Teev(a,b,c) => Teev(a,b,c),
-            Tvve(a,b,c) => Tvve(a,b,c),
-            Tvev(a,b,c) => Tvev(a,b,c),
-            Tevv(a,b,c) => Tevv(a,b,c),
-            Tvvv(a,b,c) => Tvvv(a,b,c),
-            TNeee(a,b,c) => Teee(a,b,c),
-            TNvee(a,b,c) => Tvee(a,b,c),
-            TNeve(a,b,c) => Teve(a,b,c),
-            TNeev(a,b,c) => Teev(a,b,c),
-            TNvve(a,b,c) => Tvve(a,b,c),
-            TNvev(a,b,c) => Tvev(a,b,c),
-            TNevv(a,b,c) => Tevv(a,b,c),
-            TNvvv(a,b,c) => Tvvv(a,b,c),
-            Empty => Empty
-        }
-    }
-
-    pub fn to_tuple(&self) -> (String, String, String) {
-        match self {
-            Teee(a,b,c) => format_tuple_of_three((a,b,c)),
-            Tvee(a,b,c) => format_tuple_of_three((a,b,c)),
-            Teve(a,b,c) => format_tuple_of_three((a,b,c)),
-            Teev(a,b,c) => format_tuple_of_three((a,b,c)),
-            Tvve(a,b,c) => format_tuple_of_three((a,b,c)),
-            Tvev(a,b,c) => format_tuple_of_three((a,b,c)),
-            Tevv(a,b,c) => format_tuple_of_three((a,b,c)),
-            Tvvv(a,b,c) => format_tuple_of_three((a,b,c)),
-            Empty => ("".to_string(), "".to_string(), "".to_string()),
-            tri => tri.clone().invert().to_tuple()
-        }
-    }
-    pub fn to_tuple_with_variable(&self) -> (String, String, String) {
-        match self {
-            Teee(a,b,c) => (a.to_string(),b.to_string(),c.to_string()),
-            Tvee(a,b,c) => (to_var(&a),b.to_string(),c.to_string()),
-            Teve(a,b,c) => (a.to_string(),to_var(&b),c.to_string()),
-            Teev(a,b,c) => (a.to_string(),b.to_string(), to_var(&c)),
-            Tvve(a,b,c) => (to_var(&a),to_var(&b),c.to_string()),
-            Tvev(a,b,c) => (to_var(&a),b.to_string(),to_var(&c)),
-            Tevv(a,b,c) => (a.to_string(),to_var(&b),to_var(&c)),
-            Tvvv(a,b,c) => (to_var(&a),to_var(&b),to_var(&c)),
-            Empty => ("".to_string(), "".to_string(), "".to_string()),
-            tri => tri.clone().invert().to_tuple_with_variable()
-        }
-    }
-
-    pub fn display(&self) -> String {
-        match self {
-            Teee(a,b,c) => format!("{},{},{}", a.to_string(),b.to_string(),c.to_string()),
-            Tvee(a,b,c) => format!("{},{},{}", to_var(&a),b.to_string(),c.to_string()),
-            Teve(a,b,c) => format!("{},{},{}", a.to_string(),to_var(&b),c.to_string()),
-            Teev(a,b,c) => format!("{},{},{}", a.to_string(),b.to_string(), to_var(&c)),
-            Tvve(a,b,c) => format!("{},{},{}", to_var(&a),to_var(&b),c.to_string()),
-            Tvev(a,b,c) => format!("{},{},{}", to_var(&a),b.to_string(),to_var(&c)),
-            Tevv(a,b,c) => format!("{},{},{}", a.to_string(),to_var(&b),to_var(&c)),
-            Tvvv(a,b,c) => format!("{},{},{}", to_var(&a),to_var(&b),to_var(&c)),
-            TNeee(a,b,c) => format!("Not({},{},{})", a.to_string(),b.to_string(),c.to_string()),
-            TNvee(a,b,c) => format!("Not({},{},{})", to_var(&a),b.to_string(),c.to_string()),
-            TNeve(a,b,c) => format!("Not({},{},{})", a.to_string(),to_var(&b),c.to_string()),
-            TNeev(a,b,c) => format!("Not({},{},{})", a.to_string(),b.to_string(), to_var(&c)),
-            TNvve(a,b,c) => format!("Not({},{},{})", to_var(&a),to_var(&b),c.to_string()),
-            TNvev(a,b,c) => format!("Not({},{},{})", to_var(&a),b.to_string(),to_var(&c)),
-            TNevv(a,b,c) => format!("Not({},{},{})", a.to_string(),to_var(&b),to_var(&c)),
-            TNvvv(a,b,c) => format!("Not({},{},{})", to_var(&a),to_var(&b),to_var(&c)),
-            Empty => "Empty triplet".to_string()
-        }
+pub fn extract_triplet(tri: &Language) -> Option<Triplet> {
+    match tri {
+        Language::Tri(tri) => Some(tri.clone()),
+        _ => None
     }
 }
 
@@ -407,42 +267,75 @@ pub fn parse_triplet(s: &str) -> IResult<&str,Language> {
             tuple((parse_variable, parse_variable, parse_variable))
             ))(s);
     match res {
-        Ok((t, (Language::Element(s1),Language::Element(s2),Language::Element(s3)))) => Ok((t, Language::Tri(Teee(s1.into(),s2.into(),s3.into())))),
-        Ok((t, (Language::Var(s1),Language::Element(s2),Language::Element(s3)))) => Ok((t, Language::Tri(Tvee(s1,s2.into(),s3.into())))),
-        Ok((t, (Language::Element(s1),Language::Var(s2),Language::Element(s3)))) => Ok((t, Language::Tri(Teve(s1.into(),s2,s3.into())))),
-        Ok((t, (Language::Element(s1),Language::Element(s2),Language::Var(s3)))) => Ok((t, Language::Tri(Teev(s1.into(),s2.into(),s3)))),
-        Ok((t, (Language::Var(s1),Language::Var(s2),Language::Element(s3)))) => Ok((t, Language::Tri(Tvve(s1,s2,s3.into())))),
-        Ok((t, (Language::Var(s1),Language::Element(s2),Language::Var(s3)))) => Ok((t, Language::Tri(Tvev(s1,s2.into(),s3)))),
-        Ok((t, (Language::Element(s1),Language::Var(s2),Language::Var(s3)))) => Ok((t, Language::Tri(Tevv(s1.into(),s2,s3)))),
-        Ok((t, (Language::Var(s1),Language::Var(s2),Language::Var(s3)))) => Ok((t, Language::Tri(Tvvv(s1,s2,s3)))),
-        Err(e) => Err(e),
+        Ok((t, (Language::Element(s1),Language::Element(s2),Language::Element(s3)))) 
+            => Ok((t, Language::Tri(Triplet::Teee(s1.into(),s2.into(),s3.into())))),
+        Ok((t, (Language::Var(s1),Language::Element(s2),Language::Element(s3)))) 
+			=> Ok((t, Language::Tri(Triplet::Tvee(s1,s2.into(),s3.into())))),
+        Ok((t, (Language::Element(s1),Language::Var(s2),Language::Element(s3)))) 
+			=> Ok((t, Language::Tri(Triplet::Teve(s1.into(),s2,s3.into())))),
+        Ok((t, (Language::Element(s1),Language::Element(s2),Language::Var(s3)))) 
+			=> Ok((t, Language::Tri(Triplet::Teev(s1.into(),s2.into(),s3)))),
+        Ok((t, (Language::Var(s1),Language::Var(s2),Language::Element(s3)))) 
+			=> Ok((t, Language::Tri(Triplet::Tvve(s1,s2,s3.into())))),
+        Ok((t, (Language::Var(s1),Language::Element(s2),Language::Var(s3)))) 
+			=> Ok((t, Language::Tri(Triplet::Tvev(s1,s2.into(),s3)))),
+        Ok((t, (Language::Element(s1),Language::Var(s2),Language::Var(s3)))) 
+			=> Ok((t, Language::Tri(Triplet::Tevv(s1.into(),s2,s3)))),
+        Ok((t, (Language::Var(s1),Language::Var(s2),Language::Var(s3)))) 
+			=> Ok((t, Language::Tri(Triplet::Tvvv(s1,s2,s3)))),
+        Err(e) 
+			=> Err(e),
         // not first position
-        Ok((t, (Language::NotElement(s1),Language::Element(s2),Language::Element(s3)))) => Ok((t, Language::Tri(TNeee(s1.into(),s2.into(),s3.into())))),
-        Ok((t, (Language::NotVar(s1),Language::Element(s2),Language::Element(s3)))) => Ok((t, Language::Tri(TNvee(s1,s2.into(),s3.into())))),
-        Ok((t, (Language::NotElement(s1),Language::Var(s2),Language::Element(s3)))) => Ok((t, Language::Tri(TNeve(s1.into(),s2,s3.into())))),
-        Ok((t, (Language::NotElement(s1),Language::Element(s2),Language::Var(s3)))) => Ok((t, Language::Tri(TNeev(s1.into(),s2.into(),s3)))),
-        Ok((t, (Language::NotVar(s1),Language::Var(s2),Language::Element(s3)))) => Ok((t, Language::Tri(TNvve(s1,s2,s3.into())))),
-        Ok((t, (Language::NotVar(s1),Language::Element(s2),Language::Var(s3)))) => Ok((t, Language::Tri(TNvev(s1,s2.into(),s3)))),
-        Ok((t, (Language::NotElement(s1),Language::Var(s2),Language::Var(s3)))) => Ok((t, Language::Tri(TNevv(s1.into(),s2,s3)))),
-        Ok((t, (Language::NotVar(s1),Language::Var(s2),Language::Var(s3)))) => Ok((t, Language::Tri(TNvvv(s1,s2,s3)))),
+        Ok((t, (Language::NotElement(s1),Language::Element(s2),Language::Element(s3)))) 
+			=> Ok((t, Language::Tri(Triplet::TNeee(s1.into(),s2.into(),s3.into())))),
+        Ok((t, (Language::NotVar(s1),Language::Element(s2),Language::Element(s3)))) 
+			=> Ok((t, Language::Tri(Triplet::TNvee(s1,s2.into(),s3.into())))),
+        Ok((t, (Language::NotElement(s1),Language::Var(s2),Language::Element(s3)))) 
+			=> Ok((t, Language::Tri(Triplet::TNeve(s1.into(),s2,s3.into())))),
+        Ok((t, (Language::NotElement(s1),Language::Element(s2),Language::Var(s3)))) 
+			=> Ok((t, Language::Tri(Triplet::TNeev(s1.into(),s2.into(),s3)))),
+        Ok((t, (Language::NotVar(s1),Language::Var(s2),Language::Element(s3)))) 
+			=> Ok((t, Language::Tri(Triplet::TNvve(s1,s2,s3.into())))),
+        Ok((t, (Language::NotVar(s1),Language::Element(s2),Language::Var(s3)))) 
+			=> Ok((t, Language::Tri(Triplet::TNvev(s1,s2.into(),s3)))),
+        Ok((t, (Language::NotElement(s1),Language::Var(s2),Language::Var(s3)))) 
+			=> Ok((t, Language::Tri(Triplet::TNevv(s1.into(),s2,s3)))),
+        Ok((t, (Language::NotVar(s1),Language::Var(s2),Language::Var(s3)))) 
+			=> Ok((t, Language::Tri(Triplet::TNvvv(s1,s2,s3)))),
         // not second position
-        Ok((t, (Language::Element(s1),Language::NotElement(s2),Language::Element(s3)))) => Ok((t, Language::Tri(TNeee(s1.into(),s2.into(),s3.into())))),
-        Ok((t, (Language::Var(s1),Language::NotElement(s2),Language::Element(s3)))) => Ok((t, Language::Tri(TNvee(s1,s2.into(),s3.into())))),
-        Ok((t, (Language::Element(s1),Language::NotVar(s2),Language::Element(s3)))) => Ok((t, Language::Tri(TNeve(s1.into(),s2,s3.into())))),
-        Ok((t, (Language::Element(s1),Language::NotElement(s2),Language::Var(s3)))) => Ok((t, Language::Tri(TNeev(s1.into(),s2.into(),s3)))),
-        Ok((t, (Language::Var(s1),Language::NotVar(s2),Language::Element(s3)))) => Ok((t, Language::Tri(TNvve(s1,s2,s3.into())))),
-        Ok((t, (Language::Var(s1),Language::NotElement(s2),Language::Var(s3)))) => Ok((t, Language::Tri(TNvev(s1,s2.into(),s3)))),
-        Ok((t, (Language::Element(s1),Language::NotVar(s2),Language::Var(s3)))) => Ok((t, Language::Tri(TNevv(s1.into(),s2,s3)))),
-        Ok((t, (Language::Var(s1),Language::NotVar(s2),Language::Var(s3)))) => Ok((t, Language::Tri(TNvvv(s1,s2,s3)))),
+        Ok((t, (Language::Element(s1),Language::NotElement(s2),Language::Element(s3)))) 
+			=> Ok((t, Language::Tri(Triplet::TNeee(s1.into(),s2.into(),s3.into())))),
+        Ok((t, (Language::Var(s1),Language::NotElement(s2),Language::Element(s3)))) 
+			=> Ok((t, Language::Tri(Triplet::TNvee(s1,s2.into(),s3.into())))),
+        Ok((t, (Language::Element(s1),Language::NotVar(s2),Language::Element(s3)))) 
+			=> Ok((t, Language::Tri(Triplet::TNeve(s1.into(),s2,s3.into())))),
+        Ok((t, (Language::Element(s1),Language::NotElement(s2),Language::Var(s3)))) 
+			=> Ok((t, Language::Tri(Triplet::TNeev(s1.into(),s2.into(),s3)))),
+        Ok((t, (Language::Var(s1),Language::NotVar(s2),Language::Element(s3)))) 
+			=> Ok((t, Language::Tri(Triplet::TNvve(s1,s2,s3.into())))),
+        Ok((t, (Language::Var(s1),Language::NotElement(s2),Language::Var(s3)))) 
+			=> Ok((t, Language::Tri(Triplet::TNvev(s1,s2.into(),s3)))),
+        Ok((t, (Language::Element(s1),Language::NotVar(s2),Language::Var(s3)))) 
+			=> Ok((t, Language::Tri(Triplet::TNevv(s1.into(),s2,s3)))),
+        Ok((t, (Language::Var(s1),Language::NotVar(s2),Language::Var(s3)))) 
+			=> Ok((t, Language::Tri(Triplet::TNvvv(s1,s2,s3)))),
         // not third position
-        Ok((t, (Language::Element(s1),Language::Element(s2),Language::NotElement(s3)))) => Ok((t, Language::Tri(TNeee(s1.into(),s2.into(),s3.into())))),
-        Ok((t, (Language::Var(s1),Language::Element(s2),Language::NotElement(s3)))) => Ok((t, Language::Tri(TNvee(s1,s2.into(),s3.into())))),
-        Ok((t, (Language::Element(s1),Language::Var(s2),Language::NotElement(s3)))) => Ok((t, Language::Tri(TNeve(s1.into(),s2,s3.into())))),
-        Ok((t, (Language::Element(s1),Language::Element(s2),Language::NotVar(s3)))) => Ok((t, Language::Tri(TNeev(s1.into(),s2.into(),s3)))),
-        Ok((t, (Language::Var(s1),Language::Var(s2),Language::NotElement(s3)))) => Ok((t, Language::Tri(TNvve(s1,s2,s3.into())))),
-        Ok((t, (Language::Var(s1),Language::Element(s2),Language::NotVar(s3)))) => Ok((t, Language::Tri(TNvev(s1,s2.into(),s3)))),
-        Ok((t, (Language::Element(s1),Language::Var(s2),Language::NotVar(s3)))) => Ok((t, Language::Tri(TNevv(s1.into(),s2,s3)))),
-        Ok((t, (Language::Var(s1),Language::Var(s2),Language::NotVar(s3)))) => Ok((t, Language::Tri(TNvvv(s1,s2,s3)))),
+        Ok((t, (Language::Element(s1),Language::Element(s2),Language::NotElement(s3)))) 
+			=> Ok((t, Language::Tri(Triplet::TNeee(s1.into(),s2.into(),s3.into())))),
+        Ok((t, (Language::Var(s1),Language::Element(s2),Language::NotElement(s3)))) 
+			=> Ok((t, Language::Tri(Triplet::TNvee(s1,s2.into(),s3.into())))),
+        Ok((t, (Language::Element(s1),Language::Var(s2),Language::NotElement(s3)))) 
+			=> Ok((t, Language::Tri(Triplet::TNeve(s1.into(),s2,s3.into())))),
+        Ok((t, (Language::Element(s1),Language::Element(s2),Language::NotVar(s3)))) 
+			=> Ok((t, Language::Tri(Triplet::TNeev(s1.into(),s2.into(),s3)))),
+        Ok((t, (Language::Var(s1),Language::Var(s2),Language::NotElement(s3)))) 
+			=> Ok((t, Language::Tri(Triplet::TNvve(s1,s2,s3.into())))),
+        Ok((t, (Language::Var(s1),Language::Element(s2),Language::NotVar(s3)))) 
+			=> Ok((t, Language::Tri(Triplet::TNvev(s1,s2.into(),s3)))),
+        Ok((t, (Language::Element(s1),Language::Var(s2),Language::NotVar(s3)))) 
+			=> Ok((t, Language::Tri(Triplet::TNevv(s1.into(),s2,s3)))),
+        Ok((t, (Language::Var(s1),Language::Var(s2),Language::NotVar(s3)))) 
+			=> Ok((t, Language::Tri(Triplet::TNvvv(s1,s2,s3)))),
         Ok((t, _)) => Ok((t, Language::Empty))
     }
 }

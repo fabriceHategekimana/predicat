@@ -1,115 +1,17 @@
-#![allow(dead_code, unused_variables, unused_imports, unreachable_code)]
+#![allow(dead_code, unused_variables, unused_imports, unreachable_code, unused_assignments)]
 use std::fs;
-use std::env;
-use rustyline::Context as ConsoleContext;
 use rustyline::{Editor, Config, EditMode};
 use rustyline::error::ReadlineError;
 use rustyline::config::CompletionType;
 use rustyline::history::DefaultHistory;
 use rustyline::history::FileHistory;
-use parser::ContextCMD;
-use parser::parse_command;
-use knowledge::Cache;
-use knowledge::Knowledgeable;
-use knowledge::SqliteKnowledge;
 use clap::{Command, Arg, ArgMatches};
-use parser::base_parser::PredicatAST;
-use base_context::context_traits::Context;
-use metaprogramming::substitute_variables;
-use base_context::simple_context::SimpleContext;
-use base_context::simple_context::DataFrame;
+use knowledge::SqliteKnowledge;
+use knowledge::Knowledgeable;
 
-struct Cmd(String);
-
-fn to_command(s: &str) -> Cmd {
-    Cmd(String::from(s))
-}
-
-struct Interpreter<K: Knowledgeable<DataFrame>> {
-    context: SimpleContext,
-    knowledge: K
-}
-
-impl<K: Knowledgeable<DataFrame>> Interpreter<K> {
-
-    fn new(k: K) -> Self {
-        Interpreter { 
-            context: SimpleContext::default(),
-            knowledge: k
-            }
-    }
-
-    fn propagate(&mut self, ctx: SimpleContext) -> SimpleContext {
-        let mut context = ctx;
-        while context.has_commands() && !context.has_error() {
-            context = Some(&context.get_aftercmds())
-                    .map(|x| self.parse(x))
-                    .map(|x| self.execute(&x))
-                    .unwrap().unwrap_or_default()
-        } self.context = context.clone(); self.clear_cache();
-        context.clone()
-    }
-
-    fn run(&mut self, cmd: &str) -> SimpleContext {
-        Some(&vec![cmd.to_string()])
-            .map(|x| self.parse(x))
-            .map(|x| self.execute(&x).unwrap_or_default())
-            .map(|x| self.propagate(x))
-            .unwrap()
-    }
-
-    fn clear_cache(&self) -> () {
-        self.knowledge.clear_cache();
-    }
-
-    fn display(&self) -> () {
-        self.context.display()
-    }
-
-    fn single_parse(command: &String) -> Vec<PredicatAST> {
-        parse_command(command).iter()
-                    .map(PredicatAST::clone)
-                    .flat_map(substitute_variables(SimpleContext::new()))
-                    .flatten().collect()
-    }
-
-    fn get_user_passed_arguments(&self) -> String {
-        env::args().skip(1)
-            .fold(String::new(), |acc, arg| format!("{}{} ", acc, &arg))
-    }
-
-    fn get_args_or(&self, query: &str) -> String {
-        let args = self.get_user_passed_arguments();
-        if args == "".to_string() {
-            String::from(query)
-        }
-        else{
-            args
-        }
-    }
-
-    fn execute(&self, cmds: &[PredicatAST]) -> Option<SimpleContext> {
-        let context = self.knowledge
-                .valid_commands(cmds.to_vec())?.iter()
-                .filter(|cmd| !self.knowledge.in_cache(cmd))
-                .map(|cmd| (cmd, self.knowledge.infer_commands_from(cmd)))
-                .map(|(cmd, aftcmd)| {
-                        let context: SimpleContext = self.knowledge.execute_command(cmd).into();
-                            context.add_aftercmd(&aftcmd)
-                })
-                .reduce(SimpleContext::join_contexts)?;
-        Some(context.clone())
-    }
-
-    fn parse(&self, cmds: &[String]) -> Vec<PredicatAST> {
-        cmds.iter().flat_map(Self::single_parse).collect()
-    }
-
-    fn clear(&self) -> () {
-        self.knowledge.clear_all();
-    }
-    
-}
+mod interpreter;
+use interpreter::Interpreter;
+use parser::Cmd;
 
 
 fn open(file_name: &str) -> String {
@@ -141,7 +43,7 @@ fn get_user_input() -> ArgMatches {
 fn one_command(val: &String) -> () {
     let mut interpreter = Interpreter::new(SqliteKnowledge::new());
     interpreter.run(&val);
-    interpreter.display();
+    interpreter.show();
 }
 
 fn process_string(input: &str) -> Vec<String> {
@@ -158,7 +60,7 @@ fn read_file(val: &String) -> () {
     let lines = process_string(&val);
     let mut interpreter = Interpreter::new(SqliteKnowledge::new());
     lines.iter().for_each(|cmd| {interpreter.run(cmd);});
-    interpreter.display();
+    interpreter.show();
 }
 
 fn generate_shell() -> Editor<(), FileHistory> {
@@ -174,14 +76,17 @@ fn generate_shell() -> Editor<(), FileHistory> {
 
 fn shell() {
     let mut rl = generate_shell();
+    let mut interpreter = Interpreter::new(SqliteKnowledge::new());
     loop {
-        let readline = rl.readline(">> ");
+        let readline = rl.readline(&format!("{}> ", interpreter.get_mode()));
         match readline {
             Ok(x) if x == "exit" => break,
             Ok(x) if &x[0..5] == "parse" => break,
             Ok(line) => {
                 let _ = rl.add_history_entry(line.as_str());
-                one_command(&line)},
+                interpreter.run(&line);
+                interpreter.show();
+            },
             Err(ReadlineError::Interrupted) => {
                 println!("CTRL-C");
                 break;
@@ -202,59 +107,4 @@ fn main() {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use knowledge::base_knowledge::Command;
-    use serial_test::serial;
-    use knowledge::RuleManager;
 
-    #[test]
-    #[serial]
-    fn test_add(){
-       let mut interpreter = Interpreter::new(SqliteKnowledge::new());
-       interpreter.clear();
-       interpreter.run("add julien ami julie");
-       assert_eq!(
-           SimpleContext::from(vec![["julien", "ami", "julie"]]),
-           interpreter.run("get julien ami julie"));
-    }
-
-    //#[test]
-    //#[serial]
-    //fn test_rule_1() {
-       //let mut interpreter = Interpreter::new(SqliteKnowledge::new());
-       //interpreter.clear();
-       //interpreter.run("infer add $A ami $B -> add $B ami $A");
-       //interpreter.get_rules();
-       //assert_eq!(interpreter.get_rules(),
-          //vec!["add", "$A", "ami", "$B", "add $B ami $A", "add $B ami $A"]);
-    //}
-
-    #[test]
-    #[serial]
-    fn test_rule_2() {
-       let mut interpreter = Interpreter::new(SqliteKnowledge::new());
-       interpreter.clear();
-       interpreter.run("infer add $A ami $B -> add $B ami $A");
-       interpreter.run("add julien ami julie");
-        assert_eq!(
-            SimpleContext::from(vec![["julien", "ami", "julie"],
-                                    ["julie", "ami", "julien"]]),
-            interpreter.run("get $subject $link $goal where $subject $link $goal")
-                  );
-    }
-
-    //#[test]
-    //#[serial]
-    //fn test_get_command_from() {
-       //let mut interpreter = Interpreter::new(SqliteKnowledge::new());
-       //interpreter.clear();
-       //interpreter.run("infer add $A ami $B -> add $B ami $A");
-       //let cmds = interpreter.knowledge
-           //.infer_commands_from(&Interpreter::<SqliteKnowledge>single_parse(&"add julien ami julie".to_string())[0]);
-       //assert_eq!(cmds,
-                 //["add julie ami julien"]);
-    //}
-
-}

@@ -8,7 +8,6 @@ pub use nom::{
     IResult,
 };
 
-use base_context::context_traits::Var;
 pub use super::base_parser::{
     Language,
     Comp,
@@ -18,6 +17,8 @@ pub use super::base_parser::{
     parse_triplet_and,
     extract_triplet
 };
+
+use crate::var::Var;
 
 use nom::Err;
 use nom::Needed;
