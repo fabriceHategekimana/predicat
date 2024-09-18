@@ -5,6 +5,7 @@ use base_context::context_traits::Context;
 use base_context::simple_context::SimpleContext;
 use parser::base_parser::{PredicatAST, Triplet, Comp, Language};
 use parser::var::Var;
+use parser::base_parser::CommandType;
 
 
 #[derive(PartialEq, Debug, Clone, Copy)]
@@ -186,10 +187,9 @@ fn substitute_query(vars: &[Var], triplets: &[Triplet], comps: &[Comp], context:
    }
 }
 
-fn substitute_triplet_to_predicat_ast<C>(triplets: &[Triplet], constructor: C, context: &SimpleContext) -> Vec<PredicatAST> 
-where C : Fn(Vec<Triplet>) -> PredicatAST {
+fn substitute_triplet_to_predicat_ast(triplets: &[Triplet], command_type: CommandType, context: &SimpleContext) -> Vec<PredicatAST> {
     substitute_triplet(triplets, context).iter()
-        .map(|x| constructor(x.clone())).collect()
+        .map(|x| PredicatAST::Modifier(command_type, x.clone())).collect()
 }
 
 pub fn substitute_variables(context: SimpleContext) -> impl Fn(PredicatAST) -> Option<Vec<PredicatAST>> {
@@ -198,9 +198,9 @@ pub fn substitute_variables(context: SimpleContext) -> impl Fn(PredicatAST) -> O
             Some(vec![ast.clone()])
         } else {
             let res = match ast {
-                PredicatAST::Query((vars, triplets, comps)) => substitute_query(&vars, &triplets, &comps, &context),
-                PredicatAST::AddModifier(tri) => substitute_triplet_to_predicat_ast(&tri, PredicatAST::AddModifier, &context),
-                PredicatAST::DeleteModifier(tri) => substitute_triplet_to_predicat_ast(&tri, PredicatAST::DeleteModifier, &context),
+                PredicatAST::Query((vars, triplets, comps)) => substitute_query(&vars, &triplets, &comps, &conte xt),
+                PredicatAST::Modifier(CommandType::Add, tri) => substitute_triplet_to_predicat_ast(&tri, CommandType::Add, &context),
+                PredicatAST::Modifier(CommandType::Delete, tri) => substitute_triplet_to_predicat_ast(&tri, CommandType::Delete, &context),
                 x => vec![x.clone()]
             };
             Some(res)

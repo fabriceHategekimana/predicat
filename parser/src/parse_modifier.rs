@@ -19,6 +19,7 @@ use nom::Err;
 use nom::error::Error;
 use super::base_parser::PredicatAST;
 use crate::var::Var;
+use crate::CommandType;
 
 type QueryAST = (Vec<Var>, Vec<Language>,Vec<Comp>);
 type QueryVarAST<'a> = (Vec<String>, Vec<&'a str>);
@@ -29,7 +30,7 @@ fn parse_delete_modifier(s: &str) -> IResult<&str, PredicatAST> {
     )(s);
     match res {
         Ok((s, v)) => Ok((s, 
-                PredicatAST::DeleteModifier(v.iter().flat_map(|x| extract_triplet(x)).collect()))),
+                PredicatAST::Modifier(CommandType::Delete, v.iter().flat_map(|x| extract_triplet(x)).collect()))),
         Err(e) => Err(e)
     }
 }
@@ -46,7 +47,7 @@ fn parse_add_modifier(s: &str) -> IResult<&str, PredicatAST> {
     )(s);
     match res {
         Ok((s, v)) => Ok((s, 
-                PredicatAST::AddModifier(v.iter().flat_map(|x| extract_triplet(x)).collect()))),
+                PredicatAST::Modifier(CommandType::Add, v.iter().flat_map(|x| extract_triplet(x)).collect()))),
         Err(e) => Err(e) 
     }
 }

@@ -47,8 +47,8 @@ fn parse_query_and_modifier_bar(s: &str) -> IResult<&str, PredicatAST> {
 fn parse_trigger(s: &str) -> IResult<&str, &str> {
     let res = consumed(parse_modifier)(s);
     match res {
-        Ok((so, (s1, PredicatAST::AddModifier(v)))) => Ok((so, s1)),
-        Ok((so, (s1, PredicatAST::DeleteModifier(v)))) => Ok((so, s1)),
+        Ok((so, (s1, PredicatAST::Modifier(CommandType::Add, v)))) => Ok((so, s1)),
+        Ok((so, (s1, PredicatAST::Modifier(CommandType::Delete, v)))) => Ok((so, s1)),
         Err(r) => Err(r),
         _ => todo!()
     } 

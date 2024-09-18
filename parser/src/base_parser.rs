@@ -46,17 +46,13 @@ pub enum Command {
     Predicat(String, Box<PredicatAST>)
 }
 
-type Premice = String;
-type Conclusion = String;
-
 #[derive(PartialEq, Debug, Clone)]
 pub enum PredicatAST {
     Query(
         (Vec<Var>,
          Vec<Triplet>,
          Vec<Comp>)),
-    AddModifier(Vec<Triplet>),
-    DeleteModifier(Vec<Triplet>),
+    Modifier(CommandType, Vec<Triplet>),
     Infer(String, String),
     // TODO: add Block and Assert rules
     Empty,
@@ -78,11 +74,30 @@ impl PredicatAST {
 impl From<PredicatAST> for String {
     fn from(p: PredicatAST) -> String {
         match p {
-            PredicatAST::AddModifier(v) => format!("add {}", v.iter().cloned().map(String::from).fold("".to_string(), |acc, x| format!("{} and {}", acc, x))),
-            PredicatAST::DeleteModifier(v) => format!("add {}", v.iter().cloned().map(String::from).fold("".to_string(), |acc, x| format!("{} and {}", acc, x))),
+            PredicatAST::Modifier(CommandType::Add, v) => format!("add {}", v.iter().cloned().map(String::from).fold("".to_string(), |acc, x| format!("{} and {}", acc, x))),
+            PredicatAST::Modifier(CommandType::Delete, v) => format!("add {}", v.iter().cloned().map(String::from).fold("".to_string(), |acc, x| format!("{} and {}", acc, x))),
             _ => "".to_string()
         }
     }    
+}
+
+#[derive(Debug, Clone)]
+pub struct Modifier(pub CommandType, pub Vec<Triplet>);
+
+impl Modifier {
+    pub fn len(&self) -> usize {
+        self.1.len()
+    }
+}
+
+impl From<PredicatAST> for Modifier {
+   fn from(val: PredicatAST) -> Self {
+      match val {
+          PredicatAST::Modifier(CommandType::Add, v) => Modifier(CommandType::Add, v.clone()),
+          PredicatAST::Modifier(CommandType::Delete, v) => Modifier(CommandType::Delete, v.clone()),
+          _ => Modifier(CommandType::Get, vec![])
+      } 
+   } 
 }
 
 #[derive(PartialEq, Debug, Clone)]

@@ -6,6 +6,7 @@ use sqlite::{
         Statement,
 };
 
+use parser::base_parser::Modifier;
 use base_context::context_traits::Context;
 use base_context::simple_context::SimpleContext;
 use metaprogramming::substitute_variables;
@@ -14,7 +15,7 @@ use super::Knowledgeable;
 use crate::base_knowledge::{Command, FactManager, Cache, RuleManager};
 use parser::soft_predicat;
 use parser::base_parser::PredicatAST;
-use parser::base_parser::PredicatAST::{Query, AddModifier, DeleteModifier, Empty, Infer};
+use parser::base_parser::PredicatAST::{Query, Empty, Infer};
 use parser::parse_command;
 use parser::base_parser::Language;
 use parser::base_parser::Language::Element;
@@ -258,29 +259,22 @@ impl Command<DataFrame> for SqliteKnowledge {
         false
     }
 
+    // triplet -> 
+    // [rules]  -> [(pre, post)] -> [(query, post)] -> [(Dataframe, post)] -> [cmd]
 
     fn infer_command_from_triplet(&self, modifier: &str, tri: &Triplet) -> Vec<String> {
         let (sub, lin, goa) = tri.to_tuple();
         let select = format!("SELECT * FROM rules where modifier='{}' AND (subject='{}' OR link='{}' OR goal='{}')", modifier, sub, lin, goa);
         let rules = self.query_sqlite_db(&select);
-        if ! rules.empty() {
-        let dataframe_of_variables = 
-            match rules.get_values2(&["modifier", "subject", "link", "goal"]) {
-            Some(df) => {
-                df.iter().map(|x| x.into_iter().collect_tuple().unwrap()) // to tuple
-                .map(|(modi, subj, link, goal)| unify_triplet((&sub, &lin, &goa), (&subj, &link, &goal)))
-                .reduce(|context1, context2| context1.join(context2))
-                .unwrap_or(SimpleContext::new())
-            },
-            None => SimpleContext::new(),
-        };
-        
-        rules.get_values("post_conditions").unwrap().iter()
-            .flat_map(|cmd| change_variables(cmd, &dataframe_of_variables))
+        let pres = rules.get_values("pre_conditions").unwrap();
+        let posts = rules.get_values("post_conditions").unwrap();
+        Iterator::zip(pres.iter(), posts.iter())
+            .flat_map(|(pre, post)| 
+                 unify_preconditions(tri.clone(),
+                                    Modifier::from(parse_modifier(pre).unwrap().1),
+                                    post))
+            .flat_map(|(df, post)| change_variables(post, &SimpleContext::from(df)))
             .collect()
-        } else {
-            vec![]
-        }
     }
 
     fn infer_commands_from(&self, cmd: &PredicatAST) -> Vec<Cmd> {
@@ -374,12 +368,22 @@ impl Knowledgeable<DataFrame> for SqliteKnowledge {
     }
 }
 
-fn unify_triplet((sub1, lin1, goa1): (&str, &str, &str), (sub2, lin2, goa2): (&str, &str, &str)) -> SimpleContext {
+fn unify_preconditions(tri: Triplet, pre: Modifier, post: &str) -> Vec<(DataFrame, &str)> {
+    pre.1.iter()
+        .flat_map(|tri2| unify_triplet(&tri, tri2))
+        .map(|df| (df, post.clone()))
+        .collect()
+}
+
+fn unify_triplet(tri1: &Triplet, tri2: &Triplet) -> Option<DataFrame> {
+    let (sub1, lin1, goa1) = tri1.to_tuple();
+    let (sub2, lin2, goa2) = tri2.to_tuple();
+
     let res = [(sub1, sub2), (lin1, lin2), (goa1, goa2)]
         .iter()
         .flat_map(|(el1, el2)| match is_variable(el2) { true => Some((el2.to_string(), el1.to_string())), false => None })
         .collect::<Vec<_>>();
-         SimpleContext::try_from(res).unwrap()
+         DataFrame::try_from(res).ok()
 }
 
 fn substitute_variable(var: &Var, val:&str, cmd: &str) -> String {
